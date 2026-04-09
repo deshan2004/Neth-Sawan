@@ -11,7 +11,7 @@ import HapticFeedback from './components/HapticFeedback';
 import SoundVisualizer from './components/SoundVisualizer';
 import RelativesManager from './components/RelativesManager';
 import NotificationCenter from './components/NotificationCenter';
-import AiVisionPanel from './components/AiVisionPanel';
+import Aivision from './components/Aivision';
 import Emergencycontactmodal from './components/Emergencycontactmodal';
 import './App.css';
 
