@@ -1,4 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db, auth } from '../firebase';
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  onSnapshot, 
+  deleteDoc, 
+  doc, 
+  updateDoc,
+  serverTimestamp 
+} from 'firebase/firestore';
 
 const RELATIONS = [
   { value: 'parent',    label: 'Parent',    si: 'දෙමාපිය' },

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Header = ({ isListening, lang, setLang, showToast }) => {
+const Header = ({ isListening, lang, setLang, showToast, user, isGuest, onLogout }) => {
     return (
         <header className="app-header">
             <div className="logo-section">
@@ -27,18 +27,24 @@ const Header = ({ isListening, lang, setLang, showToast }) => {
                     </button>
                 </div>
             </div>
-            <div className={`status-indicator ${isListening ? 'listening' : ''}`}>
-                <span className="dot"></span>
-                <span className="status-text">
-                    {isListening ? "සවන් දෙමින්..." : "නවත්වා ඇත"}
-                </span>
-                {isListening && (
-                    <div className="listening-wave">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                )}
+            <div className="header-right">
+                <div className={`status-indicator ${isListening ? 'listening' : ''}`}>
+                    <span className="dot"></span>
+                    <span className="status-text">
+                        {isListening ? "සවන් දෙමින්..." : "නවත්වා ඇත"}
+                    </span>
+                    {isListening && (
+                        <div className="listening-wave">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    )}
+                </div>
+                <div className="user-badge">
+                    <span className="user-icon">{isGuest ? '👤' : '👂'}</span>
+                    <span className="user-name">{isGuest ? 'Guest' : (user?.displayName || user?.email?.split('@')[0] || 'User')}</span>
+                </div>
             </div>
         </header>
     );
