@@ -2609,4 +2609,206 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--dynamic-primary);
   border-radius: 4px;
+}/* Road Safety Monitor Styles */
+.road-safety-container {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.road-safety-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.road-safety-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.road-safety-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  background: rgba(0, 221, 179, 0.1);
+  color: var(--teal);
+}
+
+/* SOS Emergency Card */
+.emergency-sos-card {
+  background: var(--surface);
+  border: 2px solid var(--red);
+  border-radius: 28px;
+  padding: 32px;
+  text-align: center;
+  animation: borderPulse 1.5s infinite;
+}
+
+@keyframes borderPulse {
+  0%, 100% { border-color: var(--red); box-shadow: 0 0 0 0 rgba(255, 51, 85, 0.4); }
+  50% { border-color: #FF6688; box-shadow: 0 0 0 10px rgba(255, 51, 85, 0); }
+}
+
+.sos-header {
+  margin-bottom: 24px;
+}
+
+.sos-header h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.sos-button-large {
+  background: linear-gradient(135deg, var(--red), #DD2244);
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 32px;
+  cursor: pointer;
+  transition: all 0.3s;
+  animation: sosPulse 1.5s infinite;
+}
+
+@keyframes sosPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 51, 85, 0.7); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(255, 51, 85, 0); }
+}
+
+.sos-button-large:hover {
+  transform: scale(1.1);
+}
+
+.sos-icon {
+  font-size: 60px;
+}
+
+.sos-text {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: 4px;
+}
+
+.sos-sub {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.emergency-numbers {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.emergency-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 60px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.emergency-btn:hover {
+  transform: translateY(-2px);
+}
+
+.emergency-btn.police:hover { background: rgba(68, 136, 255, 0.2); border-color: var(--blue); }
+.emergency-btn.ambulance:hover { background: rgba(0, 221, 179, 0.2); border-color: var(--teal); }
+.emergency-btn.fire:hover { background: rgba(255, 51, 85, 0.2); border-color: var(--red); }
+
+.btn-icon {
+  font-size: 28px;
+}
+
+.btn-text {
+  text-align: left;
+}
+
+.btn-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.btn-number {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.emergency-instructions {
+  background: rgba(255, 51, 85, 0.05);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: left;
+}
+
+.emergency-instructions h4 {
+  margin-bottom: 12px;
+  color: var(--gold);
+}
+
+.emergency-instructions ul {
+  list-style: none;
+  padding: 0;
+}
+
+.emergency-instructions li {
+  padding: 8px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Dashboard Sign Row */
+.dashboard-sign-row {
+  margin-bottom: 20px;
+}
+
+.dashboard-sign-row .sign-card {
+  background: var(--surface);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .dashboard-primary {
+    flex-direction: column;
+  }
+  
+  .sos-button-large {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .sos-icon {
+    font-size: 45px;
+  }
+  
+  .sos-text {
+    font-size: 28px;
+  }
+  
+  .emergency-numbers {
+    flex-direction: column;
+  }
+  
+  .emergency-btn {
+    justify-content: center;
+  }
 }

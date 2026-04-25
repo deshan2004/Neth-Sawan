@@ -2,19 +2,23 @@ import React from 'react';
 
 const Sidebar = ({ activeTab, setActiveTab, onClose, isOpen, user, isGuest, onLogout }) => {
     const menuItems = [
-        { id: 'dashboard', icon: '🏠', label: 'Dashboard', sinhala: 'මුල් පිටුව', description: 'Main view' },
-        { id: 'vision', icon: '👁️', label: 'AI Vision', sinhala: 'AI දෘෂ්ටිය', description: 'Image description' },
+        { id: 'dashboard', icon: '🏠', label: 'Home', sinhala: 'මුල් පිටුව', description: 'Main dashboard' },
+        { id: 'vision', icon: '👁️', label: 'AI Vision', sinhala: 'AI දෘෂ්ටිය', description: 'Image to Sign Language' },
         { id: 'learn', icon: '🤟', label: 'Learn Signs', sinhala: 'සංඥා ඉගෙන ගන්න', description: 'Sign language tutor' },
-        { id: 'history', icon: '📋', label: 'History', sinhala: 'ඉතිහාසය', description: 'Sound history' },
-        { id: 'emergency', icon: '🆘', label: 'Emergency', sinhala: 'හදිසි අවස්ථා', description: 'Visual alerts' },
+        { id: 'alerts', icon: '🔔', label: 'Alerts', sinhala: 'ඇඟවීම්', description: 'Notification history' },
         { id: 'contacts', icon: '📇', label: 'Contacts', sinhala: 'සම්බන්ධතා', description: 'Emergency contacts' },
-        { id: 'settings', icon: '⚙️', label: 'Settings', sinhala: 'සැකසුම්', description: 'App settings' }
+        { id: 'emergency', icon: '🆘', label: 'SOS', sinhala: 'හදිසි අවස්ථා', description: 'Emergency center' },
+        { id: 'settings', icon: '♿', label: 'Accessibility', sinhala: 'ප්‍රවේශ්‍යතාව', description: 'Font & color settings' }
     ];
 
     return (
         <aside className={`app-sidebar ${isOpen ? 'open' : ''}`}>
             <div className="sidebar-header">
-                <button className="close-sidebar" onClick={onClose}>✖</button>
+                <div className="logo-mini">
+                    <span>👂</span>
+                    <span>Neth-Sawan</span>
+                </div>
+                <button className="close-sidebar" onClick={onClose}>✕</button>
             </div>
             
             <div className="profile-section">
@@ -26,7 +30,7 @@ const Sidebar = ({ activeTab, setActiveTab, onClose, isOpen, user, isGuest, onLo
                 <p>{isGuest ? 'Guest Mode' : (user?.email || 'Logged In')}</p>
                 {isGuest && <span className="guest-badge">Local Data Only</span>}
                 <div className="accessibility-badge">
-                    <span>🔊 → 👁️ Visual Alerts Enabled</span>
+                    <span>♿ Accessibility Ready</span>
                 </div>
             </div>
 
@@ -49,10 +53,11 @@ const Sidebar = ({ activeTab, setActiveTab, onClose, isOpen, user, isGuest, onLo
 
             <div className="sidebar-footer">
                 <div className="accessibility-info">
-                    <p>🎯 Designed for Deaf Users</p>
-                    <p>• Visual sound alerts</p>
-                    <p>• Sign language translation</p>
-                    <p>• Screen flashing for emergencies</p>
+                    <p>🎯 Designed for Deaf & Hard of Hearing</p>
+                    <p>• 🚗 Road Safety Monitor</p>
+                    <p>• 🤟 Sign Language Translation</p>
+                    <p>• 🔴 Visual Emergency Alerts</p>
+                    <p>• 📳 Haptic Feedback</p>
                 </div>
                 <button className="logout-btn-sidebar" onClick={onLogout}>
                     🚪 Sign Out

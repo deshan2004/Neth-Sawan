@@ -17,6 +17,7 @@ import Auth from './components/Auth';
 import SignLanguageTutor from './components/SignLanguageTutor';
 import EmergencyFlash from './components/EmergencyFlash';
 import AccessibilitySettings from './components/AccessibilitySettings';
+import RoadSafetyMonitor from './components/RoadSafetyMonitor';
 
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
@@ -26,19 +27,24 @@ import { useNotifications } from './hooks/useNotifications';
 import './App.css';
 
 function App() {
+  // Auth States
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
+  
+  // UI States
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarVisible, setSidebarVisible] = useState(window.innerWidth > 1024);
   const [toastMessage, setToastMessage] = useState({ show: false, message: '', type: '' });
   const [flashEmergency, setFlashEmergency] = useState(false);
   const [emergencyData, setEmergencyData] = useState(null);
+  const [roadSafetyActive, setRoadSafetyActive] = useState(false);
   
   // Accessibility States
   const [currentTheme, setCurrentTheme] = useState('default');
   const [currentFontSize, setCurrentFontSize] = useState(16);
 
+  // Logic Hooks
   const { transcript, isListening, startListening, stopListening, clearTranscript, setLang, lang, error: speechError } = useSpeech();
   const { volume, isLoud, soundType, soundHistory, threshold, setThreshold } = useVolume(0.15);
   const { 
@@ -47,6 +53,7 @@ function App() {
     requestPermission, autoSendStatus
   } = useNotifications();
 
+  // Guest mode data (localStorage)
   const [guestRelatives, setGuestRelatives] = useState([]);
   const [guestNotifications, setGuestNotifications] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
@@ -86,6 +93,7 @@ function App() {
     }
   }, []);
 
+  // Load guest data from localStorage
   useEffect(() => {
     if (isGuest) {
       const savedRelatives = localStorage.getItem('neth_sawan_guest_relatives');
@@ -97,10 +105,16 @@ function App() {
     }
   }, [isGuest]);
 
+  // Emergency flash on loud sound
   useEffect(() => {
-    if (isLoud && soundType) {
+    if (isLoud && soundType && !roadSafetyActive) {
       setFlashEmergency(true);
-      setEmergencyData({ soundType, message: `Emergency: ${soundType}`, timestamp: new Date(), volume });
+      setEmergencyData({ 
+        soundType, 
+        message: `Emergency: ${soundType}`, 
+        timestamp: new Date(), 
+        volume 
+      });
       if (isGuest) {
         guestAddNotification({
           id: Date.now(),
@@ -114,18 +128,20 @@ function App() {
       }
       setTimeout(() => setFlashEmergency(false), 3000);
     }
-  }, [isLoud, soundType]);
+  }, [isLoud, soundType, roadSafetyActive]);
 
+  // Save sound history for guest
   useEffect(() => {
     if (isGuest && soundHistory?.length > 0) {
       setGuestSoundHistory(prev => {
-        const updated = [...soundHistory, ...prev].slice(0, 30);
+        const updated = [...soundHistory, ...prev].slice(0, 50);
         localStorage.setItem('neth_sawan_guest_sound_history', JSON.stringify(updated));
         return updated;
       });
     }
   }, [soundHistory, isGuest]);
 
+  // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -143,7 +159,7 @@ function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      showToast("Logged out", "success");
+      showToast("Logged out successfully", "success");
     } catch (err) {
       showToast("Logout failed", "error");
     }
@@ -152,12 +168,12 @@ function App() {
   const handleGuestMode = () => {
     setIsGuest(true);
     setUser(null);
-    showToast("Guest mode activated", "success");
+    showToast("Guest mode activated. Features work fully!", "success");
   };
 
   const handleSignOutGuest = () => {
     setIsGuest(false);
-    showToast("Signed out", "info");
+    showToast("Signed out from guest mode", "info");
   };
 
   const handleThemeChange = (theme) => {
@@ -169,6 +185,7 @@ function App() {
     setCurrentFontSize(size);
   };
 
+  // Guest mode handlers
   const guestAddRelative = (data) => {
     const entry = {
       id: Date.now(),
@@ -179,6 +196,7 @@ function App() {
       notifyByWhatsApp: data.notifyByWhatsApp !== false,
       notifyBySMS: data.notifyBySMS || false,
       notifyByCall: data.notifyByCall || false,
+      notifyByDesktop: data.notifyByDesktop !== false,
       autoSendWhatsApp: data.autoSendWhatsApp || false,
       createdAt: new Date().toISOString(),
     };
@@ -208,7 +226,7 @@ function App() {
 
   const guestAddNotification = (notification) => {
     setGuestNotifications(prev => {
-      const updated = [notification, ...prev].slice(0, 30);
+      const updated = [notification, ...prev].slice(0, 50);
       localStorage.setItem('neth_sawan_guest_notifications', JSON.stringify(updated));
       return updated;
     });
@@ -223,23 +241,28 @@ function App() {
     localStorage.setItem('neth_sawan_guest_notifications', JSON.stringify([]));
   };
 
+  // Use either logged-in data or guest data
   const currentRelatives = isGuest ? guestRelatives : relatives;
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
+  // Loading Screen
   if (authLoading) {
     return (
       <div className="loading-screen">
         <div className="loading-spinner"></div>
-        <p>Neth-Sawan</p>
+        <p>Neth-Sawan Loading...</p>
+        <div className="sign-language-loading">🤟</div>
       </div>
     );
   }
 
+  // Not logged in and not guest - show Auth
   if (!user && !isGuest) {
     return <Auth onGuestMode={handleGuestMode} />;
   }
 
+  // Logged in or guest - show Main App
   return (
     <div className="app-wrapper" style={{ fontSize: `${currentFontSize}px` }}>
       {/* SVG Filters for Color Blindness */}
@@ -272,8 +295,10 @@ function App() {
         </defs>
       </svg>
 
+      {/* Emergency Flash Overlay */}
       <EmergencyFlash isVisible={flashEmergency} emergencyData={emergencyData} />
 
+      {/* Sidebar */}
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -284,6 +309,7 @@ function App() {
         onLogout={isGuest ? handleSignOutGuest : handleLogout}
       />
 
+      {/* Main Content Area */}
       <div className={`content-area ${sidebarVisible && window.innerWidth > 1024 ? 'sidebar-open' : ''}`}>
         <Header 
           isListening={isListening} 
@@ -292,12 +318,15 @@ function App() {
           showToast={showToast}
           user={user}
           isGuest={isGuest}
+          roadSafetyActive={roadSafetyActive}
+          setRoadSafetyActive={setRoadSafetyActive}
         />
 
         <main className="main-content">
-          {/* DASHBOARD */}
+          {/* DASHBOARD - Main View */}
           {activeTab === 'dashboard' && (
             <>
+              {/* Top Row: Sound Alert + Road Safety + Sign Language */}
               <div className="dashboard-primary">
                 <VisualAlert 
                   isLoud={isLoud} 
@@ -305,10 +334,42 @@ function App() {
                   volume={volume}
                   threshold={threshold}
                   onThresholdChange={setThreshold}
+                  soundHistory={currentSoundHistory}
                 />
+                <RoadSafetyMonitor 
+                  isActive={roadSafetyActive}
+                  onAlert={(alert) => {
+                    showToast(alert.description, 'error');
+                    setFlashEmergency(true);
+                    setEmergencyData({
+                      soundType: alert.name,
+                      message: alert.description,
+                      timestamp: new Date(),
+                      volume: alert.volume
+                    });
+                    setTimeout(() => setFlashEmergency(false), 5000);
+                    
+                    if (isGuest) {
+                      guestAddNotification({
+                        id: Date.now(),
+                        type: 'ROAD_SAFETY',
+                        message: alert.description,
+                        soundType: alert.name,
+                        timestamp: new Date().toISOString(),
+                        read: false
+                      });
+                    }
+                  }}
+                  showToast={showToast}
+                />
+              </div>
+
+              {/* Second Row: Sign Language Translation */}
+              <div className="dashboard-sign-row">
                 <SignLanguageBox transcript={transcript} />
               </div>
 
+              {/* Third Row: Live Transcript */}
               <div className="dashboard-transcript">
                 <TranscriptBox 
                   transcript={transcript} 
@@ -320,6 +381,7 @@ function App() {
                 />
               </div>
 
+              {/* Bottom Row: Sound Visualizer + Recent History */}
               <div className="dashboard-secondary">
                 <SoundVisualizer volume={volume} isLoud={isLoud} soundType={soundType} />
                 <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
@@ -327,18 +389,17 @@ function App() {
             </>
           )}
 
-          {activeTab === 'vision' && <Aivision showToast={showToast} />}
-          {activeTab === 'learn' && <SignLanguageTutor />}
-          {activeTab === 'contacts' && (
-            <RelativesManager 
-              relatives={currentRelatives}
-              onAdd={isGuest ? guestAddRelative : addRelative}
-              onRemove={isGuest ? guestRemoveRelative : removeRelative}
-              onUpdate={isGuest ? guestUpdateRelative : updateRelative}
-              autoSendStatus={autoSendStatus}
-              isGuest={isGuest}
-            />
+          {/* AI VISION - Image Analysis & Media to Sign Language */}
+          {activeTab === 'vision' && (
+            <Aivision showToast={showToast} />
           )}
+
+          {/* LEARN SIGNS - Sign Language Tutor */}
+          {activeTab === 'learn' && (
+            <SignLanguageTutor />
+          )}
+
+          {/* ALERTS - Notification Center */}
           {activeTab === 'alerts' && (
             <NotificationCenter 
               queue={currentNotifications}
@@ -346,25 +407,115 @@ function App() {
               onClear={isGuest ? guestClearNotifications : clearNotifications}
             />
           )}
+
+          {/* CONTACTS - Emergency Contacts Manager */}
+          {activeTab === 'contacts' && (
+            <RelativesManager 
+              relatives={currentRelatives}
+              onAdd={isGuest ? guestAddRelative : addRelative}
+              onRemove={isGuest ? guestRemoveRelative : removeRelative}
+              onUpdate={isGuest ? guestUpdateRelative : updateRelative}
+              onTest={(rel) => {
+                const testEmergency = {
+                  soundType: 'Test Alert',
+                  message: 'This is a test emergency alert from Neth-Sawan',
+                  timestamp: new Date()
+                };
+                if (isGuest) {
+                  guestAddNotification({
+                    id: Date.now(),
+                    type: 'EMERGENCY',
+                    message: testEmergency.message,
+                    soundType: testEmergency.soundType,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                  });
+                  showToast(`Test alert sent to ${rel.name}`, 'success');
+                } else {
+                  showToast(`Test alert functionality ready for ${rel.name}`, 'info');
+                }
+              }}
+              autoSendStatus={autoSendStatus}
+              isGuest={isGuest}
+            />
+          )}
+
+          {/* SOS EMERGENCY - Emergency Button & Quick Dial */}
           {activeTab === 'emergency' && (
             <div className="emergency-sos-card">
+              <div className="sos-header">
+                <h2>🆘 SOS Emergency Center</h2>
+                <p>Visual & Haptic Alerts for Deaf Users</p>
+              </div>
+              
               <div className="sos-button-large" onClick={() => {
                 setFlashEmergency(true);
-                setEmergencyData({ soundType: 'SOS', message: 'Manual SOS Triggered', timestamp: new Date() });
-                setTimeout(() => setFlashEmergency(false), 5000);
-                showToast('SOS Activated! Screen flashing', 'error');
+                setEmergencyData({ 
+                  soundType: 'SOS', 
+                  message: 'Manual SOS Triggered - Get Help Now!', 
+                  timestamp: new Date() 
+                });
+                setTimeout(() => setFlashEmergency(false), 8000);
+                showToast('🚨 SOS Activated! Screen flashing for attention', 'error');
+                
+                // Vibrate for SOS
+                if (navigator.vibrate) {
+                  navigator.vibrate([500, 200, 500, 200, 500, 200, 1000]);
+                }
+                
+                if (isGuest) {
+                  guestAddNotification({
+                    id: Date.now(),
+                    type: 'SOS',
+                    message: 'Manual SOS Emergency Triggered',
+                    soundType: 'SOS ALERT',
+                    timestamp: new Date().toISOString(),
+                    read: false
+                  });
+                }
               }}>
                 <span className="sos-icon">🆘</span>
                 <span className="sos-text">SOS</span>
-                <span className="sos-sub">Emergency Alert</span>
+                <span className="sos-sub">Tap for Emergency</span>
               </div>
+
               <div className="emergency-numbers">
-                <button onClick={() => window.location.href = 'tel:119'}>👮 Police 119</button>
-                <button onClick={() => window.location.href = 'tel:1990'}>🚑 Ambulance 1990</button>
-                <button onClick={() => window.location.href = 'tel:110'}>🔥 Fire 110</button>
+                <button className="emergency-btn police" onClick={() => window.location.href = 'tel:119'}>
+                  <span className="btn-icon">👮</span>
+                  <div className="btn-text">
+                    <span className="btn-title">Police</span>
+                    <span className="btn-number">119</span>
+                  </div>
+                </button>
+                <button className="emergency-btn ambulance" onClick={() => window.location.href = 'tel:1990'}>
+                  <span className="btn-icon">🚑</span>
+                  <div className="btn-text">
+                    <span className="btn-title">Ambulance</span>
+                    <span className="btn-number">1990</span>
+                  </div>
+                </button>
+                <button className="emergency-btn fire" onClick={() => window.location.href = 'tel:110'}>
+                  <span className="btn-icon">🔥</span>
+                  <div className="btn-text">
+                    <span className="btn-title">Fire Brigade</span>
+                    <span className="btn-number">110</span>
+                  </div>
+                </button>
+              </div>
+
+              <div className="emergency-instructions">
+                <h4>⚠️ Emergency Instructions</h4>
+                <ul>
+                  <li>🔴 <strong>Red Flashing Screen</strong> = Emergency detected or SOS activated</li>
+                  <li>📳 <strong>Phone Vibration</strong> = Alert being sent to your contacts</li>
+                  <li>👥 <strong>Emergency Contacts</strong> = Will receive WhatsApp/SMS alerts</li>
+                  <li>📍 <strong>Live Location</strong> = Automatically shared with emergency contacts</li>
+                </ul>
               </div>
             </div>
           )}
+
+          {/* ACCESSIBILITY SETTINGS */}
           {activeTab === 'settings' && (
             <AccessibilitySettings 
               onThemeChange={handleThemeChange}
@@ -376,14 +527,18 @@ function App() {
         </main>
       </div>
 
+      {/* Toast Notification */}
       {toastMessage.show && (
         <div className={`toast-message ${toastMessage.type}`}>
           {toastMessage.message}
         </div>
       )}
 
+      {/* Mobile Menu Button */}
       {!sidebarVisible && window.innerWidth <= 1024 && (
-        <button className="mobile-menu-btn" onClick={() => setSidebarVisible(true)}>☰</button>
+        <button className="mobile-menu-btn" onClick={() => setSidebarVisible(true)}>
+          ☰
+        </button>
       )}
     </div>
   );
