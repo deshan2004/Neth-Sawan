@@ -323,10 +323,22 @@ function App() {
         />
 
         <main className="main-content">
-          {/* DASHBOARD - Main View */}
+          {/* DASHBOARD - Main View with Live Transcript at TOP */}
           {activeTab === 'dashboard' && (
             <>
-              {/* Top Row: Sound Alert + Road Safety + Sign Language */}
+              {/* LIVE TRANSCRIPT - TOP SECTION (Most Important for Deaf Users) */}
+              <div className="dashboard-transcript-top">
+                <TranscriptBox 
+                  transcript={transcript} 
+                  isListening={isListening}
+                  startListening={startListening}
+                  stopListening={stopListening}
+                  clearTranscript={clearTranscript}
+                  error={speechError}
+                />
+              </div>
+
+              {/* Second Row: Sound Alert + Road Safety */}
               <div className="dashboard-primary">
                 <VisualAlert 
                   isLoud={isLoud} 
@@ -364,21 +376,9 @@ function App() {
                 />
               </div>
 
-              {/* Second Row: Sign Language Translation */}
+              {/* Third Row: Sign Language Translation */}
               <div className="dashboard-sign-row">
                 <SignLanguageBox transcript={transcript} />
-              </div>
-
-              {/* Third Row: Live Transcript */}
-              <div className="dashboard-transcript">
-                <TranscriptBox 
-                  transcript={transcript} 
-                  isListening={isListening}
-                  startListening={startListening}
-                  stopListening={stopListening}
-                  clearTranscript={clearTranscript}
-                  error={speechError}
-                />
               </div>
 
               {/* Bottom Row: Sound Visualizer + Recent History */}
@@ -458,7 +458,6 @@ function App() {
                 setTimeout(() => setFlashEmergency(false), 8000);
                 showToast('🚨 SOS Activated! Screen flashing for attention', 'error');
                 
-                // Vibrate for SOS
                 if (navigator.vibrate) {
                   navigator.vibrate([500, 200, 500, 200, 500, 200, 1000]);
                 }
