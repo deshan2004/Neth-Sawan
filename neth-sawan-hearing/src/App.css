@@ -3615,4 +3615,69 @@ body {
     flex-direction: column;
     text-align: center;
   }
+}/* Mobile Warning */
+.mobile-warning {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(245, 200, 66, 0.1);
+  border-left: 3px solid var(--gold);
+  margin: 12px 20px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.mobile-warning span:first-child {
+  font-size: 24px;
+}
+
+.mobile-warning strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.mobile-warning small {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* Enhanced responsive */
+@media (max-width: 768px) {
+  .transcript-text {
+    font-size: 16px !important;
+  }
+  
+  .btn-text {
+    font-size: 13px;
+  }
+  
+  .tips-list span {
+    font-size: 10px;
+  }
+  
+  .mobile-warning {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .btn-start, .btn-stop {
+    padding: 14px 16px;
+  }
+  
+  .btn-hint {
+    display: none;
+  }
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .btn-start, .btn-stop {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .transcript-content {
+    -webkit-overflow-scrolling: touch;
+  }
 }

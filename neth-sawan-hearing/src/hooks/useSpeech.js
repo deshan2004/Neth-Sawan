@@ -8,6 +8,13 @@ export const useSpeech = (initialLang = 'si-LK') => {
   const recognitionRef = useRef(null);
   const listeningRef = useRef(false);
   const [supported, setSupported] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile
+  useEffect(() => {
+    const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    setIsMobile(mobile);
+  }, []);
 
   const SpeechRecognition = 
     typeof window !== 'undefined'
@@ -17,7 +24,7 @@ export const useSpeech = (initialLang = 'si-LK') => {
   useEffect(() => {
     if (!SpeechRecognition) {
       setSupported(false);
-      setError('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      setError('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari on iOS 14.3+');
     }
   }, [SpeechRecognition]);
 
@@ -30,6 +37,11 @@ export const useSpeech = (initialLang = 'si-LK') => {
       rec.interimResults = true;
       rec.lang = language;
       rec.maxAlternatives = 1;
+      
+      // Mobile-specific settings
+      if (isMobile) {
+        rec.continuous = false; // Some mobile browsers work better with continuous=false
+      }
 
       rec.onresult = (event) => {
         let current = '';
@@ -46,10 +58,15 @@ export const useSpeech = (initialLang = 'si-LK') => {
       rec.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
         
-        if (event.error === 'no-speech') return;
+        if (event.error === 'no-speech') {
+          if (isMobile) {
+            setError('No speech detected. Please speak into the microphone.');
+          }
+          return;
+        }
         
         if (event.error === 'not-allowed') {
-          setError('Microphone access denied. Please allow microphone permission and refresh the page.');
+          setError('Microphone access denied. Please allow microphone permission in your browser settings.');
         } else if (event.error === 'audio-capture') {
           setError('No microphone found. Please connect a microphone and try again.');
         } else if (event.error === 'network') {
@@ -66,15 +83,18 @@ export const useSpeech = (initialLang = 'si-LK') => {
 
       rec.onend = () => {
         if (listeningRef.current) {
-          setTimeout(() => {
-            if (listeningRef.current && recognitionRef.current) {
-              try {
-                recognitionRef.current.start();
-              } catch (e) {
-                console.log('Auto-restart failed:', e);
+          // For mobile, don't auto-restart as it can cause issues
+          if (!isMobile) {
+            setTimeout(() => {
+              if (listeningRef.current && recognitionRef.current) {
+                try {
+                  recognitionRef.current.start();
+                } catch (e) {
+                  console.log('Auto-restart failed:', e);
+                }
               }
-            }
-          }, 100);
+            }, 100);
+          }
         } else {
           setIsListening(false);
         }
@@ -92,7 +112,7 @@ export const useSpeech = (initialLang = 'si-LK') => {
       setError('Failed to initialize speech recognition.');
       return null;
     }
-  }, [SpeechRecognition]);
+  }, [SpeechRecognition, isMobile]);
 
   useEffect(() => {
     if (!SpeechRecognition) return;
@@ -123,6 +143,7 @@ export const useSpeech = (initialLang = 'si-LK') => {
 
     if (listeningRef.current) return;
 
+    // Request microphone permission first
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => track.stop());

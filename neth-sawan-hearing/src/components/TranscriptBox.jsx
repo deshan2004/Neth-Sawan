@@ -12,6 +12,17 @@ const TranscriptBox = ({
   const [copySuccess, setCopySuccess] = useState(false);
   const [fontSize, setFontSize] = useState(16);
   const [showBraille, setShowBraille] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [micPermission, setMicPermission] = useState(null);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+    };
+    checkMobile();
+  }, []);
 
   // Auto-scroll to bottom when new text arrives
   useEffect(() => {
@@ -19,6 +30,25 @@ const TranscriptBox = ({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [transcript]);
+
+  // Check microphone permission on mobile
+  const checkMicrophonePermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      setMicPermission('granted');
+      return true;
+    } catch (err) {
+      if (err.name === 'NotAllowedError') {
+        setMicPermission('denied');
+      } else if (err.name === 'NotFoundError') {
+        setMicPermission('notfound');
+      } else {
+        setMicPermission('error');
+      }
+      return false;
+    }
+  };
 
   // Copy transcript to clipboard
   const copyToClipboard = async () => {
@@ -30,6 +60,27 @@ const TranscriptBox = ({
     } catch (err) {
       console.error('Failed to copy:', err);
     }
+  };
+
+  // Enhanced start listening for mobile
+  const handleStartListening = async () => {
+    // On mobile, request permission first
+    if (isMobile) {
+      const hasPermission = await checkMicrophonePermission();
+      if (!hasPermission) {
+        if (micPermission === 'denied') {
+          alert('Microphone access is blocked. Please enable it in your browser settings.');
+        } else if (micPermission === 'notfound') {
+          alert('No microphone found on your device.');
+        } else {
+          alert('Please allow microphone access to use speech recognition.');
+        }
+        return;
+      }
+    }
+    
+    // Call the parent startListening
+    await startListening();
   };
 
   // Braille conversion (Grade 1 Braille for English letters)
@@ -109,7 +160,7 @@ const TranscriptBox = ({
             
             {/* Word Count */}
             <div className="transcript-stats">
-              <span>📊 {transcript.split(/\s+/).length} words</span>
+              <span>📊 {transcript.split(/\s+/).filter(w => w.trim()).length} words</span>
               <span>🔤 {transcript.length} characters</span>
             </div>
           </div>
@@ -119,7 +170,9 @@ const TranscriptBox = ({
             <p className="placeholder-text">
               {isListening
                 ? 'Listening... Speak clearly and the text will appear here'
-                : 'Press "Start Listening" below, then speak to see captions'}
+                : isMobile 
+                  ? 'Tap "Start Listening" and speak into your phone\'s microphone'
+                  : 'Press "Start Listening" below, then speak to see captions'}
             </p>
             <div className="example-phrases">
               <small>Try saying: "Hello, how are you?" or "I need help please"</small>
@@ -127,6 +180,17 @@ const TranscriptBox = ({
           </div>
         )}
       </div>
+
+      {/* Mobile Warning / Info */}
+      {isMobile && !isListening && !transcript && micPermission !== 'granted' && (
+        <div className="mobile-warning">
+          <span>📱</span>
+          <div>
+            <strong>Mobile Microphone Required</strong>
+            <small>When you tap "Start Listening", your browser will ask for microphone permission. Please allow it for speech recognition to work.</small>
+          </div>
+        </div>
+      )}
 
       {/* Braille Display */}
       {showBraille && transcript && (
@@ -177,7 +241,7 @@ const TranscriptBox = ({
       {/* Control Buttons */}
       <div className="transcript-controls">
         {!isListening ? (
-          <button className="btn-start" onClick={startListening}>
+          <button className="btn-start" onClick={handleStartListening}>
             <span className="btn-icon">🎤</span>
             <span className="btn-text">Start Listening</span>
             <span className="btn-hint">Microphone required</span>
@@ -230,8 +294,8 @@ const TranscriptBox = ({
           <div className="tips-list">
             <span>• Speak clearly and at a normal pace</span>
             <span>• Reduce background noise</span>
-            <span>• Use a good quality microphone</span>
-            <span>• Speak close to the microphone</span>
+            <span>• Hold phone closer to your mouth</span>
+            <span>• Speak in short phrases</span>
           </div>
         </div>
       )}
