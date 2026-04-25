@@ -76,101 +76,19 @@ export const useNotifications = () => {
     return cleaned.replace('+', '');
   };
 
-  const buildBeautifulMessage = (data, relative) => {
-    const time = new Date(data.timestamp || new Date()).toLocaleTimeString('en-LK', {
-      hour: '2-digit', minute: '2-digit', hour12: true
-    });
-    const date = new Date(data.timestamp || new Date()).toLocaleDateString('en-LK', {
-      day: 'numeric', month: 'long', year: 'numeric'
-    });
-    
-    let msg = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
-    msg += `─────────────────────────────────────\n`;
-    msg += `*To:* ${relative.name}\n`;
-    msg += `*From:* Neth-Sawan Emergency System\n`;
-    msg += `─────────────────────────────────────\n\n`;
-    msg += `⚠️ *Emergency Detected:* ${data.soundType || 'Emergency button pressed'}\n`;
-    msg += `📅 *Date:* ${date}\n`;
-    msg += `⏰ *Time:* ${time}\n`;
-    msg += `📝 *Message:* ${data.message || 'Immediate assistance may be needed.'}\n\n`;
-    
-    if (data.location) {
-      msg += `📍 *Location:*\n`;
-      msg += `https://www.google.com/maps?q=${data.location.lat},${data.location.lng}\n\n`;
-    }
-    
-    msg += `─────────────────────────────────────\n`;
-    msg += `⚠️ *URGENT: Please respond as soon as possible* ⚠️\n`;
-    msg += `─────────────────────────────────────\n\n`;
-    msg += `_This is an automated emergency alert from Neth-Sawan Hearing Assistant._`;
-    
-    return msg;
-  };
-
-  const buildSimpleMessage = (data, relative) => {
-    const time = new Date(data.timestamp || new Date()).toLocaleTimeString('en-LK', {
-      hour: '2-digit', minute: '2-digit', hour12: true
-    });
-    
-    let msg = `EMERGENCY ALERT - Neth-Sawan\n`;
-    msg += `To: ${relative.name}\n`;
-    msg += `Detected: ${data.soundType || 'Emergency button pressed'}\n`;
-    msg += `Time: ${time}\n`;
-    msg += `Message: ${data.message || 'Immediate assistance needed!'}`;
-    
-    if (data.location) {
-      msg += `\nLocation: https://www.google.com/maps?q=${data.location.lat},${data.location.lng}`;
-    }
-    
-    return msg;
-  };
-
-  const autoSendWhatsApp = useCallback(async (relative, emergencyData) => {
-    if (!relative.autoSendWhatsApp || !relative.phone) return false;
-    
-    const message = buildBeautifulMessage(emergencyData, relative);
-    const phoneNumber = formatPhoneForWhatsApp(relative.phone);
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    
-    setAutoSendStatus(prev => ({ ...prev, [relative.id]: 'sending' }));
-    
-    try {
-      window.open(url, '_blank', 'noopener,noreferrer');
-      
-      if (Notification.permission === 'granted') {
-        new Notification(`WhatsApp Sent to ${relative.name}`, {
-          body: `Emergency alert has been sent via WhatsApp`,
-          icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670051.png'
-        });
-      }
-      
-      setAutoSendStatus(prev => ({ ...prev, [relative.id]: 'sent' }));
-      
-      setTimeout(() => {
-        setAutoSendStatus(prev => ({ ...prev, [relative.id]: null }));
-      }, 3000);
-      
-      return true;
-    } catch (error) {
-      console.error('Auto WhatsApp send failed:', error);
-      setAutoSendStatus(prev => ({ ...prev, [relative.id]: 'failed' }));
-      return false;
-    }
-  }, []);
-
   const openWhatsApp = useCallback((relative, emergencyData) => {
     if (!relative.phone) return;
-    const message = buildBeautifulMessage(emergencyData, relative);
+    const time = new Date().toLocaleTimeString();
+    const message = `🚨 EMERGENCY ALERT\nDetected: ${emergencyData.soundType}\nTime: ${time}\nMessage: ${emergencyData.message || 'Immediate assistance needed!'}`;
     const phoneNumber = formatPhoneForWhatsApp(relative.phone);
     const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(url, '_blank');
   }, []);
 
   const openSMS = useCallback((relative, emergencyData) => {
     if (!relative.phone) return;
-    const message = buildSimpleMessage(emergencyData, relative);
-    const url = `sms:${relative.phone}?body=${encodeURIComponent(message)}`;
-    window.location.href = url;
+    const message = `EMERGENCY ALERT: ${emergencyData.soundType} - ${emergencyData.message || 'Immediate assistance needed!'}`;
+    window.location.href = `sms:${relative.phone}?body=${encodeURIComponent(message)}`;
   }, []);
 
   const makeCall = useCallback((relative) => {
@@ -181,26 +99,14 @@ export const useNotifications = () => {
   const sendDesktopNotification = (title, body, tag) => {
     if (permission !== 'granted') return;
     try {
-      const n = new Notification(title, {
-        body,
-        tag,
-        renotify: true,
-        requireInteraction: true,
-        silent: false,
-        vibrate: [300, 100, 300],
-      });
+      const n = new Notification(title, { body, tag, requireInteraction: true });
       n.onclick = () => { window.focus(); n.close(); };
       setTimeout(() => n.close(), 30000);
     } catch {}
   };
 
   const notifyRelatives = useCallback(async (emergencyData) => {
-    const {
-      message = 'Emergency detected',
-      soundType = '',
-      volume = 0,
-      timestamp = new Date(),
-    } = emergencyData;
+    const { message = 'Emergency detected', soundType = '', volume = 0, timestamp = new Date() } = emergencyData;
 
     let location = null;
     try {
@@ -225,20 +131,12 @@ export const useNotifications = () => {
 
     for (const relative of relatives) {
       if (relative.notifyByDesktop && permission === 'granted') {
-        sendDesktopNotification(
-          `🚨 EMERGENCY — ${relative.name}`,
-          `${message}\nDetected: ${soundType}\n${new Date(timestamp).toLocaleTimeString()}`,
-          `emg-${notification.id}-${relative.id}`
-        );
-      }
-
-      if (relative.autoSendWhatsApp && relative.notifyByWhatsApp) {
-        await autoSendWhatsApp(relative, { ...emergencyData, location, timestamp });
+        sendDesktopNotification(`🚨 EMERGENCY`, `${message}\nDetected: ${soundType}`, `emg-${notification.id}`);
       }
     }
 
-    return { notification, location, relatives };
-  }, [permission, relatives, autoSendWhatsApp]);
+    return { notification, location };
+  }, [permission, relatives]);
 
   const markAsRead = useCallback((id) => {
     setNotificationQueue(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));

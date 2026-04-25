@@ -1,23 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export const useSpeech = (initialLang = 'si-LK') => {
+export const useSpeech = (initialLang = 'en-US') => {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [lang, setLangState] = useState(initialLang);
   const [error, setError] = useState('');
+  const [isSupported, setIsSupported] = useState(true);
   const recognitionRef = useRef(null);
   const listeningRef = useRef(false);
-  const [supported, setSupported] = useState(true);
+  const restartAttempts = useRef(0);
 
-  const SpeechRecognition = 
-    typeof window !== 'undefined'
-      ? window.SpeechRecognition || window.webkitSpeechRecognition
-      : null;
+  const SpeechRecognition = typeof window !== 'undefined' 
+    ? (window.SpeechRecognition || window.webkitSpeechRecognition)
+    : null;
 
   useEffect(() => {
     if (!SpeechRecognition) {
-      setSupported(false);
-      setError('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      setIsSupported(false);
+      setError('Speech recognition is not supported in this browser. Please use Chrome, Safari, or Edge.');
     }
   }, [SpeechRecognition]);
 
@@ -25,68 +25,97 @@ export const useSpeech = (initialLang = 'si-LK') => {
     if (!SpeechRecognition) return null;
 
     try {
-      const rec = new SpeechRecognition();
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.lang = language;
-      rec.maxAlternatives = 1;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = language;
+      recognition.maxAlternatives = 1;
 
-      rec.onresult = (event) => {
-        let current = '';
-        for (let i = 0; i < event.results.length; i++) {
+      recognition.onresult = (event) => {
+        let currentTranscript = '';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcriptPart = event.results[i][0].transcript;
+          
           if (event.results[i].isFinal) {
-            current += event.results[i][0].transcript;
+            currentTranscript += transcriptPart + ' ';
           } else {
-            current += event.results[i][0].transcript;
+            interimTranscript += transcriptPart;
           }
         }
-        setTranscript(current);
-      };
-
-      rec.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
         
-        if (event.error === 'no-speech') return;
-        
-        if (event.error === 'not-allowed') {
-          setError('Microphone access denied. Please allow microphone permission and refresh the page.');
-        } else if (event.error === 'audio-capture') {
-          setError('No microphone found. Please connect a microphone and try again.');
-        } else if (event.error === 'network') {
-          setError('Network error. Please check your internet connection.');
-        } else if (event.error === 'aborted') {
-          return;
-        } else {
-          setError(`Speech error: ${event.error}`);
+        if (interimTranscript) {
+          setTranscript(prev => {
+            const lastSpaceIndex = prev.lastIndexOf(' ');
+            const baseText = lastSpaceIndex > 0 ? prev.substring(0, lastSpaceIndex + 1) : '';
+            return baseText + interimTranscript;
+          });
         }
         
-        setIsListening(false);
-        listeningRef.current = false;
+        if (currentTranscript) {
+          setTranscript(prev => prev + currentTranscript);
+        }
       };
 
-      rec.onend = () => {
-        if (listeningRef.current) {
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        
+        let errorMessage = '';
+        switch(event.error) {
+          case 'not-allowed':
+            errorMessage = '🎤 Microphone access denied. Please allow microphone permission.';
+            break;
+          case 'audio-capture':
+            errorMessage = '🎤 No microphone found. Please check your device.';
+            break;
+          case 'no-speech':
+            return;
+          case 'network':
+            errorMessage = '🌐 Network error. Please check your connection.';
+            break;
+          default:
+            errorMessage = `Speech error: ${event.error}`;
+        }
+        
+        setError(errorMessage);
+        
+        if (event.error !== 'not-allowed' && listeningRef.current) {
           setTimeout(() => {
             if (listeningRef.current && recognitionRef.current) {
               try {
                 recognitionRef.current.start();
-              } catch (e) {
-                console.log('Auto-restart failed:', e);
-              }
+              } catch (e) {}
             }
-          }, 100);
+          }, 1000);
         } else {
+          setIsListening(false);
+          listeningRef.current = false;
+        }
+      };
+
+      recognition.onend = () => {
+        if (listeningRef.current && restartAttempts.current < 5) {
+          restartAttempts.current++;
+          setTimeout(() => {
+            if (listeningRef.current && recognitionRef.current) {
+              try {
+                recognitionRef.current.start();
+              } catch (e) {}
+            }
+          }, 500);
+        } else if (!listeningRef.current) {
           setIsListening(false);
         }
       };
 
-      rec.onstart = () => {
-        console.log('Speech recognition started');
+      recognition.onstart = () => {
         setError('');
         setIsListening(true);
+        restartAttempts.current = 0;
       };
 
-      return rec;
+      return recognition;
     } catch (err) {
       console.error('Failed to create recognition:', err);
       setError('Failed to initialize speech recognition.');
@@ -98,7 +127,9 @@ export const useSpeech = (initialLang = 'si-LK') => {
     if (!SpeechRecognition) return;
 
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch(e) {}
+      try {
+        recognitionRef.current.stop();
+      } catch(e) {}
     }
 
     const newRecognition = createRecognition(lang);
@@ -108,7 +139,9 @@ export const useSpeech = (initialLang = 'si-LK') => {
 
     return () => {
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch(e) {}
+        try {
+          recognitionRef.current.stop();
+        } catch(e) {}
       }
     };
   }, [lang, createRecognition, SpeechRecognition]);
@@ -117,7 +150,7 @@ export const useSpeech = (initialLang = 'si-LK') => {
     setError('');
     
     if (!SpeechRecognition) {
-      setError('Speech recognition is not supported in this browser.');
+      setError('Speech recognition is not supported.');
       return;
     }
 
@@ -127,13 +160,12 @@ export const useSpeech = (initialLang = 'si-LK') => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => track.stop());
     } catch (err) {
-      console.error('Microphone permission error:', err);
       if (err.name === 'NotAllowedError') {
-        setError('Microphone access denied. Please click the microphone icon in your browser address bar and allow access.');
+        setError('🎤 Please allow microphone access to use speech recognition.');
       } else if (err.name === 'NotFoundError') {
-        setError('No microphone found on your device.');
+        setError('🎤 No microphone found on your device.');
       } else {
-        setError('Could not access microphone. Please check your permissions.');
+        setError('🎤 Could not access microphone.');
       }
       return;
     }
@@ -152,8 +184,7 @@ export const useSpeech = (initialLang = 'si-LK') => {
       listeningRef.current = true;
       setIsListening(true);
     } catch (e) {
-      console.error('Start listening error:', e);
-      if (e.message === 'start called multiple times') {
+      if (e.message === 'start called multiple times' || e.name === 'InvalidStateError') {
         try {
           recognitionRef.current.stop();
           setTimeout(() => {
@@ -164,28 +195,31 @@ export const useSpeech = (initialLang = 'si-LK') => {
             }
           }, 200);
         } catch (err) {
-          setError('Failed to start speech recognition. Please refresh the page.');
+          setError('Failed to restart speech recognition.');
         }
       } else {
-        setError('Failed to start speech recognition. Please refresh the page and try again.');
+        setError('Failed to start speech recognition. Please refresh.');
       }
     }
   }, [SpeechRecognition, lang, createRecognition]);
 
   const stopListening = useCallback(() => {
     if (!recognitionRef.current) return;
+    
     try {
       listeningRef.current = false;
       recognitionRef.current.stop();
       setIsListening(false);
+      restartAttempts.current = 0;
     } catch (e) {
-      console.error('Stop listening error:', e);
       listeningRef.current = false;
       setIsListening(false);
     }
   }, []);
 
-  const clearTranscript = useCallback(() => setTranscript(''), []);
+  const clearTranscript = useCallback(() => {
+    setTranscript('');
+  }, []);
 
   const setLang = useCallback((newLang) => {
     setLangState(newLang);
@@ -200,6 +234,6 @@ export const useSpeech = (initialLang = 'si-LK') => {
     setLang,
     lang,
     error,
-    supported,
+    supported: isSupported,
   };
 };
