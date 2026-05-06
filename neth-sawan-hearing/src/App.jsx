@@ -40,6 +40,13 @@ function App() {
   const [emergencyData, setEmergencyData] = useState(null);
   const [roadSafetyActive, setRoadSafetyActive] = useState(false);
   
+  // NEW: Emergency Notifications Toggle
+  const [emergencyNotificationsEnabled, setEmergencyNotificationsEnabled] = useState(() => {
+    // Load from localStorage
+    const saved = localStorage.getItem('emergency_notifications_enabled');
+    return saved !== null ? saved === 'true' : true; // Default: enabled
+  });
+  
   // Accessibility States
   const [currentTheme, setCurrentTheme] = useState('default');
   const [currentFontSize, setCurrentFontSize] = useState(16);
@@ -57,6 +64,11 @@ function App() {
   const [guestRelatives, setGuestRelatives] = useState([]);
   const [guestNotifications, setGuestNotifications] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
+
+  // Save emergency notifications toggle to localStorage
+  useEffect(() => {
+    localStorage.setItem('emergency_notifications_enabled', emergencyNotificationsEnabled);
+  }, [emergencyNotificationsEnabled]);
 
   // Apply accessibility settings on load
   useEffect(() => {
@@ -105,30 +117,38 @@ function App() {
     }
   }, [isGuest]);
 
-  // Emergency flash on loud sound
+  // Emergency flash on loud sound - CHECK if notifications are enabled
   useEffect(() => {
     if (isLoud && soundType && !roadSafetyActive) {
-      setFlashEmergency(true);
-      setEmergencyData({ 
-        soundType, 
-        message: `Emergency: ${soundType}`, 
-        timestamp: new Date(), 
-        volume 
-      });
-      if (isGuest) {
-        guestAddNotification({
-          id: Date.now(),
-          type: 'EMERGENCY',
-          message: `Emergency: ${soundType}`,
-          soundType,
-          timestamp: new Date().toISOString(),
-          read: false,
-          volume
+      // Only show emergency if notifications are enabled
+      if (emergencyNotificationsEnabled) {
+        setFlashEmergency(true);
+        setEmergencyData({ 
+          soundType, 
+          message: `Emergency: ${soundType}`, 
+          timestamp: new Date(), 
+          volume 
         });
+        
+        if (isGuest) {
+          guestAddNotification({
+            id: Date.now(),
+            type: 'EMERGENCY',
+            message: `Emergency: ${soundType}`,
+            soundType,
+            timestamp: new Date().toISOString(),
+            read: false,
+            volume
+          });
+        }
+        
+        setTimeout(() => setFlashEmergency(false), 3000);
+      } else {
+        // Log that emergency was suppressed
+        console.log('Emergency notification suppressed - notifications disabled');
       }
-      setTimeout(() => setFlashEmergency(false), 3000);
     }
-  }, [isLoud, soundType, roadSafetyActive]);
+  }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled]);
 
   // Save sound history for guest
   useEffect(() => {
@@ -183,6 +203,16 @@ function App() {
 
   const handleFontSizeChange = (size) => {
     setCurrentFontSize(size);
+  };
+
+  // Toggle emergency notifications
+  const toggleEmergencyNotifications = () => {
+    const newState = !emergencyNotificationsEnabled;
+    setEmergencyNotificationsEnabled(newState);
+    showToast(
+      newState ? 'Emergency notifications enabled' : 'Emergency notifications disabled',
+      newState ? 'success' : 'info'
+    );
   };
 
   // Guest mode handlers
@@ -295,8 +325,8 @@ function App() {
         </defs>
       </svg>
 
-      {/* Emergency Flash Overlay */}
-      <EmergencyFlash isVisible={flashEmergency} emergencyData={emergencyData} />
+      {/* Emergency Flash Overlay - Only shows if notifications enabled */}
+      <EmergencyFlash isVisible={flashEmergency && emergencyNotificationsEnabled} emergencyData={emergencyData} />
 
       {/* Sidebar */}
       <Sidebar 
@@ -307,6 +337,8 @@ function App() {
         user={user}
         isGuest={isGuest}
         onLogout={isGuest ? handleSignOutGuest : handleLogout}
+        emergencyNotificationsEnabled={emergencyNotificationsEnabled}
+        onToggleEmergencyNotifications={toggleEmergencyNotifications}
       />
 
       {/* Main Content Area */}
@@ -320,6 +352,8 @@ function App() {
           isGuest={isGuest}
           roadSafetyActive={roadSafetyActive}
           setRoadSafetyActive={setRoadSafetyActive}
+          emergencyNotificationsEnabled={emergencyNotificationsEnabled}
+          onToggleEmergencyNotifications={toggleEmergencyNotifications}
         />
 
         <main className="main-content">
@@ -338,10 +372,24 @@ function App() {
                 />
               </div>
 
+              {/* Emergency Notifications Status Banner */}
+              {!emergencyNotificationsEnabled && (
+                <div className="notifications-disabled-banner">
+                  <span className="banner-icon">🔕</span>
+                  <div className="banner-content">
+                    <strong>Emergency Notifications are DISABLED</strong>
+                    <p>You won't receive visual alerts or emergency flashes. Enable them in settings or click the bell icon.</p>
+                  </div>
+                  <button onClick={toggleEmergencyNotifications} className="banner-enable-btn">
+                    Enable Now
+                  </button>
+                </div>
+              )}
+
               {/* Second Row: Sound Alert + Road Safety */}
               <div className="dashboard-primary">
                 <VisualAlert 
-                  isLoud={isLoud} 
+                  isLoud={isLoud && emergencyNotificationsEnabled} 
                   soundType={soundType} 
                   volume={volume}
                   threshold={threshold}
@@ -351,25 +399,29 @@ function App() {
                 <RoadSafetyMonitor 
                   isActive={roadSafetyActive}
                   onAlert={(alert) => {
-                    showToast(alert.description, 'error');
-                    setFlashEmergency(true);
-                    setEmergencyData({
-                      soundType: alert.name,
-                      message: alert.description,
-                      timestamp: new Date(),
-                      volume: alert.volume
-                    });
-                    setTimeout(() => setFlashEmergency(false), 5000);
-                    
-                    if (isGuest) {
-                      guestAddNotification({
-                        id: Date.now(),
-                        type: 'ROAD_SAFETY',
-                        message: alert.description,
+                    if (emergencyNotificationsEnabled) {
+                      showToast(alert.description, 'error');
+                      setFlashEmergency(true);
+                      setEmergencyData({
                         soundType: alert.name,
-                        timestamp: new Date().toISOString(),
-                        read: false
+                        message: alert.description,
+                        timestamp: new Date(),
+                        volume: alert.volume
                       });
+                      setTimeout(() => setFlashEmergency(false), 5000);
+                      
+                      if (isGuest) {
+                        guestAddNotification({
+                          id: Date.now(),
+                          type: 'ROAD_SAFETY',
+                          message: alert.description,
+                          soundType: alert.name,
+                          timestamp: new Date().toISOString(),
+                          read: false
+                        });
+                      }
+                    } else {
+                      console.log('Road safety alert suppressed - notifications disabled');
                     }
                   }}
                   showToast={showToast}
@@ -449,28 +501,32 @@ function App() {
               </div>
               
               <div className="sos-button-large" onClick={() => {
-                setFlashEmergency(true);
-                setEmergencyData({ 
-                  soundType: 'SOS', 
-                  message: 'Manual SOS Triggered - Get Help Now!', 
-                  timestamp: new Date() 
-                });
-                setTimeout(() => setFlashEmergency(false), 8000);
-                showToast('🚨 SOS Activated! Screen flashing for attention', 'error');
-                
-                if (navigator.vibrate) {
-                  navigator.vibrate([500, 200, 500, 200, 500, 200, 1000]);
-                }
-                
-                if (isGuest) {
-                  guestAddNotification({
-                    id: Date.now(),
-                    type: 'SOS',
-                    message: 'Manual SOS Emergency Triggered',
-                    soundType: 'SOS ALERT',
-                    timestamp: new Date().toISOString(),
-                    read: false
+                if (emergencyNotificationsEnabled) {
+                  setFlashEmergency(true);
+                  setEmergencyData({ 
+                    soundType: 'SOS', 
+                    message: 'Manual SOS Triggered - Get Help Now!', 
+                    timestamp: new Date() 
                   });
+                  setTimeout(() => setFlashEmergency(false), 8000);
+                  showToast('🚨 SOS Activated! Screen flashing for attention', 'error');
+                  
+                  if (navigator.vibrate) {
+                    navigator.vibrate([500, 200, 500, 200, 500, 200, 1000]);
+                  }
+                  
+                  if (isGuest) {
+                    guestAddNotification({
+                      id: Date.now(),
+                      type: 'SOS',
+                      message: 'Manual SOS Emergency Triggered',
+                      soundType: 'SOS ALERT',
+                      timestamp: new Date().toISOString(),
+                      read: false
+                    });
+                  }
+                } else {
+                  showToast('Emergency notifications are disabled. Please enable them first.', 'warning');
                 }
               }}>
                 <span className="sos-icon">🆘</span>
@@ -509,6 +565,7 @@ function App() {
                   <li>📳 <strong>Phone Vibration</strong> = Alert being sent to your contacts</li>
                   <li>👥 <strong>Emergency Contacts</strong> = Will receive WhatsApp/SMS alerts</li>
                   <li>📍 <strong>Live Location</strong> = Automatically shared with emergency contacts</li>
+                  <li>🔕 <strong>Notification Toggle</strong> = Disable alerts when needed (top of screen)</li>
                 </ul>
               </div>
             </div>

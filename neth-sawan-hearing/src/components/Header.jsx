@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Header = ({ isListening, lang, setLang, showToast, user, isGuest, roadSafetyActive, setRoadSafetyActive }) => {
+const Header = ({ isListening, lang, setLang, showToast, user, isGuest, roadSafetyActive, setRoadSafetyActive, emergencyNotificationsEnabled, onToggleEmergencyNotifications }) => {
     return (
         <header className="app-header">
             <div className="logo-section">
@@ -29,6 +29,21 @@ const Header = ({ isListening, lang, setLang, showToast, user, isGuest, roadSafe
             </div>
             
             <div className="header-right">
+                {/* NEW: Emergency Notifications Toggle Button */}
+                <button 
+                    className={`emergency-toggle ${emergencyNotificationsEnabled ? 'enabled' : 'disabled'}`}
+                    onClick={onToggleEmergencyNotifications}
+                    title={emergencyNotificationsEnabled ? 'Emergency notifications ON - Click to disable' : 'Emergency notifications OFF - Click to enable'}
+                >
+                    <span className="toggle-icon">
+                        {emergencyNotificationsEnabled ? '🔔' : '🔕'}
+                    </span>
+                    <span className="toggle-text">
+                        {emergencyNotificationsEnabled ? 'Alerts ON' : 'Alerts OFF'}
+                    </span>
+                    <span className={`toggle-status ${emergencyNotificationsEnabled ? 'active' : ''}`}></span>
+                </button>
+
                 {/* Road Safety Toggle Button */}
                 <button 
                     className={`road-safety-toggle ${roadSafetyActive ? 'active' : ''}`}
@@ -65,6 +80,73 @@ const Header = ({ isListening, lang, setLang, showToast, user, isGuest, roadSafe
             </div>
 
             <style>{`
+                /* Emergency Toggle Button */
+                .emergency-toggle {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 6px 14px;
+                    background: var(--bg-card);
+                    border: 1px solid var(--border-subtle);
+                    border-radius: 30px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                
+                .emergency-toggle.enabled {
+                    background: rgba(0, 221, 179, 0.15);
+                    border-color: var(--teal);
+                }
+                
+                .emergency-toggle.disabled {
+                    background: rgba(255, 51, 85, 0.1);
+                    border-color: var(--red);
+                }
+                
+                .emergency-toggle:hover {
+                    transform: translateY(-1px);
+                }
+                
+                .toggle-icon {
+                    font-size: 16px;
+                }
+                
+                .toggle-text {
+                    font-size: 11px;
+                    font-weight: 600;
+                }
+                
+                .emergency-toggle.enabled .toggle-text {
+                    color: var(--teal);
+                }
+                
+                .emergency-toggle.disabled .toggle-text {
+                    color: var(--red);
+                }
+                
+                .toggle-status {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: var(--text-secondary);
+                    transition: all 0.2s;
+                }
+                
+                .toggle-status.active {
+                    background: var(--teal);
+                    animation: pulse 1s infinite;
+                }
+                
+                .emergency-toggle.disabled .toggle-status {
+                    background: var(--red);
+                }
+                
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.4; transform: scale(0.8); }
+                }
+                
+                /* Road Safety Toggle */
                 .road-safety-toggle {
                     display: flex;
                     align-items: center;
@@ -88,19 +170,6 @@ const Header = ({ isListening, lang, setLang, showToast, user, isGuest, roadSafe
                     50% { box-shadow: 0 0 0 5px rgba(0, 221, 179, 0); }
                 }
                 
-                .toggle-icon {
-                    font-size: 16px;
-                }
-                
-                .toggle-text {
-                    font-size: 11px;
-                    font-weight: 600;
-                }
-                
-                .road-safety-toggle.active .toggle-text {
-                    color: var(--teal);
-                }
-                
                 .toggle-dot {
                     width: 8px;
                     height: 8px;
@@ -112,11 +181,6 @@ const Header = ({ isListening, lang, setLang, showToast, user, isGuest, roadSafe
                 .toggle-dot.active {
                     background: var(--teal);
                     animation: pulse 1s infinite;
-                }
-                
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.4; }
                 }
             `}</style>
         </header>
