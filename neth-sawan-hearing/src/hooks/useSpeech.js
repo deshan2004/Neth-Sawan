@@ -9,13 +9,14 @@ export const useSpeech = (initialLang = 'si-LK') => {
   const listeningRef = useRef(false);
   const [supported, setSupported] = useState(true);
   const [browserInfo, setBrowserInfo] = useState('');
+  const [microphonePermission, setMicrophonePermission] = useState(null);
 
-  const SpeechRecognition = 
-    typeof window !== 'undefined'
-      ? window.SpeechRecognition || window.webkitSpeechRecognition
-      : null;
+  // Choose correct SpeechRecognition constructor
+  const SpeechRecognitionAPI = typeof window !== 'undefined'
+    ? (window.SpeechRecognition || window.webkitSpeechRecognition)
+    : null;
 
-  // Detect browser info for debugging
+  // Detect browser info once
   useEffect(() => {
     const ua = navigator.userAgent;
     const isChrome = /Chrome/.test(ua) && !/Edg/.test(ua);
@@ -23,23 +24,32 @@ export const useSpeech = (initialLang = 'si-LK') => {
     const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
     const isFirefox = /Firefox/.test(ua);
     const isMobile = /Android|iPhone|iPad|iPod/.test(ua);
-    setBrowserInfo(`Browser: ${isChrome ? 'Chrome' : isEdge ? 'Edge' : isSafari ? 'Safari' : isFirefox ? 'Firefox' : 'Other'} | Mobile: ${isMobile}`);
+    const platform = isMobile ? 'Mobile' : 'Desktop';
+    setBrowserInfo(`${platform} | ${isChrome ? 'Chrome' : isEdge ? 'Edge' : isSafari ? 'Safari' : isFirefox ? 'Firefox' : 'Other'}`);
     
-    if (!SpeechRecognition) {
+    if (!SpeechRecognitionAPI) {
       setSupported(false);
-      setError(`Speech recognition not supported in this browser. ${browserInfo} Try Chrome or Edge on desktop.`);
+      setError('Your browser does not support Speech Recognition. Please use Chrome, Edge, or Safari (iOS 14.3+).');
     }
   }, []);
 
+  // Create recognition instance with current language
   const createRecognition = useCallback((language) => {
-    if (!SpeechRecognition) return null;
+    if (!SpeechRecognitionAPI) return null;
 
     try {
-      const rec = new SpeechRecognition();
+      const rec = new SpeechRecognitionAPI();
       rec.continuous = true;
       rec.interimResults = true;
       rec.lang = language;
       rec.maxAlternatives = 1;
+
+      // Mobile: sometimes need to disable continuous mode? Keep it but handle restarts.
+      if (/iPhone|iPad|Android/i.test(navigator.userAgent)) {
+        // On some Android versions, continuous mode may stop unexpectedly
+        // We'll keep it but add robust reconnection
+        console.log('Mobile device detected, enabling aggressive reconnection');
+      }
 
       rec.onresult = (event) => {
         let current = '';
@@ -50,48 +60,61 @@ export const useSpeech = (initialLang = 'si-LK') => {
             current += event.results[i][0].transcript;
           }
         }
-        setTranscript(current);
-        console.log('🎤 Transcript updated:', current);
+        if (current.trim()) {
+          setTranscript(current);
+          console.log('🎤 Transcript updated:', current);
+        }
       };
 
       rec.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
         
-        if (event.error === 'no-speech') return;
-        
         let userMessage = '';
         if (event.error === 'not-allowed') {
-          userMessage = 'Microphone access denied. Please click the lock icon in your browser address bar and allow microphone access.';
+          userMessage = 'Microphone access denied. Please allow microphone in browser settings, then refresh.';
+          setMicrophonePermission('denied');
         } else if (event.error === 'audio-capture') {
-          userMessage = 'No microphone found. Please connect a microphone and refresh.';
+          userMessage = 'No microphone found. Please connect a microphone.';
         } else if (event.error === 'network') {
-          userMessage = 'Network error. Please check your internet connection.';
+          userMessage = 'Network error. Check your internet connection.';
         } else if (event.error === 'aborted') {
+          // usually when stopListening is called, ignore
+          return;
+        } else if (event.error === 'no-speech') {
+          // ignore, user just not speaking
           return;
         } else {
-          userMessage = `Speech error: ${event.error}. Try reloading the page.`;
+          userMessage = `Error: ${event.error}. Try reloading the page.`;
         }
-        setError(userMessage);
-        setIsListening(false);
-        listeningRef.current = false;
+        
+        if (userMessage) {
+          setError(userMessage);
+        }
+        
+        // If error is not aborted, turn off listening flag
+        if (event.error !== 'aborted') {
+          listeningRef.current = false;
+          setIsListening(false);
+        }
       };
 
       rec.onend = () => {
         console.log('Speech recognition ended, listening flag:', listeningRef.current);
         if (listeningRef.current) {
+          // Auto-restart on mobile if we still intend to listen
           console.log('Auto-restarting speech recognition...');
           setTimeout(() => {
             if (listeningRef.current && recognitionRef.current) {
               try {
                 recognitionRef.current.start();
               } catch (e) {
-                console.log('Auto-restart failed:', e);
-                setError('Failed to restart speech recognition. Please click Start again.');
+                console.error('Auto-restart failed:', e);
+                setError('Failed to restart speech recognition. Please tap Start again.');
                 listeningRef.current = false;
                 setIsListening(false);
               }
             }
-          }, 100);
+          }, 300);
         } else {
           setIsListening(false);
         }
@@ -109,10 +132,11 @@ export const useSpeech = (initialLang = 'si-LK') => {
       setError('Failed to initialize speech recognition. ' + err.message);
       return null;
     }
-  }, [SpeechRecognition]);
+  }, [SpeechRecognitionAPI]);
 
+  // Recreate recognition when language changes
   useEffect(() => {
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognitionAPI) return;
 
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch(e) {}
@@ -128,13 +152,34 @@ export const useSpeech = (initialLang = 'si-LK') => {
         try { recognitionRef.current.stop(); } catch(e) {}
       }
     };
-  }, [lang, createRecognition, SpeechRecognition]);
+  }, [lang, createRecognition, SpeechRecognitionAPI]);
+
+  // Request microphone permission separately (helps on mobile)
+  const requestMicrophonePermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      setMicrophonePermission('granted');
+      return true;
+    } catch (err) {
+      console.error('Microphone permission error:', err);
+      if (err.name === 'NotAllowedError') {
+        setError('Microphone access denied. Please tap the lock icon in your browser and allow microphone, then refresh.');
+      } else if (err.name === 'NotFoundError') {
+        setError('No microphone found on your device.');
+      } else {
+        setError('Could not access microphone. Please check your permissions.');
+      }
+      setMicrophonePermission('denied');
+      return false;
+    }
+  };
 
   const startListening = useCallback(async () => {
     setError('');
     
-    if (!SpeechRecognition) {
-      setError('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari on iOS 14.3+.');
+    if (!SpeechRecognitionAPI) {
+      setError('Speech recognition not supported in this browser. Use Chrome, Edge, or Safari on iOS 14.3+.');
       return;
     }
 
@@ -143,21 +188,9 @@ export const useSpeech = (initialLang = 'si-LK') => {
       return;
     }
 
-    // Check microphone permission explicitly
-    try {
-      console.log('Requesting microphone permission...');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      console.log('Microphone permission granted');
-    } catch (err) {
-      console.error('Microphone permission error:', err);
-      if (err.name === 'NotAllowedError') {
-        setError('Microphone access denied. Please click the microphone icon in your browser address bar and allow access, then refresh the page.');
-      } else if (err.name === 'NotFoundError') {
-        setError('No microphone found on your device.');
-      } else {
-        setError('Could not access microphone. Please check your permissions.');
-      }
+    // Ask for microphone permission first (critical on mobile)
+    const hasPermission = await requestMicrophonePermission();
+    if (!hasPermission) {
       return;
     }
 
@@ -188,13 +221,13 @@ export const useSpeech = (initialLang = 'si-LK') => {
             }
           }, 200);
         } catch (err) {
-          setError('Failed to start speech recognition. Please refresh the page.');
+          setError('Failed to start. Please refresh the page.');
         }
       } else {
-        setError('Failed to start speech recognition. Please refresh the page and try again.');
+        setError('Failed to start speech recognition. Please refresh the page.');
       }
     }
-  }, [SpeechRecognition, lang, createRecognition]);
+  }, [SpeechRecognitionAPI, lang, createRecognition]);
 
   const stopListening = useCallback(() => {
     if (!recognitionRef.current) return;
@@ -211,10 +244,7 @@ export const useSpeech = (initialLang = 'si-LK') => {
   }, []);
 
   const clearTranscript = useCallback(() => setTranscript(''), []);
-
-  const setLang = useCallback((newLang) => {
-    setLangState(newLang);
-  }, []);
+  const setLang = useCallback((newLang) => setLangState(newLang), []);
 
   return {
     transcript,
@@ -226,6 +256,7 @@ export const useSpeech = (initialLang = 'si-LK') => {
     lang,
     error,
     supported,
-    browserInfo, // for debugging
+    browserInfo,
+    microphonePermission,
   };
 };
