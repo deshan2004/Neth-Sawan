@@ -54,7 +54,7 @@ function App() {
   const [currentFontSize, setCurrentFontSize] = useState(16);
 
   // Logic Hooks
-  const { transcript, isListening, startListening, stopListening, clearTranscript, setLang, lang, error: speechError } = useSpeech();
+  const { transcript, isListening, startListening, stopListening, clearTranscript, setLang, lang, error: speechError, browserInfo } = useSpeech();
   const { volume, isLoud, soundType, soundHistory, threshold, setThreshold } = useVolume(0.15);
   const { 
     notificationQueue, markAsRead, clearNotifications, 
@@ -324,18 +324,38 @@ function App() {
         <main className="main-content">
           {activeTab === 'dashboard' && (
             <>
-              {/* Live Captions - most important */}
-              <div className="dashboard-transcript-top">
-                <TranscriptBox 
-                  transcript={transcript} isListening={isListening} startListening={startListening}
-                  stopListening={stopListening} clearTranscript={clearTranscript} error={speechError}
-                />
-              </div>
+              {/* ========= COMBINED: Live Captions + Sign Language ========= */}
+              <div className="unified-captions-sign-card">
+                <div className="card-head">
+                  <div className="card-title">
+                    <span className="card-title-icon icon-teal">🎤🤟</span>
+                    Live Captions & Sign Language Translator
+                  </div>
+                  {isListening && (
+                    <div className="live-badge">
+                      <span className="pulse-dot"></span>
+                      <span>LISTENING</span>
+                    </div>
+                  )}
+                </div>
 
-              {/* Sign Language Translator - directly linked to live captions */}
-              <div className="dashboard-sign-row">
-                <SignLanguageBox transcript={transcript} />
+                {/* Transcript Box (full width inside) */}
+                <TranscriptBox 
+                  transcript={transcript} 
+                  isListening={isListening} 
+                  startListening={startListening}
+                  stopListening={stopListening} 
+                  clearTranscript={clearTranscript} 
+                  error={speechError}
+                  browserInfo={browserInfo}
+                />
+
+                {/* Sign Language Translator (directly below, same card) */}
+                <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+                  <SignLanguageBox transcript={transcript} />
+                </div>
               </div>
+              {/* ======================================================= */}
 
               {/* Optional: Emergency disabled banner */}
               {!emergencyNotificationsEnabled && (
