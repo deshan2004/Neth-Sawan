@@ -9,5 +9,56 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Botpress Webchat Scripts -->
+    <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
+    <script src="https://files.bpcontent.cloud/2026/05/28/08/20260528083052-XCJQC18V.js" defer></script>
+    
+    <!-- 100% Working Botpress Cloud v3 Listener Script -->
+   <!-- Robust Botpress Message Forwarder -->
+    <<!-- Bulletproof Botpress Message Forwarder -->
+    <script>
+      // Object එක ඇතුළේ කොහේ හරි හැංගිලා තියෙන සැබෑ මැසේජ් වැකිය (Text) විතරක් හොයලා දෙන සුපිරි function එකක්
+      function extractBotText(obj) {
+        if (typeof obj === 'string') {
+          // සාමාන්‍ය මැසේජ් එකක හිස්තැන් (spaces) තියෙන නිසා ID සහ Timestamps මඟහැරලා මැසේජ් එක විතරක් ගන්නවා
+          if (obj.includes(' ') && obj.length > 5 && !obj.includes('_')) {
+            return obj;
+          }
+        }
+        if (obj && typeof obj === 'object') {
+          for (var key in obj) {
+            if (obj.hasOwnProperty(key)) {
+              var found = extractBotText(obj[key]);
+              if (found) return found;
+            }
+          }
+        }
+        return "";
+      }
+
+      function initBotpressCloudListener() {
+        if (window.botpress && typeof window.botpress.on === 'function') {
+          console.log("🚀 Neth-Sawan Botpress Cloud Hooked Successfully!");
+
+          window.botpress.on('message', function (message) {
+            console.log("📩 Raw Message received from Botpress:", message);
+            
+            // මුළු Object එකම පීරලා ටෙක්ස්ට් එක හොයාගන්නවා
+            var botText = extractBotText(message);
+            console.log("🔍 Extracted Text from index.html:", botText);
+
+            // කෙලින්ම React එකට සරල Text එකක් විදිහට යවනවා
+            window.postMessage({
+              type: 'BOTPRESS_SIMPLIFIED_MSG',
+              text: botText
+            }, '*');
+          });
+        } else {
+          setTimeout(initBotpressCloudListener, 200);
+        }
+      }
+      window.addEventListener('DOMContentLoaded', initBotpressCloudListener);
+    </script>
   </body>
 </html>

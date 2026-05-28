@@ -8,6 +8,7 @@ const Sidebar = ({ activeTab, setActiveTab, onClose, isOpen, user, isGuest, onLo
         { id: 'alerts', icon: '🔔', label: 'Alerts', sinhala: 'ඇඟවීම්', description: 'Notification history' },
         { id: 'contacts', icon: '📇', label: 'Contacts', sinhala: 'සම්බන්ධතා', description: 'Emergency contacts' },
         { id: 'emergency', icon: '🆘', label: 'SOS', sinhala: 'හදිසි අවස්ථා', description: 'Emergency center' },
+        { id: 'roadmonitor', icon: '🛣️', label: 'Road Monitor', sinhala: 'මාර්ග ආරක්ෂාව', description: 'Dedicated road safety' },   // NEW
         { id: 'settings', icon: '♿', label: 'Accessibility', sinhala: 'ප්‍රවේශ්‍යතාව', description: 'Font & color settings' }
     ];
 
