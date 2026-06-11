@@ -259,7 +259,7 @@ function App() {
   const toggleEmergencyNotifications = () => {
     const newState = !emergencyNotificationsEnabled;
     setEmergencyNotificationsEnabled(newState);
-    showToast(newState ? 'Emergency notifications enabled' : 'Emergency notifications disabled', newState ? 'success' : 'info');
+    showToast(newState ? 'emergency notifications enabled' : 'emergency notifications disabled', newState ? 'success' : 'info');
   };
 
   // Guest Handlers
@@ -359,7 +359,9 @@ function App() {
         else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
 
         const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-        window.open(url, '_blank', 'noopener,noreferrer');
+        
+        // 🌟 Mobile browsers වල Popup blocker එක මගහරවා ගන්න window.location.href පාවිච්චි කරමු
+        window.location.href = url;
       }
     });
   };
