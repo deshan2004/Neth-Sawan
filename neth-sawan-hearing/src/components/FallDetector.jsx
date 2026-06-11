@@ -1,112 +1,126 @@
+// src/components/FallDetector.jsx
 import React, { useState, useEffect, useRef } from 'react';
 
 const FallDetector = ({ onFallDetected }) => {
   const [isCountingDown, setIsCountingDown] = useState(false);
   const [countdown, setCountdown] = useState(10);
+  const [hasPermission, setHasPermission] = useState(null);
   
-  // Accelerometer / Device Motion Sensor Refs
-  const lastX = useRef(0);
-  const lastY = useRef(0);
-  const lastZ = useRef(0);
-  const lastTime = useRef(Date.now());
-  
-  // 1. Sensor Event Listener to Detect Fall / Impact
-  useEffect(() => {
-    const handleMotion = (event) => {
-      if (isCountingDown) return; // Countdown එක දුවන වෙලාවට අලුතින් impact ගන්නේ නැත
+  const timerRef = useRef(null);
+  const countdownIntervalRef = useRef(null);
 
+  // 1. iOS සහ සමහර Android ෆෝන් වල සෙන්සර්ස් වලට Permission ඉල්ලීම
+  const requestPermission = async () => {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        const permissionState = await DeviceMotionEvent.requestPermission();
+        setHasPermission(permissionState === 'granted');
+      } catch (error) {
+        console.error("Error requesting DeviceMotion permission:", error);
+        setHasPermission(false);
+      }
+    } else {
+      // සාමාන්‍ය බ්‍රවුසර් වල කෙලින්ම වැඩ කරයි
+      setHasPermission(true);
+    }
+  };
+
+  useEffect(() => {
+    // Permission දැනටමත් තියෙනවද බලන්න මුලින්ම රන් කරනවා
+    requestPermission();
+
+    const handleMotion = (event) => {
+      if (isCountingDown) return; // දැනටමත් වැටීමක් ඩිටෙක්ට් වී countdown යනවා නම් නැවත බලන්න ඕනේ නැහැ
+
+      // X, Y, Z අක්ෂ ඔස්සේ සිදුවන ත්වරණය (Acceleration including gravity)
       const acc = event.accelerationIncludingGravity;
       if (!acc) return;
 
-      const currentTime = Date.now();
-      const timeDiff = currentTime - lastTime.current;
+      // G-Force එක ගණනය කිරීම (Magnitude of Acceleration)
+      // Formula: √(x² + y² + z²)
+      const totalAcceleration = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
 
-      if (timeDiff > 100) {
-        const x = acc.x || 0;
-        const y = acc.y || 0;
-        const z = acc.z || 0;
-
-        const totalAcceleration = Math.sqrt(x * x + y * y + z * z);
-        
-        // Threshold එක 30m/s² ට වඩා වැඩි වුණොත් impact එකක් ලෙස සලකා Countdown එක පටන් ගනී
-        if (totalAcceleration > 30) { 
-          console.log("⚠️ Fall impact detected! Magnitude:", totalAcceleration);
-          setIsCountingDown(true);
-          setCountdown(10);
-        }
-
-        lastX.current = x;
-        lastY.current = y;
-        lastZ.current = z;
-        lastTime.current = currentTime;
+      // 💡 FALL DETECTION THRESHOLD: 
+      // සාමාන්‍යයෙන් කෙනෙක් වැටෙද්දී G-Force එක 25 m/s² ට වඩා වැඩි වෙනවා (සාමාන්‍ය gravity එක 9.8 m/s²)
+      if (totalAcceleration > 25) {
+        triggerCountdown();
       }
     };
 
-    if (window.DeviceMotionEvent) {
+    if (hasPermission) {
       window.addEventListener('devicemotion', handleMotion);
     }
 
     return () => {
       window.removeEventListener('devicemotion', handleMotion);
+      clearInterval(countdownIntervalRef.current);
+      clearTimeout(timerRef.current);
     };
-  }, [isCountingDown]);
+  }, [hasPermission, isCountingDown]);
 
-  // 🕒 2. CORRECTED COUNTDOWN TIMER LOGIC (10, 9, 8...)
-  useEffect(() => {
-    let timer;
-    if (isCountingDown && countdown > 0) {
-      timer = setInterval(() => {
-        setCountdown((prevCount) => prevCount - 1);
-      }, 1000);
-    } else if (isCountingDown && countdown === 0) {
-      setIsCountingDown(false);
-      onFallDetected(); // Countdown එක 0 වුණ සැනින් WhatsApp/SOS පද්ධතිය ක්‍රියාත්මක වේ
-    }
-
-    return () => clearInterval(timer);
-  }, [isCountingDown, countdown, onFallDetected]);
-
-  // User cancels the emergency alert
-  const handleCancel = () => {
-    setIsCountingDown(false);
+  // 2. වැටීමක් හඳුනාගත් විට Countdown එක පටන් ගැනීම
+  const triggerCountdown = () => {
+    setIsCountingDown(true);
     setCountdown(10);
-    console.log("😇 User clicked 'I am OK'. Emergency cancelled.");
+
+    // හැම තත්පරයකම ස්ක්‍රීන් එකේ Countdown එක අඩු කරන්න
+    countdownIntervalRef.current = setInterval(() => {
+      setCountdown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+
+    // ✅ FIXED: මෙතන කලින් තිබුණේ 10ms. ඒක 10000ms (තත්පර 10) ලෙස නිවැරදි කර ඇත.
+    timerRef.current = setTimeout(() => {
+      clearInterval(countdownIntervalRef.current);
+      setIsCountingDown(false);
+      
+      // 🚨 App.jsx එකේ තියෙන Emergency Function එක මෙතනින් Call වෙනවා
+      if (onFallDetected) {
+        onFallDetected(); 
+      }
+    }, 10000); // 10000ms = තත්පර 10ක් සම්පූර්ණයෙන් ගණන් කරයි
   };
 
-  // අනතුරක් හඳුනා නොගත් වෙලාවට මුකුත්ම Screen එකේ පෙන්වන්නේ නැත
-  if (!isCountingDown) return null;
+  // 3. වැරදීමකින් වැටීමක් පෙන්වුවහොත් (False Alarm) පරිශීලකයාට Cancel කිරීමට ඇති හැකියාව
+  const handleIImOkay = () => {
+    clearInterval(countdownIntervalRef.current);
+    clearTimeout(timerRef.current);
+    setIsCountingDown(false);
+    setCountdown(10);
+  };
 
   return (
-    <div className="fall-emergency-overlay" style={{
-      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-      backgroundColor: '#e60000', zIndex: 99999, display: 'flex',
-      flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      color: '#fff', fontFamily: 'sans-serif', padding: '20px', boxSizing: 'border-box'
-    }}>
-      <div style={{ fontSize: '70px', marginBottom: '10px' }}>🚨</div>
-      <h1 style={{ fontSize: '42px', fontWeight: 'bold', margin: '10px 0', textAlign: 'center' }}>Fall Detected!</h1>
-      <div style={{ fontSize: '60px', marginBottom: '20px' }}>🚨</div>
-      
-      <p style={{ fontSize: '20px', textAlign: 'center', maxWidth: '80%', margin: '0 0 30px 0', lineHeight: '1.4' }}>
-        Sending emergency alert to your relatives in...
-      </p>
+    <div style={{ padding: '16px', textAlign: 'center' }}>
+      {hasPermission === false && (
+        <button 
+          onClick={requestPermission}
+          style={{ padding: '10px 20px', background: '#FF3355', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer' }}
+        >
+          ⚠️ Enable Fall Detection (Grant Sensor Access)
+        </button>
+      )}
 
-      {/* 🔴 මෙන්න මේ ස්ටේට් එක දැන් හැම තත්පරයකදීම 10, 9, 8... විදිහට අඩුවේවි මල්ලි */}
-      <div style={{ fontSize: '120px', fontWeight: 'bold', marginBottom: '40px', transition: 'all 0.3s ease' }}>
-        {countdown}
-      </div>
-
-      <button 
-        onClick={handleCancel}
-        style={{
-          backgroundColor: '#00cc99', color: '#fff', border: 'none',
-          padding: '18px 45px', fontSize: '24px', fontWeight: 'bold',
-          borderRadius: '40px', cursor: 'pointer', boxShadow: '0 8px 15px rgba(0,0,0,0.3)',
-          display: 'flex', alignItems: 'center', gap: '10px', transition: 'transform 0.2s'
-        }}
-      >
-        I am OK 👍
-      </button>
+      {isCountingDown && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+          background: 'rgba(255, 0, 0, 0.9)', display: 'flex', flexDirection: 'column',
+          justifyContent: 'center', alignItems: 'center', zIndex: 9999, color: 'white'
+        }}>
+          <h1 style={{ fontSize: '3rem', marginBottom: '10px' }}>🚨 Fall Detected! 🚨</h1>
+          <p style={{ fontSize: '1.2rem' }}>Sending emergency alert to your relatives in...</p>
+          <div style={{ fontSize: '6rem', fontWeight: 'bold', margin: '20px 0' }}>{countdown}</div>
+          
+          <button 
+            onClick={handleIImOkay}
+            style={{
+              padding: '20px 40px', fontSize: '1.5rem', fontWeight: 'bold',
+              background: '#00CCAA', color: 'black', border: 'none', borderRadius: '50px',
+              cursor: 'pointer', boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
+            }}
+          >
+            I am OK 👍
+          </button>
+        </div>
+      )}
     </div>
   );
 };
