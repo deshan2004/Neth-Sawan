@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore'
 
 // Components
 import Header from './components/Header';
@@ -18,6 +19,7 @@ import SignLanguageTutor from './components/SignLanguageTutor';
 import EmergencyFlash from './components/EmergencyFlash';
 import AccessibilitySettings from './components/AccessibilitySettings';
 import RoadSafetyMonitor from './components/RoadSafetyMonitor';
+import FallDetector from "./components/FallDetector";
 
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
@@ -26,6 +28,36 @@ import { useNotifications } from './hooks/useNotifications';
 import { useHaptic } from './hooks/useHaptic';
 
 import './App.css';
+
+// Beautiful WhatsApp message template for Fall Detection
+const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
+  const time = new Date().toLocaleString('en-LK', {
+    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+  
+  let message = `🚨 *URGENT: FALL DETECTED - Neth-Sawan* 🚨\n\n`;
+  message += `Dear ${contactName},\n\n`;
+  message += `⚠️ *An immediate fall/impact was detected by your loved one's device, and they have not responded to the safety countdown.*\n\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `📢 *ALERT TYPE:* 🛑 AUTOMATIC FALL DETECTION\n`;
+  message += `🕒 *TIME:* ${time}\n`;
+  message += `👤 *USER:* ${userEmail || 'Neth-Sawan User'}\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  
+  if (location) {
+    message += `📍 *LAST KNOWN LIVE LOCATION:*\n`;
+    message += `https://maps.google.com/?q=${location.lat},${location.lng}\n\n`;
+  } else {
+    message += `📍 *LOCATION:* Location services were unavailable, please try calling them immediately.\n\n`;
+  }
+  
+  message += `📝 *MESSAGE:* This is an automated emergency alert. Immediate assistance may be required. Please contact or check on your loved one right away!\n\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `⚠️ *PLEASE RESPOND IMMEDIATELY* ⚠️\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  message += `_Sent automatically by Neth-Sawan Accessibility Assistant._`;
+  return message;
+};
 
 function App() {
   // Auth States
@@ -283,6 +315,55 @@ function App() {
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
+  // 🚨 NEW: FALL DETECTION EMERGENCY TRIGGER
+  const handleFallEmergency = async () => {
+    console.log("🚨 Fall confirmed by FallDetector! Triggering Emergency Sequence...");
+    let currentLocation = null;
+
+    try {
+      const pos = await new Promise((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, enableHighAccuracy: true })
+      );
+      currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch (e) {
+      console.warn("Could not capture live location:", e.message);
+    }
+
+    if (emergencyNotificationsEnabled) {
+      setFlashEmergency(true);
+      setEmergencyData({ soundType: '🛑 FALL DETECTED', message: 'An automatic fall was detected!', timestamp: new Date(), volume: 1.0 });
+      showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
+      if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+      
+      if (isGuest) {
+        guestAddNotification({
+          id: Date.now(),
+          type: 'EMERGENCY',
+          message: '🚨 AUTOMATIC FALL DETECTED',
+          soundType: 'FALL',
+          timestamp: new Date().toISOString(),
+          read: false
+        });
+      }
+      setTimeout(() => setFlashEmergency(false), 8000);
+    }
+
+    if (!currentRelatives || currentRelatives.length === 0) return;
+
+    currentRelatives.forEach(contact => {
+      if (contact.notifyByWhatsApp && contact.phone) {
+        const message = buildFallWhatsAppMessage(contact.name, currentLocation, user?.email || 'Guest User');
+        let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
+        if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
+        else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
+        else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
+
+        const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    });
+  };
+
   if (authLoading) {
     return (
       <div className="loading-screen">
@@ -299,6 +380,9 @@ function App() {
 
   return (
     <div className="app-wrapper" style={{ fontSize: `${currentFontSize}px` }}>
+      {/* BACKGROUND FALL DETECTOR INTEGRATION */}
+      <FallDetector onFallDetected={handleFallEmergency} />
+
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
           <filter id="protanopia"><feColorMatrix type="matrix" values="0.567, 0.433, 0, 0, 0, 0.558, 0.442, 0, 0, 0, 0, 0.242, 0.758, 0, 0, 0, 0, 0, 1, 0"/></filter>

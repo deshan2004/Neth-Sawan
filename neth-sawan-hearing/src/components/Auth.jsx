@@ -23,8 +23,13 @@ const Auth = ({ onGuestMode }) => {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, formData.email, formData.password);
       } else {
+        // 1. Firebase Authentication එකෙන් User කෙනෙක් හදනවා
         const res = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        
+        // 2. User ගේ Display Name එක Update කරනවා
         await updateProfile(res.user, { displayName: formData.name });
+        
+        // 3. [ක්‍රමය ඒ] කෙලින්ම Frontend එකෙන් Firestore එකට User Document එක ලියනවා
         await setDoc(doc(db, "users", res.user.uid), {
           uid: res.user.uid,
           name: formData.name,
@@ -32,8 +37,29 @@ const Auth = ({ onGuestMode }) => {
           createdAt: serverTimestamp(),
           role: 'user'
         });
+
+        // 4. [ක්‍රමය බී] ඔයාගේ Node.js Express Backend එකටත් User Data යවනවා (Backup & Sync සඳහා)
+        try {
+          await fetch('http://localhost:5000/api/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              uid: res.user.uid,
+              name: formData.name,
+              email: formData.email,
+              role: 'user'
+            }),
+          });
+          console.log("User synced with Backend Server successfully!");
+        } catch (backendErr) {
+          console.warn("Backend sync failed, but user created via frontend:", backendErr.message);
+          // Backend එක Off වෙලා තිබ්බොත් app එක crash වෙන්නේ නැති වෙන්නයි මේ inner try-catch එක දාලා තියෙන්නේ.
+        }
       }
     } catch (err) {
+      console.error("Auth Error: ", err);
       let errorMessage = err.message;
       if (err.code === 'auth/email-already-in-use') errorMessage = 'Email already registered';
       if (err.code === 'auth/invalid-credential') errorMessage = 'Invalid email or password';

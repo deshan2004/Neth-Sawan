@@ -1,25 +1,17 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore"; // 👈 මේක තියෙන්නම ඕනේ
 
-// Replace with your actual Firebase config from Firebase Console
-//projectId: "nethsawan-ca228",
 const firebaseConfig = {
-  apiKey: "AIzaSyD3dJeYQwZ87gGncbcP14NDFCfQNzncP5g",
-  authDomain: "nethsawan-ca228.firebaseapp.com",
-  projectId: "nethsawan-ca228",
-  storageBucket: "nethsawan-ca228.firebasestorage.app",
-  messagingSenderId: "883239486246",
-  appId: "1:883239486246:web:f3cefa2d6da0b7c01877e7"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-let app;
-try {
-  app = initializeApp(firebaseConfig);
-} catch (error) {
-  console.error("Firebase initialization error:", error);
-}
+const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app); // 👈 මේ ලයින් එක හරියටම තියෙනවද බලන්න

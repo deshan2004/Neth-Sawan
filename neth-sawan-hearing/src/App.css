@@ -3974,4 +3974,338 @@ body {
     gap: 4px;
     font-size: 10px;
   }
+}/* ============================================================
+   BACKGROUND VIDEO STYLES
+   ============================================================ */
+
+.background-video-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  overflow: hidden;
+}
+
+.background-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+  filter: brightness(0.7) saturate(0.8);
+}
+
+.background-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(7, 9, 26, 0.85), rgba(13, 17, 40, 0.9));
+  pointer-events: none;
+}
+
+/* ============================================================
+   SIMPLIFIED & USER-FRIENDLY UI
+   ============================================================ */
+
+/* Ensure content is above background */
+.app-wrapper {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+/* Cards with subtle glass effect */
+.card, .unified-card, .sound-card, .primary-card {
+  background: rgba(13, 17, 40, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 221, 179, 0.2);
+  transition: all 0.3s ease;
+}
+
+.card:hover, .unified-card:hover {
+  border-color: rgba(0, 221, 179, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Simplified Dashboard Layout */
+.simple-dashboard {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.primary-card {
+  border-radius: 28px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.card-header-simple {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: rgba(0, 221, 179, 0.08);
+  border-bottom: 1px solid rgba(0, 221, 179, 0.15);
+}
+
+.card-header-simple h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  background: linear-gradient(135deg, #00DDB3, #F5C842);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header-icon {
+  font-size: 28px;
+  background: none;
+  -webkit-text-fill-color: initial;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 221, 179, 0.15);
+  padding: 6px 14px;
+  border-radius: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #00DDB3;
+}
+
+.live-dot {
+  width: 10px;
+  height: 10px;
+  background: #00DDB3;
+  border-radius: 50%;
+  animation: livePulse 1s infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.sign-language-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 8px;
+}
+
+/* Sound Row - Two column layout */
+.sound-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.sound-card {
+  border-radius: 24px;
+  padding: 20px;
+}
+
+.card-title-simple {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #00DDB3;
+}
+
+.card-title-simple span:first-child {
+  font-size: 24px;
+}
+
+/* Road Safety Banner */
+.road-safety-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(0, 221, 179, 0.15), rgba(0, 221, 179, 0.05));
+  border: 1px solid #00DDB3;
+  border-radius: 20px;
+  padding: 14px 24px;
+  margin-top: 8px;
+}
+
+.road-safety-banner span:first-child {
+  font-size: 32px;
+}
+
+.road-safety-banner strong {
+  display: block;
+  font-size: 14px;
+  color: #00DDB3;
+}
+
+.road-safety-banner small {
+  font-size: 11px;
+  color: #8899CC;
+}
+
+/* Larger, more clickable buttons */
+.btn-start, .btn-stop, .action-btn, .theme-option, .cb-option {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px; /* Better touch target */
+}
+
+.btn-start:hover, .btn-stop:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+/* Improved typography for readability */
+.transcript-text {
+  font-size: 18px !important;
+  line-height: 1.6 !important;
+}
+
+@media (min-width: 768px) {
+  .transcript-text {
+    font-size: 20px !important;
+  }
+}
+
+/* Simplified Sidebar */
+.app-sidebar {
+  background: rgba(13, 17, 40, 0.95);
+  backdrop-filter: blur(16px);
+}
+
+.nav-item {
+  font-size: 14px;
+  padding: 12px 16px;
+}
+
+.nav-item .nav-label {
+  font-weight: 500;
+}
+
+/* Simplified Emergency Card */
+.emergency-sos-card {
+  background: rgba(13, 17, 40, 0.9);
+  backdrop-filter: blur(16px);
+  border-radius: 32px;
+  padding: 32px;
+}
+
+.sos-button-large {
+  width: 160px;
+  height: 160px;
+}
+
+/* Toast messages - more visible */
+.toast-message {
+  background: rgba(13, 17, 40, 0.95);
+  backdrop-filter: blur(20px);
+  padding: 14px 28px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .sound-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .card-header-simple {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .primary-card {
+    border-radius: 20px;
+  }
+  
+  .card-header-simple h2 {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .card-header-simple {
+    padding: 16px;
+  }
+  
+  .sound-card {
+    padding: 16px;
+  }
+  
+  .sos-button-large {
+    width: 130px;
+    height: 130px;
+  }
+  
+  .sos-text {
+    font-size: 28px;
+  }
+}
+
+/* Ensure high contrast mode works with background video */
+@media (prefers-contrast: high) {
+  .background-overlay {
+    background: #0A0C1A;
+    opacity: 0.95;
+  }
+  
+  .card, .unified-card, .sound-card {
+    background: #0D1128;
+    backdrop-filter: none;
+    border-width: 2px;
+  }
+}
+
+/* Smooth transitions for accessibility settings */
+body, .app-wrapper, .card, button {
+  transition: background-color 0.3s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Make scrollbars more visible */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00DDB3;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00FFCC;
+}
+
+/* Focus styles for keyboard navigation */
+button:focus-visible, 
+.nav-item:focus-visible,
+.theme-option:focus-visible {
+  outline: 2px solid #00DDB3;
+  outline-offset: 2px;
 }

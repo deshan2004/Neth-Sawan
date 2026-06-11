@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 serviceAccountKey.json
+
+# local env files
+.env
+.env.local
