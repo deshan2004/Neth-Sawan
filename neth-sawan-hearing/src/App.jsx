@@ -105,7 +105,6 @@ function App() {
     const handleBotpressEvents = (event) => {
       if (event.data && event.data.type === 'BOTPRESS_SIMPLIFIED_MSG') {
         const textContent = event.data.text;
-        console.log("🧠 React Received Text from Bot:", textContent);
         
         if (textContent) {
           if (textContent.trim().includes("Placing the Sign Language demonstration")) {
@@ -315,21 +314,15 @@ function App() {
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
-  // 🚨 FIXED: FALL DETECTION EMERGENCY TRIGGER WITH FIREBASE
   const handleFallEmergency = async () => {
-    console.log("🚨 Fall confirmed by FallDetector! Triggering Emergency Sequence...");
     let currentLocation = null;
-
     try {
       const pos = await new Promise((resolve, reject) =>
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, enableHighAccuracy: true })
       );
       currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    } catch (e) {
-      console.warn("Could not capture live location:", e.message);
-    }
+    } catch (e) { console.warn("Location error:", e.message); }
 
-    // 1. Firebase Firestore Database එකට සේව් කිරීම
     try {
       await addDoc(collection(db, "emergency_alerts"), {
         alertType: "AUTOMATIC_FALL_DETECTION",
@@ -338,46 +331,32 @@ function App() {
         userId: user ? user.uid : "GUEST_USER",
         location: currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : "Location Unavailable"
       });
-      console.log("✅ Emergency alert successfully saved to Firebase!");
-    } catch (error) {
-      console.error("❌ Error saving emergency to Firebase:", error);
-    }
+    } catch (error) { console.error("Firebase error:", error); }
 
     if (emergencyNotificationsEnabled) {
       setFlashEmergency(true);
       setEmergencyData({ soundType: '🛑 FALL DETECTED', message: 'An automatic fall was detected!', timestamp: new Date(), volume: 1.0 });
       showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
       if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
-      
-      if (isGuest) {
-        guestAddNotification({
-          id: Date.now(),
-          type: 'EMERGENCY',
-          message: '🚨 AUTOMATIC FALL DETECTED',
-          soundType: 'FALL',
-          timestamp: new Date().toISOString(),
-          read: false
-        });
-      }
       setTimeout(() => setFlashEmergency(false), 8000);
     }
 
-    if (!currentRelatives || currentRelatives.length === 0) return;
+    if (currentRelatives && currentRelatives.length > 0) {
+      const userConfirmed = window.confirm("🚨 Fall Detected! Click OK to send emergency WhatsApp alerts to your relatives.");
+      if (userConfirmed) {
+        currentRelatives.forEach(contact => {
+          if (contact.notifyByWhatsApp && contact.phone) {
+            const message = buildFallWhatsAppMessage(contact.name, currentLocation, user?.email || 'Guest User');
+            let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
+            if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
+            else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
+            else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
 
-    currentRelatives.forEach(contact => {
-      if (contact.notifyByWhatsApp && contact.phone) {
-        const message = buildFallWhatsAppMessage(contact.name, currentLocation, user?.email || 'Guest User');
-        let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
-        if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
-        else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
-        else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
-
-        const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-        
-        // 🌟 Mobile browsers වල Popup blocker එක මගහරවා ගන්න window.location.href පාවිච්චි කරමු
-        window.location.href = url;
+            window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+          }
+        });
       }
-    });
+    }
   };
 
   if (authLoading) {
@@ -396,7 +375,6 @@ function App() {
 
   return (
     <div className="app-wrapper" style={{ fontSize: `${currentFontSize}px` }}>
-      {/* BACKGROUND FALL DETECTOR INTEGRATION */}
       <FallDetector onFallDetected={handleFallEmergency} />
 
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
@@ -425,7 +403,6 @@ function App() {
         <main className="main-content">
           {activeTab === 'dashboard' && (
             <>
-              {/* ========= COMBINED: Live Captions + Sign Language ========= */}
               <div className="unified-captions-sign-card">
                 <div className="card-head">
                   <div className="card-title">
@@ -439,8 +416,6 @@ function App() {
                     </div>
                   )}
                 </div>
-
-                {/* Transcript Box (full width inside) */}
                 <TranscriptBox 
                   transcript={transcript} 
                   isListening={isListening} 
@@ -450,15 +425,11 @@ function App() {
                   error={speechError}
                   browserInfo={browserInfo}
                 />
-
-                {/* Sign Language Translator (directly below, same card) */}
                 <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
                   <SignLanguageBox transcript={transcript} />
                 </div>
               </div>
-              {/* ======================================================= */}
 
-              {/* Optional: Emergency disabled banner */}
               {!emergencyNotificationsEnabled && (
                 <div className="notifications-disabled-banner">
                   <span className="banner-icon">🔕</span>
@@ -470,7 +441,6 @@ function App() {
                 </div>
               )}
 
-              {/* Additional tools – VisualAlert, RoadSafetyMonitor, etc. */}
               <div className="dashboard-primary">
                 <VisualAlert 
                   isLoud={isLoud && emergencyNotificationsEnabled} soundType={soundType} volume={volume}
@@ -540,7 +510,6 @@ function App() {
             </div>
           )}
 
-          {/* Dedicated Road Monitor Page */}
           {activeTab === 'roadmonitor' && (
             <div style={{ maxWidth: '900px', margin: '0 auto' }}>
               <div style={{ marginBottom: '20px', textAlign: 'center' }}>
