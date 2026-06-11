@@ -30,18 +30,17 @@ const FallDetector = ({ onFallDetected }) => {
     requestPermission();
 
     const handleMotion = (event) => {
-      if (isCountingDown) return; // දැනටමත් වැටීමක් ඩිටෙක්ට් වී countdown යනවා නම් නැවත බලන්න ඕනේ නැහැ
+      // දැනටමත් කවුන්ටඩවුන් එක දුවනවා නම් අලුතින් ඩිටෙක්ට් කරන්න ඕනේ නැහැ
+      if (timerRef.current) return; 
 
       // X, Y, Z අක්ෂ ඔස්සේ සිදුවන ත්වරණය (Acceleration including gravity)
       const acc = event.accelerationIncludingGravity;
       if (!acc) return;
 
       // G-Force එක ගණනය කිරීම (Magnitude of Acceleration)
-      // Formula: √(x² + y² + z²)
       const totalAcceleration = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
 
-      // 💡 FALL DETECTION THRESHOLD: 
-      // සාමාන්‍යයෙන් කෙනෙක් වැටෙද්දී G-Force එක 25 m/s² ට වඩා වැඩි වෙනවා (සාමාන්‍ය gravity එක 9.8 m/s²)
+      // 💡 FALL DETECTION THRESHOLD:
       if (totalAcceleration > 25) {
         triggerCountdown();
       }
@@ -53,40 +52,65 @@ const FallDetector = ({ onFallDetected }) => {
 
     return () => {
       window.removeEventListener('devicemotion', handleMotion);
-      clearInterval(countdownIntervalRef.current);
-      clearTimeout(timerRef.current);
     };
-  }, [hasPermission, isCountingDown]);
+  }, [hasPermission]);
 
-  // 2. වැටීමක් හඳුනාගත් විට Countdown එක පටන් ගැනීම
+  // 🕒 3. Countdown එක තත්පරයෙන් තත්පරය අඩු කරන ලොජික් එක
+  useEffect(() => {
+    if (isCountingDown) {
+      countdownIntervalRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownIntervalRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => clearInterval(countdownIntervalRef.current);
+  }, [isCountingDown]);
+
+  // 4. වැටීමක් හඳුනාගත් විට Countdown එක පටන් ගැනීම
   const triggerCountdown = () => {
+    if (timerRef.current) return; // Duplicate ටයිමර්ස් හැදීම වළක්වයි
+
     setIsCountingDown(true);
     setCountdown(10);
 
-    // හැම තත්පරයකම ස්ක්‍රීන් එකේ Countdown එක අඩු කරන්න
-    countdownIntervalRef.current = setInterval(() => {
-      setCountdown((prev) => (prev > 1 ? prev - 1 : 0));
-    }, 1000);
-
-    // ✅ FIXED: මෙතන කලින් තිබුණේ 10ms. ඒක 10000ms (තත්පර 10) ලෙස නිවැරදි කර ඇත.
+    // තත්පර 10ක් ඇතුළත Cancel නොකළොත් App.jsx එකේ function එක call වෙනවා
     timerRef.current = setTimeout(() => {
-      clearInterval(countdownIntervalRef.current);
+      cleanupTimers();
       setIsCountingDown(false);
       
-      // 🚨 App.jsx එකේ තියෙන Emergency Function එක මෙතනින් Call වෙනවා
+      // 🚨 App.jsx එකෙන් ආපු function එක මෙතනින් රන් වෙලා DB සේව් වීම සහ WhatsApp වැඩේ වෙනවා
       if (onFallDetected) {
         onFallDetected(); 
       }
-    }, 10000); // 10000ms = තත්පර 10ක් සම්පූර්ණයෙන් ගණන් කරයි
+    }, 10000); 
   };
 
-  // 3. වැරදීමකින් වැටීමක් පෙන්වුවහොත් (False Alarm) පරිශීලකයාට Cancel කිරීමට ඇති හැකියාව
+  // ටයිමර්ස් ක්ලියර් කරන පොදු ෆන්ක්ෂන් එකක්
+  const cleanupTimers = () => {
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    countdownIntervalRef.current = null;
+  };
+
+  // 5. පරිශීලකයා "I am OK" බොත්තම එබූ විට (False Alarm එකක් නම්)
   const handleIImOkay = () => {
-    clearInterval(countdownIntervalRef.current);
-    clearTimeout(timerRef.current);
+    cleanupTimers();
     setIsCountingDown(false);
     setCountdown(10);
+    console.log("😇 False alarm cancelled by user.");
   };
+
+  // Component unmount වෙනකොට සේරම ටයිමර්ස් ක්ලීන් කරන්න
+  useEffect(() => {
+    return () => cleanupTimers();
+  }, []);
 
   return (
     <div style={{ padding: '16px', textAlign: 'center' }}>

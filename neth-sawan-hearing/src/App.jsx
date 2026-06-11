@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from './firebase';
+import { auth, db } from './firebase'; // Make sure db is imported here!
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Components
 import Header from './components/Header';
@@ -46,7 +46,7 @@ const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
   
   if (location) {
     message += `📍 *LAST KNOWN LIVE LOCATION:*\n`;
-    message += `https://maps.google.com/?q=${location.lat},${location.lng}\n\n`;
+    message += `https://maps.google.com/?q=$${location.lat},${location.lng}\n\n`;
   } else {
     message += `📍 *LOCATION:* Location services were unavailable, please try calling them immediately.\n\n`;
   }
@@ -315,7 +315,7 @@ function App() {
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
-  // 🚨 NEW: FALL DETECTION EMERGENCY TRIGGER
+  // 🚨 FIXED: FALL DETECTION EMERGENCY TRIGGER WITH FIREBASE
   const handleFallEmergency = async () => {
     console.log("🚨 Fall confirmed by FallDetector! Triggering Emergency Sequence...");
     let currentLocation = null;
@@ -327,6 +327,20 @@ function App() {
       currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     } catch (e) {
       console.warn("Could not capture live location:", e.message);
+    }
+
+    // 1. Firebase Firestore Database එකට සේව් කිරීම
+    try {
+      await addDoc(collection(db, "emergency_alerts"), {
+        alertType: "AUTOMATIC_FALL_DETECTION",
+        status: "CRITICAL",
+        timestamp: serverTimestamp(),
+        userId: user ? user.uid : "GUEST_USER",
+        location: currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : "Location Unavailable"
+      });
+      console.log("✅ Emergency alert successfully saved to Firebase!");
+    } catch (error) {
+      console.error("❌ Error saving emergency to Firebase:", error);
     }
 
     if (emergencyNotificationsEnabled) {
