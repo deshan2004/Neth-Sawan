@@ -23,6 +23,7 @@ import RoadSafetyMonitor from './components/RoadSafetyMonitor';
 import { useSpeech } from './hooks/useSpeech';
 import { useVolume } from './hooks/useVolume';
 import { useNotifications } from './hooks/useNotifications';
+import { useHaptic } from './hooks/useHaptic';
 
 import './App.css';
 
