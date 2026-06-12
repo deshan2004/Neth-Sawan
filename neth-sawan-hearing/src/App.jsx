@@ -373,21 +373,7 @@ function AppContent() {
         <main className="main-content">
           {/* DASHBOARD TAB */}
           {activeTab === 'dashboard' && (
-            <>
-              {!emergencyNotificationsEnabled && (
-                <div className="notifications-disabled-banner">
-                  <span className="banner-icon">🔕</span>
-                  <div className="banner-content">
-                    <strong>{t('alertsOff')}</strong>
-                    <p>{t('noEmergencyAlerts') || "You won't receive visual alerts or emergency flashes."}</p>
-                  </div>
-                  <button onClick={toggleEmergencyNotifications} className="banner-enable-btn">
-                    {t('enableNow') || "Enable Now"}
-                  </button>
-                </div>
-              )}
-
-              {/* Live Captions + Sign Language side by side */}
+            <> {/* Live Captions + Sign Language side by side */}
               <div className="captions-sign-row">
                 <div className="captions-box">
                   <div className="section-header">
