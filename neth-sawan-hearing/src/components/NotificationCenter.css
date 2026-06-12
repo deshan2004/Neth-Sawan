@@ -1,0 +1,13 @@
+.notif-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0,0,0,0.3);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.notif-item.unread {
+  border-left: 4px solid var(--alert-info);
+  background: rgba(0,221,255,0.1);
+}

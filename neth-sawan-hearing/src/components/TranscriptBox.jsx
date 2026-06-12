@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import './TranscriptBox.css';
 
 const TranscriptBox = ({ 
   transcript, 

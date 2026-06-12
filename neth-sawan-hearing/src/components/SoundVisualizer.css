@@ -1,0 +1,14 @@
+canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.viz-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 8px;
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--radius-md);
+}

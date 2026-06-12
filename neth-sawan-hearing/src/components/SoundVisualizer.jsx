@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import './SoundVisualizer.css';
 
 const SoundVisualizer = ({ volume, isLoud, soundType }) => {
   const canvasRef  = useRef(null);

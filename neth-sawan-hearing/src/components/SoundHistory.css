@@ -1,0 +1,78 @@
+/* SoundHistory – Clean timeline */
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  transition: all 0.2s;
+}
+
+.history-row:hover {
+  background: rgba(0, 221, 179, 0.08);
+  transform: translateX(4px);
+}
+
+.h-icon {
+  font-size: 24px;
+  width: 36px;
+  text-align: center;
+}
+
+.h-type {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.h-vol {
+  font-size: 0.75rem;
+  color: #00DDB3;
+  margin-left: 8px;
+  background: rgba(0, 221, 179, 0.15);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.h-time {
+  font-size: 0.7rem;
+  color: #8899CC;
+  font-family: monospace;
+}
+
+/* Empty state */
+.history-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #8899CC;
+}
+
+.history-empty .big {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+/* Scrollbar */
+.history-list::-webkit-scrollbar {
+  width: 4px;
+}
+.history-list::-webkit-scrollbar-track {
+  background: #1A1E3A;
+  border-radius: 4px;
+}
+.history-list::-webkit-scrollbar-thumb {
+  background: #00DDB3;
+  border-radius: 4px;
+}

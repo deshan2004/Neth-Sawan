@@ -1,0 +1,157 @@
+/* RelativesManager – Modern, clean, accessible */
+
+.relatives-manager-card {
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgba(13, 17, 40, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 221, 179, 0.2);
+}
+
+/* Header */
+.card-head {
+  background: linear-gradient(135deg, rgba(0, 221, 179, 0.12), rgba(0, 221, 179, 0.03));
+  border-bottom: 1px solid rgba(0, 221, 179, 0.2);
+}
+
+/* Contact item – modern card style */
+.rel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border-radius: 24px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.rel-item:hover {
+  transform: translateY(-3px);
+  border-color: rgba(0, 221, 179, 0.5);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Avatar */
+.rel-avatar {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #00CCAA, #008877);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: bold;
+  color: #000;
+  flex-shrink: 0;
+}
+
+/* Contact info */
+.rel-info {
+  flex: 1;
+}
+
+.rel-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.rel-relation {
+  background: rgba(0, 221, 179, 0.15);
+  padding: 4px 12px;
+  border-radius: 40px;
+  font-size: 0.75rem;
+  color: #00DDB3;
+}
+
+.rel-contact {
+  font-size: 0.85rem;
+  color: #A0A8D0;
+  margin: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Method tags */
+.rel-methods {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.method-tag {
+  padding: 5px 12px;
+  border-radius: 30px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+}
+
+.method-tag.wa { background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.3); }
+.method-tag.sms { background: rgba(68, 136, 255, 0.15); color: #4488FF; border: 1px solid rgba(68, 136, 255, 0.3); }
+.method-tag.call { background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3); }
+.method-tag.desktop { background: rgba(0, 221, 179, 0.15); color: #00DDB3; border: 1px solid rgba(0, 221, 179, 0.3); }
+
+/* Action buttons */
+.rel-actions {
+  display: flex;
+  gap: 12px;
+  align-self: flex-end;
+}
+
+.action-icon {
+  background: #2A2F55;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #D0D8FF;
+  font-size: 1.1rem;
+}
+
+.action-icon:hover {
+  transform: scale(1.05);
+  background: #00CCAA;
+  color: #000;
+}
+
+.action-icon.danger:hover {
+  background: #FF3355;
+  color: white;
+}
+
+/* Desktop layout */
+@media (min-width: 768px) {
+  .rel-item {
+    flex-direction: row;
+    align-items: center;
+  }
+  .rel-actions {
+    align-self: center;
+  }
+}
+
+/* Empty state */
+.rel-empty {
+  text-align: center;
+  padding: 48px 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 24px;
+}

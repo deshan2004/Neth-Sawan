@@ -1,5 +1,6 @@
 // components/AccessibilitySettings.jsx
 import React, { useState, useEffect } from 'react';
+import './AccessibilitySettings.css';
 
 const AccessibilitySettings = ({ onThemeChange, onFontSizeChange, currentTheme, currentFontSize }) => {
   const [activeTheme, setActiveTheme] = useState(currentTheme || 'default');

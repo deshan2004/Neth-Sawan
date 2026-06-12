@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { auth } from '../firebase';
+import './Aivision.css';
 
 // Complete Sign Language Dictionary for Media Detection
 const SIGN_DICTIONARY = {

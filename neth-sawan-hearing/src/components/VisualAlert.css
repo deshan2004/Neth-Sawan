@@ -1,0 +1,210 @@
+/* VisualAlert – Modern, accessible, responsive */
+
+.alert-card {
+  background: rgba(13, 17, 40, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 24px;
+  padding: 20px;
+  transition: all 0.3s;
+}
+
+/* Alert level badge */
+.alert-level-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 40px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 12px;
+  background: rgba(0, 204, 170, 0.2);
+  color: #00CCAA;
+}
+
+.alert-level-badge.warning {
+  background: rgba(255, 136, 0, 0.2);
+  color: #FF8800;
+}
+
+.alert-level-badge.critical {
+  background: rgba(255, 0, 51, 0.2);
+  color: #FF0033;
+  animation: pulseBadge 0.8s infinite;
+}
+
+@keyframes pulseBadge {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* Volume header */
+.vol-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: #D0D8FF;
+}
+
+.vol-num {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: monospace;
+  text-shadow: 0 0 6px currentColor;
+  transition: color 0.1s;
+}
+
+/* Volume track */
+.vol-track {
+  height: 12px;
+  background: #2A2F55;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.vol-fill {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.08s linear;
+}
+
+/* Alert box (critical) */
+.alert-box {
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(255, 0, 51, 0.15);
+  border-left: 6px solid #FF0033;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+  animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.alert-icon {
+  font-size: 2.2rem;
+}
+
+.alert-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #FF0033;
+  margin-bottom: 4px;
+}
+
+.alert-type {
+  font-size: 0.85rem;
+  color: #FFA0A0;
+}
+
+/* Sensitivity control */
+.sensitivity-control {
+  margin-top: 20px;
+}
+
+.sensitivity-label {
+  font-weight: 700;
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: #D0D8FF;
+}
+
+.sensitivity-slider {
+  width: 100%;
+  height: 6px;
+    appearance: none;
+  margin: 8px 0;
+}
+
+.sensitivity-slider:focus {
+  outline: none;
+}
+
+.sensitivity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #00DDB3;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 6px #00DDB3;
+  transition: transform 0.1s;
+}
+
+.sensitivity-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.sensitivity-hint {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #8899CC;
+  margin-top: 4px;
+}
+
+/* Recent sounds */
+.recent-sounds {
+  margin-top: 20px;
+}
+
+.recent-title {
+  font-weight: 700;
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+  color: #D0D8FF;
+}
+
+.sound-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sound-chip {
+  background: #2A2F55;
+  padding: 6px 14px;
+  border-radius: 40px;
+  font-size: 0.75rem;
+  color: #D0D8FF;
+  transition: all 0.2s;
+}
+
+.sound-chip:hover {
+  background: #00DDB3;
+  color: #000;
+  transform: scale(1.02);
+  cursor: default;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .alert-card {
+    padding: 16px;
+  }
+  .vol-num {
+    font-size: 1.6rem;
+  }
+  .alert-icon {
+    font-size: 1.8rem;
+  }
+  .alert-title {
+    font-size: 0.9rem;
+  }
+  .sound-chip {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+}

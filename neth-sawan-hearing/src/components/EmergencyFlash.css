@@ -1,0 +1,40 @@
+.emergency-flash-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.95);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: criticalFlash 0.2s infinite alternate;
+}
+@keyframes criticalFlash {
+  0% { background: rgba(255,0,51,0.9); }
+  100% { background: rgba(0,0,0,0.95); }
+}
+.emergency-flash-content {
+  text-align: center;
+  background: #000000CC;
+  padding: 30px 20px;
+  border-radius: 48px;
+  max-width: 90%;
+  border: 6px solid #FF0033;
+}
+@media (min-width: 768px) {
+  .emergency-flash-content {
+    padding: 40px;
+    max-width: 600px;
+  }
+}
+.emergency-title {
+  font-size: 32px;
+  font-weight: 900;
+  color: #FF0033;
+  text-shadow: 2px 2px 0 white;
+}
+@media (min-width: 768px) {
+  .emergency-title {
+    font-size: 48px;
+  }
+}

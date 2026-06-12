@@ -1,0 +1,164 @@
+/* SignLanguageBox – Vibrant, accessible, animated */
+
+.sign-language-card {
+  border: 1px solid rgba(245, 200, 66, 0.3);
+  background: rgba(13, 17, 40, 0.6);
+  backdrop-filter: blur(12px);
+}
+
+.sign-badge {
+  font-size: 0.7rem;
+  background: rgba(245, 200, 66, 0.15);
+  color: #F5C842;
+  padding: 4px 12px;
+  border-radius: 40px;
+  margin-left: 10px;
+}
+
+/* Sign animation */
+.sign-animation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 28px;
+  background: linear-gradient(135deg, rgba(0, 221, 179, 0.12), rgba(245, 200, 66, 0.06));
+  border-radius: 28px;
+  width: 100%;
+  transition: all 0.3s;
+}
+
+@media (min-width: 768px) {
+  .sign-animation {
+    flex-direction: row;
+    text-align: left;
+  }
+}
+
+.sign-hand-large {
+  font-size: 90px;
+  animation: handWave 1.2s ease infinite;
+  filter: drop-shadow(0 4px 12px rgba(0, 221, 179, 0.3));
+}
+
+@keyframes handWave {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(8deg) scale(1.05); }
+}
+
+.sign-details h3 {
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #00DDB3, #F5C842);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sign-details p {
+  font-size: 0.9rem;
+  color: #D0D8FF;
+  line-height: 1.5;
+}
+
+/* Waiting state */
+.sign-waiting {
+  text-align: center;
+  padding: 32px;
+}
+
+.sign-hand-pulse {
+  font-size: 80px;
+  animation: gentlePulse 1.8s ease infinite;
+}
+
+@keyframes gentlePulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.example-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.example-words span {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 16px;
+  border-radius: 40px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.example-words span:hover {
+  background: rgba(0, 221, 179, 0.2);
+  color: #00DDB3;
+  transform: translateY(-2px);
+}
+
+/* Quick reference */
+.quick-reference {
+  margin-top: 24px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+}
+
+.quick-reference h4 {
+  margin-bottom: 16px;
+  color: #00DDB3;
+}
+
+.quick-signs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.quick-sign-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-sign-item:hover {
+  background: rgba(0, 221, 179, 0.2);
+  transform: translateY(-4px);
+}
+
+.quick-hand {
+  font-size: 32px;
+}
+
+.quick-word {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Guide */
+.sign-language-guide {
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(68, 136, 255, 0.08);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  border-left: 3px solid #4488FF;
+}
+
+.guide-title {
+  font-weight: 700;
+  color: #4488FF;
+  margin-bottom: 6px;
+}

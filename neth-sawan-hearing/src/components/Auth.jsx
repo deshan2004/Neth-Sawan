@@ -4,35 +4,66 @@ import { auth, db } from '../firebase';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  updateProfile 
+  updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import './Auth.css';
 
-const Auth = ({ onGuestMode, initialMode = 'login', onSuccess }) => {
+const Auth = ({ onGuestMode, initialMode = 'login', onSuccess, onClose }) => {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Google Sign-In
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const res = await signInWithPopup(auth, provider);
+      await setDoc(doc(db, "users", res.user.uid), {
+        uid: res.user.uid,
+        name: res.user.displayName || 'Google User',
+        email: res.user.email,
+        createdAt: serverTimestamp(),
+        role: 'user'
+      }, { merge: true });
+      try {
+        await fetch('http://localhost:5000/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: res.user.uid,
+            name: res.user.displayName || 'Google User',
+            email: res.user.email,
+            role: 'user'
+          }),
+        });
+      } catch (backendErr) { console.warn("Backend sync failed:", backendErr.message); }
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      if (err.code !== 'auth/popup-closed-by-user') setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Email/Password submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
     try {
       if (isLogin) {
-        // Sign in existing user
         await signInWithEmailAndPassword(auth, formData.email, formData.password);
         if (onSuccess) onSuccess();
       } else {
-        // 1. Create user in Firebase Authentication
         const res = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        
-        // 2. Update display name
         await updateProfile(res.user, { displayName: formData.name });
-        
-        // 3. Save user document to Firestore (frontend direct write)
         await setDoc(doc(db, "users", res.user.uid), {
           uid: res.user.uid,
           name: formData.name,
@@ -40,8 +71,6 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess }) => {
           createdAt: serverTimestamp(),
           role: 'user'
         });
-
-        // 4. Async sync with backend server (Doesn't block user if fails)
         try {
           await fetch('http://localhost:5000/api/users', {
             method: 'POST',
@@ -53,27 +82,28 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess }) => {
               role: 'user'
             }),
           });
-          console.log("User synced with Backend Server successfully!");
-        } catch (backendErr) {
-          console.warn("Backend sync failed, but user created via frontend:", backendErr.message);
-        }
-
+        } catch (backendErr) { console.warn("Backend sync failed:", backendErr.message); }
         if (onSuccess) onSuccess();
       }
     } catch (err) {
-      console.error("Auth Error: ", err);
       let errorMessage = err.message;
       if (err.code === 'auth/email-already-in-use') errorMessage = 'Email already registered';
       if (err.code === 'auth/invalid-credential') errorMessage = 'Invalid email or password';
       if (err.code === 'auth/weak-password') errorMessage = 'Password should be at least 6 characters';
       setError(errorMessage);
-      setLoading(false); // Only reset loading here if there's an error and we stay on page
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="auth-wrapper">
-      <div className="auth-card">
+    <div className="auth-container-fixed">
+      <div className="auth-card-clean">
+        {/* ✕ Close button – always visible when onClose is provided */}
+        {onClose && (
+          <button type="button" className="auth-close-x" onClick={onClose} aria-label="Close">✕</button>
+        )}
+
         <div className="auth-header">
           <div className="auth-logo">
             <span className="auth-logo-ear">👂</span>
@@ -83,146 +113,164 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess }) => {
           <p>{isLogin ? 'Sign in to Neth-Sawan' : 'Join the hearing assistant community'}</p>
         </div>
 
+        <button type="button" className="google-login-btn" onClick={handleGoogleSignIn} disabled={loading}>
+          <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" className="google-icon" />
+          {isLogin ? 'Sign in with Google' : 'Sign up with Google'}
+        </button>
+
+        <div className="divider-line"><span>OR</span></div>
+
         <form onSubmit={handleSubmit}>
           {!isLogin && (
             <div className="input-group">
               <span className="input-icon">👤</span>
-              <input 
-                type="text" 
-                placeholder="Full Name" 
-                required 
-                value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})} 
-              />
+              <input type="text" placeholder="Full Name" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
             </div>
           )}
           <div className="input-group">
             <span className="input-icon">📧</span>
-            <input 
-              type="email" 
-              placeholder="Email Address" 
-              required 
-              value={formData.email}
-              onChange={e => setFormData({...formData, email: e.target.value})} 
-            />
+            <input type="email" placeholder="Email Address" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
           </div>
           <div className="input-group">
             <span className="input-icon">🔒</span>
-            <input 
-              type={showPassword ? "text" : "password"} 
-              placeholder="Password" 
-              required 
-              value={formData.password}
-              onChange={e => setFormData({...formData, password: e.target.value})} 
-            />
-            <button 
-              type="button" 
-              className="eye-btn"
-              onClick={() => setShowPassword(!showPassword)}
-            >
+            <input type={showPassword ? "text" : "password"} placeholder="Password" required value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+            <button type="button" className="eye-btn" onClick={() => setShowPassword(!showPassword)}>
               {showPassword ? '👁️' : '👁️‍🗨️'}
             </button>
           </div>
-          
           {error && <div className="error-box">{error}</div>}
-          
           <button type="submit" className="auth-btn main" disabled={loading}>
             {loading ? <div className="spinner"></div> : (isLogin ? 'Sign In' : 'Create Account')}
           </button>
         </form>
 
-        <div className="divider">
-          <span>OR</span>
-        </div>
-
-        <button className="auth-btn guest" onClick={onGuestMode}>
-          🚪 Continue as Guest
-        </button>
+        <button className="auth-btn guest" onClick={onGuestMode}>🚪 Continue as Guest</button>
 
         <button className="auth-switch" onClick={() => setIsLogin(!isLogin)}>
           {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
         </button>
-
-        <div className="auth-footer">
-          <p>Neth-Sawan - Hearing Assistant for Everyone</p>
-        </div>
       </div>
 
       <style>{`
-        .auth-wrapper {
-          min-height: 100vh;
+        .auth-container-fixed {
+          width: 100%;
           display: flex;
           justify-content: center;
           align-items: center;
-          background: radial-gradient(ellipse at 30% 40%, #0D1128, #04050F);
-          position: relative;
-          overflow: hidden;
+          box-sizing: border-box;
         }
-        .auth-wrapper::before {
-          content: '';
-          position: absolute;
-          width: 200%;
-          height: 200%;
-          background: radial-gradient(circle at 20% 80%, rgba(0,221,179,0.08), transparent 50%);
-          animation: rotate 20s linear infinite;
-        }
-        @keyframes rotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .auth-card {
+        .auth-card-clean {
           position: relative;
           width: 100%;
-          max-width: 450px;
-          background: rgba(13, 17, 40, 0.95);
-          backdrop-filter: blur(20px);
-          border-radius: 32px;
-          padding: 40px 32px;
-          border: 1px solid rgba(0, 221, 179, 0.2);
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-          animation: slideUp 0.5s ease;
-          z-index: 1;
+          max-width: 400px;
+          background: #0D1128;
+          border-radius: 28px;
+          padding: 32px 24px;
+          border: 1px solid rgba(0, 221, 179, 0.3);
+          box-shadow: 0 25px 40px rgba(0, 0, 0, 0.5);
+          box-sizing: border-box;
+          text-align: center;
         }
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
+        .auth-close-x {
+          position: absolute;
+          top: 18px;
+          right: 18px;
+          background: rgba(255,255,255,0.08);
+          border: none;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          color: #8899CC;
+          font-size: 18px;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .auth-close-x:hover {
+          background: rgba(255,51,85,0.2);
+          color: #FF3355;
+          transform: scale(1.05);
         }
         .auth-header {
-          text-align: center;
-          margin-bottom: 32px;
+          margin-bottom: 24px;
         }
         .auth-logo {
           display: flex;
           justify-content: center;
           gap: 12px;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
         .auth-logo-ear, .auth-logo-wave {
-          font-size: 48px;
-          animation: pulse 2s ease-in-out infinite;
-        }
-        .auth-logo-ear { animation-delay: 0s; }
-        .auth-logo-wave { animation-delay: 0.3s; }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 0.7; }
-          50% { transform: scale(1.1); opacity: 1; }
+          font-size: 44px;
         }
         .auth-header h2 {
-          font-size: 28px;
+          font-size: 26px;
           font-weight: 700;
           background: linear-gradient(135deg, #00DDB3, #F5C842);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
-          margin-bottom: 8px;
+          margin: 0 0 6px 0;
         }
         .auth-header p {
           font-size: 13px;
           color: #8899CC;
+          margin: 0;
+        }
+        .google-login-btn {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          background: #FFFFFF;
+          color: #1F1F1F;
+          border: none;
+          padding: 12px;
+          border-radius: 40px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: 0.2s;
+        }
+        .google-login-btn:hover {
+          background: #F1F3F4;
+          transform: translateY(-1px);
+        }
+        .google-icon {
+          width: 18px;
+          height: 18px;
+        }
+        .divider-line {
+          margin: 20px 0;
+          position: relative;
+          text-align: center;
+        }
+        .divider-line::before {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 0;
+          width: 100%;
+          height: 1px;
+          background: rgba(255,255,255,0.1);
+          z-index: 1;
+        }
+        .divider-line span {
+          position: relative;
+          z-index: 2;
+          background: #0D1128;
+          padding: 0 10px;
+          color: #5C628A;
+          font-size: 12px;
+          font-weight: 600;
         }
         .input-group {
           position: relative;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
+          text-align: left;
         }
         .input-icon {
           position: absolute;
@@ -230,22 +278,22 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess }) => {
           top: 50%;
           transform: translateY(-50%);
           font-size: 16px;
-          color: #5c628a;
+          color: #5C628A;
         }
         .input-group input {
           width: 100%;
-          padding: 14px 16px 14px 44px;
-          background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
+          padding: 12px 16px 12px 42px;
+          background: rgba(0,0,0,0.25);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 40px;
           color: #E8EEFF;
           font-size: 14px;
-          transition: all 0.2s;
+          transition: 0.2s;
         }
         .input-group input:focus {
           outline: none;
           border-color: #00DDB3;
-          box-shadow: 0 0 0 3px rgba(0, 221, 179, 0.1);
+          box-shadow: 0 0 0 3px rgba(0,221,179,0.15);
         }
         .eye-btn {
           position: absolute;
@@ -254,92 +302,70 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess }) => {
           transform: translateY(-50%);
           background: none;
           border: none;
-          font-size: 16px;
           cursor: pointer;
-          color: #5c628a;
+          color: #5C628A;
         }
         .error-box {
-          background: rgba(255, 51, 85, 0.15);
+          background: rgba(255,51,85,0.15);
           border: 1px solid #FF3355;
-          border-radius: 12px;
-          padding: 10px 14px;
+          border-radius: 40px;
+          padding: 10px;
           font-size: 12px;
           color: #FF3355;
-          margin-bottom: 20px;
+          margin-bottom: 14px;
         }
         .auth-btn {
           width: 100%;
-          padding: 14px;
-          border-radius: 16px;
+          padding: 13px;
+          border-radius: 40px;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: 0.2s;
           border: none;
         }
         .auth-btn.main {
           background: linear-gradient(135deg, #00DDB3, #00B899);
           color: #07091A;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
         .auth-btn.main:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(0, 221, 179, 0.3);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(0,221,179,0.3);
         }
         .auth-btn.guest {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          color: #E8EEFF;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          color: #D0D8FF;
         }
         .auth-btn.guest:hover {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(255,255,255,0.08);
           border-color: #F5C842;
-        }
-        .auth-btn:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
+          color: #F5C842;
         }
         .spinner {
-          width: 20px;
-          height: 20px;
-          border: 2px solid rgba(0, 0, 0, 0.2);
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgba(0,0,0,0.1);
           border-top-color: #07091A;
           border-radius: 50%;
           animation: spin 0.6s linear infinite;
           margin: 0 auto;
         }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        .divider {
-          margin: 24px 0;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          text-align: center;
-        }
-        .divider span {
-          background: rgba(13, 17, 40, 0.95);
-          padding: 0 12px;
-          color: #5c628a;
-          font-size: 12px;
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .auth-switch {
           background: none;
           border: none;
           color: #00DDB3;
           font-size: 13px;
           cursor: pointer;
-          margin-top: 20px;
+          margin-top: 16px;
           width: 100%;
-          text-align: center;
+          transition: color 0.2s;
         }
         .auth-switch:hover {
           text-decoration: underline;
-        }
-        .auth-footer {
-          margin-top: 28px;
-          text-align: center;
-          font-size: 11px;
-          color: #4A5578;
+          color: #F5C842;
         }
       `}</style>
     </div>

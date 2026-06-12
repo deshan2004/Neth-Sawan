@@ -2,37 +2,24 @@
 import React, { useState } from 'react';
 import Auth from './Auth';
 import { useLanguage } from '../context/LanguageContext';
+import './LandingPage.css';
 
 const LandingPage = ({ onGuestMode }) => {
   const { t } = useLanguage();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
 
-  // Public folder එකේ තියෙන background video එකේ නිවැරදි path එක
+  // Local video path (place your video in public/videos/background.mp4)
   const videoSrc = "/videos/background.mp4";
 
   return (
     <div className="landing-page">
-      {/* ─── Hero Section with Background Video ─────────────────── */}
+      {/* Hero Section with background video */}
       <div className="landing-hero">
-        
-        {/* Layer 1: Background Video (Z-Index: 1) */}
-        <video
-          className="landing-bg-video"
-          autoPlay
-          loop
-          muted
-          playsInline
-          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230A0C1A'/%3E%3C/svg%3E"
-        >
+        <video className="landing-bg-video" autoPlay loop muted playsInline>
           <source src={videoSrc} type="video/mp4" />
-          Your browser does not support the video tag.
         </video>
-
-        {/* Layer 2: Transparent Dark Overlay (Z-Index: 2) */}
         <div className="landing-overlay"></div>
-
-        {/* Layer 3: Foreground Content (Z-Index: 3) */}
         <div className="landing-content">
           <div className="landing-logo">
             <span>👂</span>
@@ -57,7 +44,7 @@ const LandingPage = ({ onGuestMode }) => {
         </div>
       </div>
 
-      {/* ─── Features Section ─────────────────── */}
+      {/* Features */}
       <div className="landing-features">
         <div className="feature-card">
           <span className="feature-icon">🎤</span>
@@ -81,24 +68,26 @@ const LandingPage = ({ onGuestMode }) => {
         </div>
       </div>
 
-      {/* ─── Auth Modal ─────────────────── */}
+      {/* Auth Modal – now passes onClose */}
       {showAuthModal && (
         <div className="modal-overlay" onClick={() => setShowAuthModal(false)}>
           <div className="modal-container" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowAuthModal(false)}>✕</button>
-            <Auth initialMode={authMode} onGuestMode={onGuestMode} onSuccess={() => setShowAuthModal(false)} />
+            <Auth
+              initialMode={authMode}
+              onGuestMode={onGuestMode}
+              onSuccess={() => setShowAuthModal(false)}
+              onClose={() => setShowAuthModal(false)}   // 👈 close button inside Auth
+            />
           </div>
         </div>
       )}
 
-      {/* ─── Updated CSS Styles with Video Controls ─────────────────── */}
       <style>{`
         .landing-page {
           min-height: 100vh;
           background: #0A0C1A;
           font-family: 'Inter', sans-serif;
         }
-        
         .landing-hero {
           position: relative;
           height: 100vh;
@@ -107,10 +96,7 @@ const LandingPage = ({ onGuestMode }) => {
           justify-content: center;
           text-align: center;
           overflow: hidden;
-          background-color: #0A0C1A;
         }
-
-        /* Video එක මුළු Screen එක පුරාම Background එකක් ලෙස තැබීම */
         .landing-bg-video {
           position: absolute;
           top: 0;
@@ -118,29 +104,26 @@ const LandingPage = ({ onGuestMode }) => {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          z-index: 1; /* හැමදේටම යටින් */
+          z-index: 1;
         }
-
-        /* Video එක උඩින් වැටෙන Transparent Dark Overlay එක */
         .landing-overlay {
           position: absolute;
           inset: 0;
-          /* වීඩියෝ එක උඩින් අකුරු පැහැදිලිව පෙනෙන්න 40% ක කළු පැහැයක් සහ Gradient එකක් මිශ්‍ර කර ඇත */
-          background: linear-gradient(to bottom, rgba(10, 12, 26, 0.4), #0A0C1A),
-                      radial-gradient(circle at 50% 30%, rgba(0, 221, 179, 0.15), transparent 70%);
-          z-index: 2; /* වීඩියෝ එකට උඩින් */
-          pointer-events: none; /* Buttons Click කිරීමට බාධාවක් නොවන ලෙස */
+          background: linear-gradient(to bottom, rgba(10,12,26,0.4), #0A0C1A), radial-gradient(circle at 50% 30%, rgba(0,221,179,0.15), transparent 70%);
+          z-index: 2;
+          pointer-events: none;
         }
-
-        /* ප්‍රධාන Content සහ Text Layer එක */
         .landing-content {
           position: relative;
-          z-index: 3; /* Overlay එකටත් උඩින් */
+          z-index: 3;
           padding: 20px;
           max-width: 800px;
-          animation: fadeIn 1s ease-out;
+          background: rgba(10,12,26,0.6);
+          backdrop-filter: blur(12px);
+          border-radius: 48px;
+          border: 1px solid rgba(0,221,179,0.2);
+          margin: 0 20px;
         }
-
         .landing-logo {
           font-size: 64px;
           margin-bottom: 20px;
@@ -178,7 +161,7 @@ const LandingPage = ({ onGuestMode }) => {
           font-weight: 600;
           font-size: 16px;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: 0.2s;
           border: none;
         }
         .btn-primary {
@@ -187,7 +170,7 @@ const LandingPage = ({ onGuestMode }) => {
         }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,221,179,0.3); }
         .btn-secondary {
-          background: rgba(10, 12, 26, 0.6);
+          background: rgba(10,12,26,0.6);
           backdrop-filter: blur(5px);
           border: 1px solid rgba(0,221,179,0.5);
           color: #00DDB3;
@@ -200,7 +183,6 @@ const LandingPage = ({ onGuestMode }) => {
           color: #D0D8FF;
         }
         .btn-guest:hover { border-color: #F5C842; color: #F5C842; transform: translateY(-2px); }
-        
         .landing-features {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -224,7 +206,6 @@ const LandingPage = ({ onGuestMode }) => {
         .feature-icon { font-size: 48px; display: block; margin-bottom: 16px; }
         .feature-card h3 { font-size: 22px; margin-bottom: 12px; color: #00DDB3; }
         .feature-card p { color: #A0A8D0; line-height: 1.5; }
-        
         .modal-overlay {
           position: fixed;
           inset: 0;
@@ -238,32 +219,14 @@ const LandingPage = ({ onGuestMode }) => {
         }
         .modal-container {
           position: relative;
-          background: #0A0C1A;
-          border: 1px solid #00DDB3;
-          border-radius: 32px;
+          background: transparent;
           max-width: 450px;
           width: 100%;
           max-height: 90vh;
           overflow-y: auto;
-          padding: 24px;
         }
-        .modal-close {
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          background: none;
-          border: none;
-          color: #8899CC;
-          font-size: 24px;
-          cursor: pointer;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(15px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
         @media (max-width: 768px) {
+          .landing-content { padding: 24px; }
           .landing-content h1 { font-size: 36px; }
           .tagline { font-size: 16px; }
           .landing-buttons { flex-direction: column; width: 100%; }

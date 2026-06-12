@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import './HapticFeedback.css';
 
 const HapticFeedback = ({ isLoud, volume, soundType }) => {
   const ref = useRef(null);

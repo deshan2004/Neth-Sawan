@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './SignLanguageBox.css';
 
 // Complete dictionary for sign language translation
 const SIGN_DICTIONARY = {

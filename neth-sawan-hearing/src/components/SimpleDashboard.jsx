@@ -4,6 +4,7 @@ import SignLanguageBox from './SignLanguageBox';
 import VisualAlert from './VisualAlert';
 import { SoundHistory } from './SoundHistory';
 import SoundVisualizer from './SoundVisualizer';
+import './SimpleDashboard.css';
 
 const SimpleDashboard = ({
   transcript,

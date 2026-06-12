@@ -1,5 +1,6 @@
 // src/components/FallDetector.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import './FallDetector.css';
 
 const FallDetector = ({ onFallDetected }) => {
   const [isCountingDown, setIsCountingDown] = useState(false);

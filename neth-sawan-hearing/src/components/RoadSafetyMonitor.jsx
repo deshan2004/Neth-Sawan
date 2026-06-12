@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import './RoadSafetyMonitor.css';
 
 const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
   const [isMonitoring, setIsMonitoring] = useState(false);

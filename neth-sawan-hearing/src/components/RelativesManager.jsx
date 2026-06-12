@@ -1,6 +1,7 @@
 // src/components/RelativesManager.jsx
 import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase';
+import './RelativesManager.css';
 
 const RELATIONS = [
   { value: 'parent',    label: 'Parent',    si: 'දෙමාපිය', emoji: '👨‍👩‍👧' },

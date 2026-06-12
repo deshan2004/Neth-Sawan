@@ -1,0 +1,66 @@
+/* HapticFeedback – vibration visualiser */
+
+.haptic-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: rgba(13, 17, 40, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid #FF3355;
+  border-radius: 60px;
+  z-index: 300;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.vib-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 32px;
+}
+
+.vib-bar {
+  width: 5px;
+  border-radius: 3px;
+  background: #FF3355;
+  animation: barBounce 0.3s ease-in-out infinite alternate;
+  transform-origin: bottom;
+}
+
+@keyframes barBounce {
+  from { transform: scaleY(0.5); }
+  to { transform: scaleY(1); }
+}
+
+.haptic-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #FF3355;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .haptic-bar {
+    padding: 8px 18px;
+    gap: 10px;
+  }
+  .vib-bars {
+    height: 24px;
+  }
+  .haptic-label {
+    font-size: 11px;
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './EmergencyFlash.css';
 
 const EmergencyFlash = ({ isVisible, emergencyData }) => {
   const [countdown, setCountdown] = useState(0);

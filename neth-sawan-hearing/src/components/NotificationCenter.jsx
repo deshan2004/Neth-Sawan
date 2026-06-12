@@ -1,4 +1,5 @@
 import React from 'react';
+import './NotificationCenter.css';
 
 const relTime = (ts) => {
   const diff = Date.now() - new Date(ts).getTime();
