@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from './firebase'; // Make sure db is imported here!
+import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -20,21 +20,24 @@ import EmergencyFlash from './components/EmergencyFlash';
 import AccessibilitySettings from './components/AccessibilitySettings';
 import RoadSafetyMonitor from './components/RoadSafetyMonitor';
 import FallDetector from "./components/FallDetector";
+import BackgroundVideo from './components/BackgroundVideo';
+import LandingPage from './components/LandingPage';
 
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
 import { useVolume } from './hooks/useVolume';
 import { useNotifications } from './hooks/useNotifications';
-import { useHaptic } from './hooks/useHaptic';
+
+// Context
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
 
-// Beautiful WhatsApp message template for Fall Detection
+// WhatsApp message helper for fall detection
 const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
   const time = new Date().toLocaleString('en-LK', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
-  
   let message = `🚨 *URGENT: FALL DETECTED - Neth-Sawan* 🚨\n\n`;
   message += `Dear ${contactName},\n\n`;
   message += `⚠️ *An immediate fall/impact was detected by your loved one's device, and they have not responded to the safety countdown.*\n\n`;
@@ -43,14 +46,12 @@ const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
   message += `🕒 *TIME:* ${time}\n`;
   message += `👤 *USER:* ${userEmail || 'Neth-Sawan User'}\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  
   if (location) {
     message += `📍 *LAST KNOWN LIVE LOCATION:*\n`;
-    message += `https://maps.google.com/?q=$${location.lat},${location.lng}\n\n`;
+    message += `https://maps.google.com/?q=${location.lat},${location.lng}\n\n`;
   } else {
     message += `📍 *LOCATION:* Location services were unavailable, please try calling them immediately.\n\n`;
   }
-  
   message += `📝 *MESSAGE:* This is an automated emergency alert. Immediate assistance may be required. Please contact or check on your loved one right away!\n\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
   message += `⚠️ *PLEASE RESPOND IMMEDIATELY* ⚠️\n`;
@@ -59,7 +60,10 @@ const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
   return message;
 };
 
-function App() {
+// Inner component that uses language context
+function AppContent() {
+  const { updateLanguageFromTranscript, t } = useLanguage();
+
   // Auth States
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -73,9 +77,6 @@ function App() {
   const [emergencyData, setEmergencyData] = useState(null);
   const [roadSafetyActive, setRoadSafetyActive] = useState(false);
   
-  // Botpress Sign Language State
-  const [currentSign, setCurrentSign] = useState('');
-
   // Emergency Notifications Toggle
   const [emergencyNotificationsEnabled, setEmergencyNotificationsEnabled] = useState(() => {
     const saved = localStorage.getItem('emergency_notifications_enabled');
@@ -92,7 +93,7 @@ function App() {
   const { 
     notificationQueue, markAsRead, clearNotifications, 
     relatives, addRelative, removeRelative, updateRelative,
-    requestPermission, autoSendStatus
+    autoSendStatus
   } = useNotifications();
 
   // Guest mode data
@@ -100,39 +101,14 @@ function App() {
   const [guestNotifications, setGuestNotifications] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
 
-  // Botpress event listener
+  // Auto-switch UI language based on transcript
   useEffect(() => {
-    const handleBotpressEvents = (event) => {
-      if (event.data && event.data.type === 'BOTPRESS_SIMPLIFIED_MSG') {
-        const textContent = event.data.text;
-        
-        if (textContent) {
-          if (textContent.trim().includes("Placing the Sign Language demonstration")) {
-            setCurrentSign('THANK_YOU');
-            showToast("Sign Language Activated via Bot command!", "success");
-            return;
-          }
-          const match = textContent.match(/[A-Z]{3,}(_[A-Z]+)*/);
-          if (match) {
-            const detectedSign = match[0];
-            setCurrentSign(detectedSign);
-            showToast(`Sign Detected: ${detectedSign}`, 'success');
-          } else if (textContent.toLowerCase().includes('thank you')) {
-            setCurrentSign('THANK_YOU');
-            showToast(`Sign Detected: THANK_YOU`, 'success');
-          } else if (textContent.toLowerCase().includes('hello')) {
-            setCurrentSign('HELLO');
-            showToast(`Sign Detected: HELLO`, 'success');
-          }
-        }
-      }
-    };
+    if (transcript && transcript.trim().length > 0) {
+      updateLanguageFromTranscript(transcript);
+    }
+  }, [transcript, updateLanguageFromTranscript]);
 
-    window.addEventListener('message', handleBotpressEvents);
-    return () => window.removeEventListener('message', handleBotpressEvents);
-  }, []);
-
-  // Save emergency notifications toggle to localStorage
+  // Save emergency toggle to localStorage
   useEffect(() => {
     localStorage.setItem('emergency_notifications_enabled', emergencyNotificationsEnabled);
   }, [emergencyNotificationsEnabled]);
@@ -142,16 +118,11 @@ function App() {
     const savedTheme = localStorage.getItem('accessibility_theme');
     const savedFontSize = localStorage.getItem('accessibility_fontSize');
     const savedColorBlindMode = localStorage.getItem('accessibility_colorBlindMode');
-    
     if (savedFontSize) {
       setCurrentFontSize(parseInt(savedFontSize));
       document.documentElement.style.setProperty('--dynamic-font-size', `${savedFontSize}px`);
     }
-    
-    if (savedTheme) {
-      setCurrentTheme(savedTheme);
-    }
-    
+    if (savedTheme) setCurrentTheme(savedTheme);
     if (savedColorBlindMode && savedColorBlindMode !== 'none') {
       let filter = '';
       switch(savedColorBlindMode) {
@@ -159,6 +130,7 @@ function App() {
         case 'deuteranopia': filter = 'url(#deuteranopia)'; break;
         case 'tritanopia': filter = 'url(#tritanopia)'; break;
         case 'achromatopsia': filter = 'grayscale(100%)'; break;
+        default: filter = 'none';
       }
       if (filter) document.body.style.filter = filter;
     }
@@ -176,27 +148,23 @@ function App() {
     }
   }, [isGuest]);
 
-  // Emergency flash
+  // Emergency flash for loud sounds
   useEffect(() => {
-    if (isLoud && soundType && !roadSafetyActive) {
-      if (emergencyNotificationsEnabled) {
-        setFlashEmergency(true);
-        setEmergencyData({ soundType, message: `Emergency: ${soundType}`, timestamp: new Date(), volume });
-        
-        if (isGuest) {
-          guestAddNotification({
-            id: Date.now(),
-            type: 'EMERGENCY',
-            message: `Emergency: ${soundType}`,
-            soundType,
-            timestamp: new Date().toISOString(),
-            read: false,
-            volume
-          });
-        }
-        
-        setTimeout(() => setFlashEmergency(false), 3000);
+    if (isLoud && soundType && !roadSafetyActive && emergencyNotificationsEnabled) {
+      setFlashEmergency(true);
+      setEmergencyData({ soundType, message: `Emergency: ${soundType}`, timestamp: new Date(), volume });
+      if (isGuest) {
+        guestAddNotification({
+          id: Date.now(),
+          type: 'EMERGENCY',
+          message: `Emergency: ${soundType}`,
+          soundType,
+          timestamp: new Date().toISOString(),
+          read: false,
+          volume
+        });
       }
+      setTimeout(() => setFlashEmergency(false), 3000);
     }
   }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled]);
 
@@ -229,21 +197,21 @@ function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      showToast("Logged out successfully", "success");
+      showToast(t('loggedOut') || "Logged out", "success");
     } catch (err) {
-      showToast("Logout failed", "error");
+      showToast(t('logoutFailed') || "Logout failed", "error");
     }
   };
 
   const handleGuestMode = () => {
     setIsGuest(true);
     setUser(null);
-    showToast("Guest mode activated. Features work fully!", "success");
+    showToast(t('guestModeActivated') || "Guest mode activated", "success");
   };
 
   const handleSignOutGuest = () => {
     setIsGuest(false);
-    showToast("Signed out from guest mode", "info");
+    showToast(t('guestSignedOut') || "Signed out from guest mode", "info");
   };
 
   const handleThemeChange = (theme) => {
@@ -258,10 +226,10 @@ function App() {
   const toggleEmergencyNotifications = () => {
     const newState = !emergencyNotificationsEnabled;
     setEmergencyNotificationsEnabled(newState);
-    showToast(newState ? 'emergency notifications enabled' : 'emergency notifications disabled', newState ? 'success' : 'info');
+    showToast(newState ? (t('alertsOn') || 'Emergency notifications enabled') : (t('alertsOff') || 'Emergency notifications disabled'), newState ? 'success' : 'info');
   };
 
-  // Guest Handlers
+  // Guest handlers
   const guestAddRelative = (data) => {
     const entry = {
       id: Date.now(), name: data.name.trim(), phone: data.phone?.trim() || '', email: data.email?.trim() || '',
@@ -314,6 +282,7 @@ function App() {
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
+  // Fall detection handler
   const handleFallEmergency = async () => {
     let currentLocation = null;
     try {
@@ -351,7 +320,6 @@ function App() {
             if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
             else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
             else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
-
             window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
           }
         });
@@ -359,6 +327,7 @@ function App() {
     }
   };
 
+  // Loading state
   if (authLoading) {
     return (
       <div className="loading-screen">
@@ -369,19 +338,22 @@ function App() {
     );
   }
 
+  // Show landing page if not logged in and not guest
   if (!user && !isGuest) {
-    return <Auth onGuestMode={handleGuestMode} />;
+    return <LandingPage onGuestMode={handleGuestMode} />;
   }
 
+  // Main app
   return (
     <div className="app-wrapper" style={{ fontSize: `${currentFontSize}px` }}>
+      <BackgroundVideo opacity={0.85} />
       <FallDetector onFallDetected={handleFallEmergency} />
 
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
-          <filter id="protanopia"><feColorMatrix type="matrix" values="0.567, 0.433, 0, 0, 0, 0.558, 0.442, 0, 0, 0, 0, 0.242, 0.758, 0, 0, 0, 0, 0, 1, 0"/></filter>
-          <filter id="deuteranopia"><feColorMatrix type="matrix" values="0.625, 0.375, 0, 0, 0, 0.7, 0.3, 0, 0, 0, 0, 0.3, 0.7, 0, 0, 0, 0, 0, 1, 0"/></filter>
-          <filter id="tritanopia"><feColorMatrix type="matrix" values="0.95, 0.05, 0, 0, 0, 0, 0.433, 0.567, 0, 0, 0, 0.475, 0.525, 0, 0, 0, 0, 0, 1, 0"/></filter>
+          <filter id="protanopia"><feColorMatrix type="matrix" values="0.567,0.433,0,0,0,0.558,0.442,0,0,0,0,0.242,0.758,0,0,0,0,0,1,0"/></filter>
+          <filter id="deuteranopia"><feColorMatrix type="matrix" values="0.625,0.375,0,0,0,0.7,0.3,0,0,0,0,0.3,0.7,0,0,0,0,0,1,0"/></filter>
+          <filter id="tritanopia"><feColorMatrix type="matrix" values="0.95,0.05,0,0,0,0,0.433,0.567,0,0,0,0.475,0.525,0,0,0,0,0,1,0"/></filter>
         </defs>
       </svg>
 
@@ -390,7 +362,6 @@ function App() {
       <Sidebar 
         activeTab={activeTab} setActiveTab={setActiveTab} isOpen={sidebarVisible} onClose={() => setSidebarVisible(false)}
         user={user} isGuest={isGuest} onLogout={isGuest ? handleSignOutGuest : handleLogout}
-        emergencyNotificationsEnabled={emergencyNotificationsEnabled} onToggleEmergencyNotifications={toggleEmergencyNotifications}
       />
 
       <div className={`content-area ${sidebarVisible && window.innerWidth > 1024 ? 'sidebar-open' : ''}`}>
@@ -407,12 +378,12 @@ function App() {
                 <div className="card-head">
                   <div className="card-title">
                     <span className="card-title-icon icon-teal">🎤🤟</span>
-                    Live Captions & Sign Language Translator
+                    {t('liveCaptionsSign')}
                   </div>
                   {isListening && (
                     <div className="live-badge">
                       <span className="pulse-dot"></span>
-                      <span>LISTENING</span>
+                      <span>{t('listening').toUpperCase()}</span>
                     </div>
                   )}
                 </div>
@@ -434,10 +405,10 @@ function App() {
                 <div className="notifications-disabled-banner">
                   <span className="banner-icon">🔕</span>
                   <div className="banner-content">
-                    <strong>Emergency Notifications are DISABLED</strong>
-                    <p>You won't receive visual alerts or emergency flashes.</p>
+                    <strong>{t('alertsOff')}</strong>
+                    <p>{t('noEmergencyAlerts') || "You won't receive visual alerts or emergency flashes."}</p>
                   </div>
-                  <button onClick={toggleEmergencyNotifications} className="banner-enable-btn">Enable Now</button>
+                  <button onClick={toggleEmergencyNotifications} className="banner-enable-btn">{t('enableNow') || "Enable Now"}</button>
                 </div>
               )}
 
@@ -478,7 +449,7 @@ function App() {
           {activeTab === 'emergency' && (
             <div className="emergency-sos-card">
               <div className="sos-header">
-                <h2>🆘 SOS Emergency Center</h2>
+                <h2>🆘 {t('sosCenter')}</h2>
               </div>
               <div className="sos-button-large" onClick={() => {
                 if (emergencyNotificationsEnabled) {
@@ -490,21 +461,20 @@ function App() {
                 }
               }}>
                 <span className="sos-icon">🆘</span>
-                <span className="sos-text">SOS</span>
+                <span className="sos-text">{t('sos')}</span>
               </div>
               <div className="emergency-numbers">
-                <button className="emergency-btn police" onClick={() => window.location.href = 'tel:119'}>👮 Police (119)</button>
-                <button className="emergency-btn ambulance" onClick={() => window.location.href = 'tel:1990'}>🚑 Ambulance (1990)</button>
+                <button className="emergency-btn police" onClick={() => window.location.href = 'tel:119'}>👮 {t('police')} (119)</button>
+                <button className="emergency-btn ambulance" onClick={() => window.location.href = 'tel:1990'}>🚑 {t('ambulance')} (1990)</button>
               </div>
-              
               <div className="emergency-instructions-box" style={{ marginTop: '20px', textAlign: 'left', padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
-                <h4>⚠️ Emergency Instructions</h4>
+                <h4>⚠️ {t('emergencyInstructions')}</h4>
                 <ul>
-                  <li>🔴 <strong>Red Flashing Screen</strong> = Emergency detected or SOS activated</li>
-                  <li>📳 <strong>Phone Vibration</strong> = Alert being sent to your contacts</li>
-                  <li>👥 <strong>Emergency Contacts</strong> = Will receive WhatsApp/SMS alerts</li>
-                  <li>📍 <strong>Live Location</strong> = Automatically shared with emergency contacts</li>
-                  <li>🔕 <strong>Notification Toggle</strong> = Disable alerts when needed (top of screen)</li>
+                  <li>{t('redFlashing')}</li>
+                  <li>{t('vibration')}</li>
+                  <li>{t('contactsNotify')}</li>
+                  <li>{t('liveLocation')}</li>
+                  <li>{t('notificationToggle') || "🔕 Notification Toggle = Disable alerts when needed (top of screen)"}</li>
                 </ul>
               </div>
             </div>
@@ -513,8 +483,8 @@ function App() {
           {activeTab === 'roadmonitor' && (
             <div style={{ maxWidth: '900px', margin: '0 auto' }}>
               <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-                <h2 style={{ fontSize: '28px', marginBottom: '8px' }}>🛣️ Dedicated Road Safety Monitor</h2>
-                <p style={{ color: 'var(--text-secondary)' }}>Full‑screen detection of horns, sirens, engines – with direction & distance hints</p>
+                <h2 style={{ fontSize: '28px', marginBottom: '8px' }}>🛣️ {t('roadSafetyMonitor')}</h2>
+                <p style={{ color: 'var(--text-secondary)' }}>{t('dedicatedRoadSafety') || "Full‑screen detection of horns, sirens, engines – with direction & distance hints"}</p>
               </div>
               <RoadSafetyMonitor
                 isActive={true}
@@ -548,6 +518,15 @@ function App() {
       {toastMessage.show && <div className={`toast-message ${toastMessage.type}`}>{toastMessage.message}</div>}
       {!sidebarVisible && window.innerWidth <= 1024 && <button className="mobile-menu-btn" onClick={() => setSidebarVisible(true)}>☰</button>}
     </div>
+  );
+}
+
+// Main App wrapper with LanguageProvider
+function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
 

@@ -2,7 +2,7 @@ import React from 'react';
 
 const BackgroundVideo = ({ videoSrc, opacity = 0.4 }) => {
   // Default abstract tech/wave video from free stock source
-  const defaultVideo = "https://assets.mixkit.co/videos/preview/mixkit-digital-wave-of-connecting-dots-32007-large.mp4";
+  const defaultVideo = "videos/background.mp4";
   
   return (
     <div className="background-video-container">

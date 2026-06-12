@@ -1,3 +1,4 @@
+// src/components/Auth.jsx
 import React, { useState } from 'react';
 import { auth, db } from '../firebase';
 import { 
@@ -7,8 +8,8 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-const Auth = ({ onGuestMode }) => {
-  const [isLogin, setIsLogin] = useState(true);
+const Auth = ({ onGuestMode, initialMode = 'login', onSuccess }) => {
+  const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,15 +22,17 @@ const Auth = ({ onGuestMode }) => {
     
     try {
       if (isLogin) {
+        // Sign in existing user
         await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        if (onSuccess) onSuccess();
       } else {
-        // 1. Firebase Authentication එකෙන් User කෙනෙක් හදනවා
+        // 1. Create user in Firebase Authentication
         const res = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
         
-        // 2. User ගේ Display Name එක Update කරනවා
+        // 2. Update display name
         await updateProfile(res.user, { displayName: formData.name });
         
-        // 3. [ක්‍රමය ඒ] කෙලින්ම Frontend එකෙන් Firestore එකට User Document එක ලියනවා
+        // 3. Save user document to Firestore (frontend direct write)
         await setDoc(doc(db, "users", res.user.uid), {
           uid: res.user.uid,
           name: formData.name,
@@ -38,13 +41,11 @@ const Auth = ({ onGuestMode }) => {
           role: 'user'
         });
 
-        // 4. [ක්‍රමය බී] ඔයාගේ Node.js Express Backend එකටත් User Data යවනවා (Backup & Sync සඳහා)
+        // 4. Async sync with backend server (Doesn't block user if fails)
         try {
           await fetch('http://localhost:5000/api/users', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               uid: res.user.uid,
               name: formData.name,
@@ -55,8 +56,9 @@ const Auth = ({ onGuestMode }) => {
           console.log("User synced with Backend Server successfully!");
         } catch (backendErr) {
           console.warn("Backend sync failed, but user created via frontend:", backendErr.message);
-          // Backend එක Off වෙලා තිබ්බොත් app එක crash වෙන්නේ නැති වෙන්නයි මේ inner try-catch එක දාලා තියෙන්නේ.
         }
+
+        if (onSuccess) onSuccess();
       }
     } catch (err) {
       console.error("Auth Error: ", err);
@@ -65,8 +67,7 @@ const Auth = ({ onGuestMode }) => {
       if (err.code === 'auth/invalid-credential') errorMessage = 'Invalid email or password';
       if (err.code === 'auth/weak-password') errorMessage = 'Password should be at least 6 characters';
       setError(errorMessage);
-    } finally {
-      setLoading(false);
+      setLoading(false); // Only reset loading here if there's an error and we stay on page
     }
   };
 
