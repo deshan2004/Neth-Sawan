@@ -18,7 +18,7 @@ const OnlineUsers = () => {
         online: true,
         lastSeen: new Date(),
         name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-        photoURL: currentUser.photoURL || null
+        photoURL: currentUser.photoURL || null,
       }, { merge: true });
     };
     setOnline();
@@ -93,6 +93,7 @@ const OnlineUsers = () => {
           text-align: center;
           padding: 40px;
           color: var(--text-muted);
+          font-size: 14px;
         }
         .online-users-list {
           display: flex;
@@ -165,6 +166,7 @@ const OnlineUsers = () => {
           cursor: pointer;
           transition: 0.2s;
           color: #000;
+          white-space: nowrap;
         }
         .call-user-btn:hover {
           transform: translateY(-2px);
@@ -177,6 +179,7 @@ const OnlineUsers = () => {
           .call-user-btn {
             width: 100%;
             text-align: center;
+            white-space: normal;
           }
         }
       `}</style>
