@@ -1,3 +1,5 @@
+/* Auth.css - Clean borderless version */
+
 .auth-container-fixed {
   width: 100%;
   display: flex;
@@ -5,6 +7,7 @@
   align-items: center;
   box-sizing: border-box;
 }
+
 .auth-card-clean {
   position: relative;
   width: 100%;
@@ -12,16 +15,19 @@
   background: #0D1128;
   border-radius: 28px;
   padding: 32px 24px;
-  border: 1px solid rgba(0, 221, 179, 0.3);
-  box-shadow: 0 25px 40px rgba(0, 0, 0, 0.5);
+  /* 👇 No border, no outline, no shadow */
+  border: none;
+  outline: none;
+  box-shadow: none;
   box-sizing: border-box;
   text-align: center;
 }
+
 .auth-close-x {
   position: absolute;
   top: 18px;
   right: 18px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   border: none;
   width: 32px;
   height: 32px;
@@ -34,23 +40,29 @@
   align-items: center;
   justify-content: center;
 }
+
 .auth-close-x:hover {
-  background: rgba(255,51,85,0.2);
+  background: rgba(255, 51, 85, 0.2);
   color: #FF3355;
   transform: scale(1.05);
 }
+
 .auth-header {
   margin-bottom: 24px;
 }
+
 .auth-logo {
   display: flex;
   justify-content: center;
   gap: 12px;
   margin-bottom: 12px;
 }
-.auth-logo-ear, .auth-logo-wave {
+
+.auth-logo-ear,
+.auth-logo-wave {
   font-size: 44px;
 }
+
 .auth-header h2 {
   font-size: 26px;
   font-weight: 700;
@@ -60,11 +72,13 @@
   background-clip: text;
   margin: 0 0 6px 0;
 }
+
 .auth-header p {
   font-size: 13px;
   color: #8899CC;
   margin: 0;
 }
+
 .google-login-btn {
   width: 100%;
   display: flex;
@@ -81,19 +95,23 @@
   cursor: pointer;
   transition: 0.2s;
 }
+
 .google-login-btn:hover {
   background: #F1F3F4;
   transform: translateY(-1px);
 }
+
 .google-icon {
   width: 18px;
   height: 18px;
 }
+
 .divider-line {
   margin: 20px 0;
   position: relative;
   text-align: center;
 }
+
 .divider-line::before {
   content: "";
   position: absolute;
@@ -101,9 +119,10 @@
   left: 0;
   width: 100%;
   height: 1px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   z-index: 1;
 }
+
 .divider-line span {
   position: relative;
   z-index: 2;
@@ -113,11 +132,13 @@
   font-size: 12px;
   font-weight: 600;
 }
+
 .input-group {
   position: relative;
   margin-bottom: 14px;
   text-align: left;
 }
+
 .input-icon {
   position: absolute;
   left: 14px;
@@ -126,21 +147,24 @@
   font-size: 16px;
   color: #5C628A;
 }
+
 .input-group input {
   width: 100%;
   padding: 12px 16px 12px 42px;
-  background: rgba(0,0,0,0.25);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 40px;
   color: #E8EEFF;
   font-size: 14px;
   transition: 0.2s;
 }
+
 .input-group input:focus {
   outline: none;
   border-color: #00DDB3;
-  box-shadow: 0 0 0 3px rgba(0,221,179,0.15);
+  box-shadow: 0 0 0 3px rgba(0, 221, 179, 0.15);
 }
+
 .eye-btn {
   position: absolute;
   right: 14px;
@@ -151,8 +175,9 @@
   cursor: pointer;
   color: #5C628A;
 }
+
 .error-box {
-  background: rgba(255,51,85,0.15);
+  background: rgba(255, 51, 85, 0.15);
   border: 1px solid #FF3355;
   border-radius: 40px;
   padding: 10px;
@@ -160,6 +185,7 @@
   color: #FF3355;
   margin-bottom: 14px;
 }
+
 .auth-btn {
   width: 100%;
   padding: 13px;
@@ -170,35 +196,46 @@
   transition: 0.2s;
   border: none;
 }
+
 .auth-btn.main {
   background: linear-gradient(135deg, #00DDB3, #00B899);
   color: #07091A;
   margin-bottom: 12px;
 }
+
 .auth-btn.main:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0,221,179,0.3);
+  box-shadow: 0 6px 16px rgba(0, 221, 179, 0.3);
 }
+
 .auth-btn.guest {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: #D0D8FF;
 }
+
 .auth-btn.guest:hover {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   border-color: #F5C842;
   color: #F5C842;
 }
+
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(0,0,0,0.1);
+  border: 2px solid rgba(0, 0, 0, 0.1);
   border-top-color: #07091A;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   margin: 0 auto;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .auth-switch {
   background: none;
   border: none;
@@ -209,24 +246,20 @@
   width: 100%;
   transition: color 0.2s;
 }
+
 .auth-switch:hover {
   text-decoration: underline;
   color: #F5C842;
-}.auth-card-clean {
-  max-width: 400px;
-  width: 90%;
-  padding: 32px 24px;
 }
+
+/* Responsive */
 @media (max-width: 480px) {
   .auth-card-clean {
     padding: 24px 16px;
   }
-}
-.input-group input {
-  font-size: 14px;
-}
-@media (max-width: 480px) {
-  .google-login-btn, .auth-btn {
+
+  .google-login-btn,
+  .auth-btn {
     font-size: 13px;
   }
 }
