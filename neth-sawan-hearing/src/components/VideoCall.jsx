@@ -1,27 +1,18 @@
-// src/components/VideoCall.jsx
+// src/components/VideoCall.jsx – Video/Audio only
 import React, { useState, useEffect, useRef } from 'react';
-import { auth, db } from '../firebase';
-import { doc, onSnapshot, deleteDoc, setDoc, collection, addDoc, query, orderBy, onSnapshot as onSnapshotQuery } from 'firebase/firestore';
+import { db } from '../firebase';
+import { doc, onSnapshot, deleteDoc, setDoc } from 'firebase/firestore';
 import Peer from 'peerjs';
 
 const VideoCall = ({ targetUser, currentUser, onClose }) => {
-  const [callStatus, setCallStatus] = useState('idle'); // idle, calling, ringing, connected
+  const [callStatus, setCallStatus] = useState('idle');
   const [incomingCall, setIncomingCall] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [messageText, setMessageText] = useState('');
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
   const peerRef = useRef(null);
   const callRef = useRef(null);
   const roomId = [currentUser.uid, targetUser.uid].sort().join('_');
-  const messagesEndRef = useRef(null);
 
-  // Scroll chat to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Initialize PeerJS
   useEffect(() => {
     const peer = new Peer(currentUser.uid, {
       config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
@@ -41,14 +32,12 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
     };
   }, [currentUser.uid]);
 
-  // Listen for Firestore signaling (offers, answers)
   useEffect(() => {
     const signalingRef = doc(db, 'signaling', roomId);
     const unsubscribe = onSnapshot(signalingRef, async (docSnap) => {
       if (!docSnap.exists()) return;
       const data = docSnap.data();
 
-      // Incoming offer
       if (data.offer && data.to === currentUser.uid && callStatus === 'idle' && !incomingCall) {
         setIncomingCall(true);
         setCallStatus('ringing');
@@ -62,30 +51,16 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
         }
       }
 
-      // Answer
       if (data.answer && callRef.current && callRef.current.peer === data.from) {
         callRef.current.answer(data.answer);
       }
 
-      // ICE candidate
       if (data.candidate && callRef.current) {
         callRef.current.addIceCandidate(data.candidate);
       }
     });
     return () => unsubscribe();
   }, [roomId, currentUser.uid, callStatus, incomingCall, targetUser.uid]);
-
-  // Listen for chat messages
-  useEffect(() => {
-    const messagesRef = collection(db, 'calls', roomId, 'messages');
-    const q = query(messagesRef, orderBy('timestamp', 'asc'));
-    const unsubscribe = onSnapshotQuery(q, (snapshot) => {
-      const msgs = [];
-      snapshot.forEach(doc => msgs.push({ id: doc.id, ...doc.data() }));
-      setMessages(msgs);
-    });
-    return () => unsubscribe();
-  }, [roomId]);
 
   const getLocalStream = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -172,23 +147,12 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
     }
   };
 
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!messageText.trim()) return;
-    const messagesRef = collection(db, 'calls', roomId, 'messages');
-    await addDoc(messagesRef, {
-      text: messageText,
-      sender: currentUser.uid,
-      senderName: currentUser.name,
-      timestamp: Date.now()
-    });
-    setMessageText('');
-  };
-
   return (
     <div className="video-call-modal">
       <div className="video-call-container">
         <button className="close-call-btn" onClick={onClose}>✕</button>
+
+        <div className="section-title">📹 Video Call with {targetUser.name}</div>
 
         <div className="video-grid">
           <div className="remote-video">
@@ -220,28 +184,6 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
             </>
           )}
         </div>
-
-        {/* Chat section */}
-        <div className="chat-section">
-          <div className="chat-messages">
-            {messages.map(msg => (
-              <div key={msg.id} className={`chat-message ${msg.sender === currentUser.uid ? 'sent' : 'received'}`}>
-                <strong>{msg.senderName}:</strong> {msg.text}
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-          <form onSubmit={sendMessage} className="chat-input-form">
-            <input
-              type="text"
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              placeholder="Type a message..."
-              className="chat-input"
-            />
-            <button type="submit" className="chat-send-btn">Send</button>
-          </form>
-        </div>
       </div>
 
       <style>{`
@@ -258,14 +200,10 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
         .video-call-container {
           background: #0A0C1A;
           border-radius: 28px;
-          width: 100%;
-          max-width: 1200px;
-          max-height: 90vh;
-          display: flex;
-          flex-direction: column;
-          padding: 16px;
+          width: 90%;
+          max-width: 800px;
+          padding: 20px;
           position: relative;
-          overflow-y: auto;
         }
         .close-call-btn {
           position: absolute;
@@ -279,17 +217,21 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
           color: white;
           font-size: 20px;
           cursor: pointer;
-          z-index: 10;
+        }
+        .section-title {
+          font-size: 20px;
+          font-weight: 700;
+          color: #00DDB3;
+          text-align: center;
+          margin-bottom: 20px;
         }
         .video-grid {
           display: flex;
-          flex-wrap: wrap;
+          flex-direction: column;
           gap: 16px;
           margin-bottom: 20px;
         }
         .remote-video, .local-video {
-          flex: 1;
-          min-width: 200px;
           background: #000;
           border-radius: 20px;
           overflow: hidden;
@@ -300,7 +242,6 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          background: #1A1E3A;
         }
         .remote-video span, .local-video span {
           position: absolute;
@@ -309,14 +250,13 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
           background: rgba(0,0,0,0.6);
           padding: 4px 10px;
           border-radius: 20px;
-          font-size: 11px;
+          font-size: 12px;
         }
         .call-controls {
           display: flex;
           gap: 12px;
           justify-content: center;
           flex-wrap: wrap;
-          margin-bottom: 20px;
         }
         .call-start-btn, .call-answer-btn, .call-reject-btn, .call-end-btn, .call-mute-btn, .call-video-btn {
           padding: 10px 20px;
@@ -325,91 +265,17 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
           border: none;
           cursor: pointer;
           font-size: 14px;
-          transition: 0.2s;
         }
         .call-start-btn { background: #00CCAA; color: #000; }
         .call-answer-btn { background: #00FF88; color: #000; }
         .call-reject-btn, .call-end-btn { background: #FF0033; color: #fff; }
         .call-mute-btn, .call-video-btn { background: #2A2F55; color: #fff; }
-        .call-status-text {
-          color: #00DDB3;
-          font-weight: 500;
-        }
-        .chat-section {
-          border-top: 1px solid #2A2F55;
-          padding-top: 16px;
-          display: flex;
-          flex-direction: column;
-          height: 220px;
-        }
-        .chat-messages {
-          flex: 1;
-          overflow-y: auto;
-          padding: 8px;
-          background: rgba(0,0,0,0.2);
-          border-radius: 16px;
-          margin-bottom: 8px;
-        }
-        .chat-message {
-          margin: 8px 0;
-          padding: 8px 12px;
-          border-radius: 20px;
-          max-width: 80%;
-          word-wrap: break-word;
-          font-size: 13px;
-        }
-        .chat-message.sent {
-          background: #00CCAA;
-          color: #000;
-          margin-left: auto;
-          text-align: right;
-        }
-        .chat-message.received {
-          background: #2A2F55;
-          color: #fff;
-        }
-        .chat-input-form {
-          display: flex;
-          gap: 8px;
-        }
-        .chat-input {
-          flex: 1;
-          padding: 10px 16px;
-          border-radius: 40px;
-          border: 1px solid #2A2F55;
-          background: #1A1E3A;
-          color: white;
-          font-size: 14px;
-        }
-        .chat-send-btn {
-          background: #00CCAA;
-          border: none;
-          border-radius: 40px;
-          padding: 10px 20px;
-          font-weight: bold;
-          cursor: pointer;
-        }
+        .call-status-text { color: #00DDB3; font-weight: 500; }
         @media (max-width: 768px) {
-          .video-call-container {
-            padding: 12px;
-          }
-          .video-grid {
-            flex-direction: column;
-          }
-          .remote-video, .local-video {
-            min-width: 100%;
-            aspect-ratio: 4 / 3;
-          }
-          .chat-message {
-            max-width: 95%;
-          }
+          .video-call-container { width: 95%; padding: 16px; }
           .call-start-btn, .call-answer-btn, .call-reject-btn, .call-end-btn, .call-mute-btn, .call-video-btn {
             padding: 8px 16px;
             font-size: 12px;
-          }
-          .incoming-buttons {
-            display: flex;
-            gap: 8px;
           }
         }
       `}</style>

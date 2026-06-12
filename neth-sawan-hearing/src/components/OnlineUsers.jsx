@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, setDoc } from 'firebase/firestore';
 import VideoCall from './VideoCall';
+import ChatComponent from './ChatComponent';
 
 const OnlineUsers = () => {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [chatUser, setChatUser] = useState(null);
   const currentUser = auth.currentUser;
 
   useEffect(() => {
@@ -73,9 +75,14 @@ const OnlineUsers = () => {
                 <span className="user-name">{user.name || 'User'}</span>
                 <span className="user-status">Online</span>
               </div>
-              <button className="call-user-btn" onClick={() => setSelectedUser(user)}>
-                📞 Video Call & Chat
-              </button>
+              <div className="user-buttons">
+                <button className="video-call-btn" onClick={() => setSelectedUser(user)}>
+                  📹 Video Call
+                </button>
+                <button className="chat-btn" onClick={() => setChatUser(user)}>
+                  💬 Chat
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -85,6 +92,13 @@ const OnlineUsers = () => {
           targetUser={selectedUser}
           currentUser={{ uid: currentUser.uid, name: currentUser.displayName || currentUser.email?.split('@')[0] }}
           onClose={() => setSelectedUser(null)}
+        />
+      )}
+      {chatUser && (
+        <ChatComponent
+          targetUser={chatUser}
+          currentUser={{ uid: currentUser.uid, name: currentUser.displayName || currentUser.email?.split('@')[0] }}
+          onClose={() => setChatUser(null)}
         />
       )}
 
@@ -108,6 +122,7 @@ const OnlineUsers = () => {
           background: rgba(255,255,255,0.05);
           border-radius: 20px;
           transition: 0.2s;
+          flex-wrap: wrap;
         }
         .online-user-item:hover {
           background: rgba(0,221,179,0.1);
@@ -157,29 +172,42 @@ const OnlineUsers = () => {
           font-size: 11px;
           color: #00FF88;
         }
-        .call-user-btn {
-          background: linear-gradient(135deg, #00CCAA, #00997a);
+        .user-buttons {
+          display: flex;
+          gap: 10px;
+        }
+        .video-call-btn, .chat-btn {
           border: none;
-          padding: 10px 20px;
+          padding: 8px 16px;
           border-radius: 40px;
           font-weight: 600;
           cursor: pointer;
           transition: 0.2s;
-          color: #000;
-          white-space: nowrap;
         }
-        .call-user-btn:hover {
+        .video-call-btn {
+          background: linear-gradient(135deg, #00CCAA, #00997a);
+          color: #000;
+        }
+        .chat-btn {
+          background: #2A2F55;
+          color: #00DDFF;
+          border: 1px solid #00DDFF;
+        }
+        .video-call-btn:hover, .chat-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,204,170,0.4);
         }
         @media (max-width: 768px) {
           .online-user-item {
-            flex-wrap: wrap;
+            flex-direction: column;
+            align-items: flex-start;
           }
-          .call-user-btn {
+          .user-buttons {
             width: 100%;
+            justify-content: space-between;
+          }
+          .video-call-btn, .chat-btn {
+            flex: 1;
             text-align: center;
-            white-space: normal;
           }
         }
       `}</style>

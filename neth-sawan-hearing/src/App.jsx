@@ -23,7 +23,7 @@ import RoadSafetyMonitor from './components/RoadSafetyMonitor';
 import FallDetector from "./components/FallDetector";
 import BackgroundVideo from './components/BackgroundVideo';
 import LandingPage from './components/LandingPage';
-import OnlineUsers from './components/OnlineUsers'; // NEW
+import OnlineUsers from './components/OnlineUsers'; // NEW: Community tab
 
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
@@ -373,7 +373,9 @@ function AppContent() {
         <main className="main-content">
           {/* DASHBOARD TAB */}
           {activeTab === 'dashboard' && (
-            <> {/* Live Captions + Sign Language side by side */}
+            <>
+            
+              {/* Live Captions + Sign Language side by side */}
               <div className="captions-sign-row">
                 <div className="captions-box">
                   <div className="section-header">
