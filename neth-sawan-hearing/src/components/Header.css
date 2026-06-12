@@ -1,8 +1,6 @@
 /* ============================================================
    HEADER – MODERN, RESPONSIVE, BEAUTIFUL
-   Glass-morphism effects, smooth transitions, accessible
    ============================================================ */
-
 .app-header {
   position: sticky;
   top: 0;
@@ -16,24 +14,28 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-  transition: all 0.3s ease;
+  transition: 0.3s;
 }
-
-/* Desktop padding */
 @media (min-width: 768px) {
+  .app-header { padding: 16px 28px; }
+}
+@media (max-width: 768px) {
   .app-header {
-    padding: 16px 28px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .logo-section, .header-right {
+    justify-content: space-between;
+    width: 100%;
   }
 }
 
-/* Logo & left section */
-.logo-section {
+.logo-section, .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
 }
-
 .logo-text {
   font-size: 28px;
   font-weight: 800;
@@ -42,227 +44,49 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
-  letter-spacing: -0.5px;
-  transition: transform 0.2s;
 }
-
-.logo-text:hover {
-  transform: scale(1.02);
-}
-
 .tagline {
   font-size: 14px;
   color: #D0D8FF;
-  font-weight: 500;
-  background: rgba(0, 221, 179, 0.1);
+  background: rgba(0,221,179,0.1);
   padding: 4px 12px;
   border-radius: 40px;
 }
-
-/* Language switcher */
 .lang-switcher {
   display: flex;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0,0,0,0.2);
   padding: 4px;
   border-radius: 48px;
 }
-
 .lang-btn {
   padding: 8px 16px;
   font-weight: 600;
   border: none;
   border-radius: 40px;
   background: #2A2F55;
-  color: #FFF;
+  color: white;
   cursor: pointer;
-  transition: all 0.2s;
-  font-size: 14px;
+  transition: 0.2s;
 }
-
 .lang-btn.active {
   background: #00CCAA;
   color: #000;
-  box-shadow: 0 2px 8px rgba(0, 204, 170, 0.3);
 }
-
 .lang-btn:hover:not(.active) {
   background: #3A3F6A;
   transform: translateY(-1px);
 }
-
-/* Right section */
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-/* Emergency toggle button */
-.emergency-toggle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 20px;
-  border-radius: 48px;
-  font-weight: 700;
-  font-size: 14px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: #2A2F55;
-  color: #FFF;
-}
-
-.emergency-toggle.enabled {
-  background: #00CCAA;
-  color: #000;
-  box-shadow: 0 2px 12px rgba(0, 204, 170, 0.4);
-}
-
-.emergency-toggle.disabled {
-  background: #FF0033;
-  color: #FFF;
-}
-
-.emergency-toggle:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.05);
-}
-
-/* Road safety toggle */
-.road-safety-toggle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 20px;
-  border-radius: 48px;
-  font-weight: 700;
-  font-size: 14px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: #2A2F55;
-  color: #FFF;
-}
-
-.road-safety-toggle.active {
-  background: #FF8800;
-  color: #000;
-  box-shadow: 0 2px 12px rgba(255, 136, 0, 0.4);
-}
-
-.road-safety-toggle:hover {
-  transform: translateY(-2px);
-}
-
-/* Listening status indicator */
-.listening-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 20px;
-  border-radius: 48px;
-  background: #2A2F55;
-  transition: all 0.2s;
-}
-
-.listening-status.active {
-  background: rgba(0, 204, 170, 0.15);
-  border: 2px solid #00FFCC;
-  backdrop-filter: blur(4px);
-}
-
-.status-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #888;
-  transition: all 0.2s;
-}
-
-.listening-status.active .status-dot {
-  background: #00FFCC;
-  animation: pulse 1.2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
-}
-
-.status-text {
-  font-weight: 700;
-  font-size: 14px;
-}
-
-/* User badge */
-.user-badge {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 18px;
-  background: #1A1E3A;
-  border-radius: 48px;
-  font-weight: 500;
-  font-size: 14px;
-  border: 1px solid rgba(0, 221, 179, 0.3);
-  transition: all 0.2s;
-}
-
-.user-badge:hover {
-  border-color: #00DDB3;
-  background: #222842;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .app-header {
-    gap: 12px;
-  }
-  .logo-text {
-    font-size: 24px;
-  }
-  .tagline {
-    font-size: 12px;
-  }
-  .emergency-toggle, .road-safety-toggle, .listening-status, .user-badge {
-    padding: 6px 14px;
-    font-size: 12px;
-  }
-  .lang-btn {
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 768px) {
-  .app-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .logo-section {
-    justify-content: space-between;
-    width: 100%;
-  }
-  .header-right {
-    justify-content: space-between;
-    width: 100%;
-  }
-}/* Add these styles to your existing Header.css */
 .emergency-toggle-btn {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 24px;
+  padding: 10px 20px;
   border-radius: 60px;
   font-weight: 800;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
+  font-size: 14px;
   border: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  cursor: pointer;
 }
 .emergency-toggle-btn.enabled {
   background: linear-gradient(135deg, #00CCAA, #00997a);
@@ -274,24 +98,64 @@
   color: #FF3355;
   border: 1px solid #FF3355;
 }
-.emergency-toggle-btn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.05);
-}
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0,204,170,0.4); }
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,204,170,0.4); }
   50% { box-shadow: 0 0 0 8px rgba(0,204,170,0); }
-}.app-header {
-  padding: 12px 16px;
-  flex-wrap: wrap;
+}
+.road-safety-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 60px;
+  font-weight: 700;
+  background: #2A2F55;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+.road-safety-toggle.active {
+  background: #FF8800;
+  color: #000;
+}
+.listening-status {
+  display: flex;
+  align-items: center;
   gap: 12px;
+  padding: 8px 20px;
+  border-radius: 60px;
+  background: #2A2F55;
 }
-@media (min-width: 768px) {
-  .app-header {
-    padding: 16px 24px;
-  }
+.listening-status.active {
+  background: rgba(0,204,170,0.15);
+  border: 2px solid #00FFCC;
 }
-.logo-section, .header-right {
-  flex-wrap: wrap;
-  gap: 8px;
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #888;
+}
+.listening-status.active .status-dot {
+  background: #00FFCC;
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  background: #1A1E3A;
+  border-radius: 60px;
+  font-weight: 500;
+  border: 1px solid rgba(0,221,179,0.3);
+  transition: 0.2s;
+}
+.user-badge:hover {
+  border-color: #00DDB3;
+  background: #222842;
 }
