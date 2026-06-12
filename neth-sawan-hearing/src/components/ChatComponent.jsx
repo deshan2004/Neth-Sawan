@@ -1,4 +1,3 @@
-// src/components/ChatComponent.jsx – Text chat only
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -28,23 +27,28 @@ const ChatComponent = ({ targetUser, currentUser, onClose }) => {
   const sendMessage = async (e) => {
     e.preventDefault();
     if (!messageText.trim()) return;
-    const messagesRef = collection(db, 'chats', roomId, 'messages');
-    await addDoc(messagesRef, {
-      text: messageText,
-      sender: currentUser.uid,
-      senderName: currentUser.name,
-      timestamp: Date.now()
-    });
-    setMessageText('');
+    
+    try {
+      const messagesRef = collection(db, 'chats', roomId, 'messages');
+      await addDoc(messagesRef, {
+        text: messageText.trim(),
+        sender: currentUser.uid,
+        senderName: currentUser.name,
+        timestamp: Date.now()
+      });
+      setMessageText('');
+    } catch (error) {
+      console.error("Error writing document to Firestore: ", error);
+    }
   };
 
   return (
-    <div className="chat-modal">
+    <div className="chat-modal" role="dialog" aria-modal="true">
       <div className="chat-container">
-        <button className="close-chat-btn" onClick={onClose}>✕</button>
+        <button className="close-chat-btn" onClick={onClose} aria-label="Close Chat">✕</button>
 
         <div className="chat-header">
-          <div className="chat-title">💬 Chat with {targetUser.name} 🤟</div>
+          <h3 className="chat-title">💬 Chat with {targetUser.name} </h3>
         </div>
 
         <div className="chat-messages-area">
@@ -64,6 +68,7 @@ const ChatComponent = ({ targetUser, currentUser, onClose }) => {
             onChange={(e) => setMessageText(e.target.value)}
             placeholder="Type a message... (or use sign language emojis)"
             className="chat-input-field"
+            aria-label="Message Input"
           />
           <button type="submit" className="chat-send-button">Send</button>
         </form>

@@ -1,4 +1,3 @@
-// src/components/VideoCall.jsx – Video/Audio only, sign language friendly
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { doc, onSnapshot, deleteDoc, setDoc } from 'firebase/firestore';
@@ -8,10 +7,14 @@ import './VideoCall.css';
 const VideoCall = ({ targetUser, currentUser, onClose }) => {
   const [callStatus, setCallStatus] = useState('idle');
   const [incomingCall, setIncomingCall] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
   const peerRef = useRef(null);
   const callRef = useRef(null);
+  const localStreamRef = useRef(null);
   const roomId = [currentUser.uid, targetUser.uid].sort().join('_');
 
   useEffect(() => {
@@ -20,15 +23,14 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
     });
     peerRef.current = peer;
 
-    peer.on('open', () => console.log('Peer ready:', currentUser.uid));
     peer.on('call', (call) => {
       setIncomingCall(true);
       setCallStatus('ringing');
       callRef.current = call;
     });
-    peer.on('error', (err) => console.error('Peer error:', err));
 
     return () => {
+      cleanStreamTracks();
       if (peerRef.current) peerRef.current.destroy();
     };
   }, [currentUser.uid]);
@@ -64,9 +66,26 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
   }, [roomId, currentUser.uid, callStatus, incomingCall, targetUser.uid]);
 
   const getLocalStream = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-    return stream;
+    if (localStreamRef.current) return localStreamRef.current;
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      return stream;
+    } catch (err) {
+      console.error("Failed to access hardware devices: ", err);
+      return null;
+    }
+  };
+
+  const cleanStreamTracks = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
   };
 
   const setupCallHandlers = (call) => {
@@ -76,15 +95,17 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
       setIncomingCall(false);
     });
     call.on('close', () => endCall());
-    call.on('error', (err) => console.error('Call error:', err));
   };
 
   const startCall = async () => {
     setCallStatus('calling');
     const stream = await getLocalStream();
+    if (!stream) { setCallStatus('idle'); return; }
+    
     const call = peerRef.current.call(targetUser.uid, stream);
     callRef.current = call;
     setupCallHandlers(call);
+    
     const offer = call.peerConnection.localDescription;
     await setDoc(doc(db, 'signaling', roomId), {
       offer,
@@ -101,6 +122,7 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
     setupCallHandlers(callRef.current);
     setCallStatus('connected');
     setIncomingCall(false);
+    
     const answer = callRef.current.peerConnection.localDescription;
     await setDoc(doc(db, 'signaling', roomId), {
       answer,
@@ -119,45 +141,44 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
 
   const endCall = () => {
     if (callRef.current) callRef.current.close();
-    if (localVideoRef.current?.srcObject) {
-      localVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
-      localVideoRef.current.srcObject = null;
-    }
-    if (remoteVideoRef.current?.srcObject) {
-      remoteVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
-      remoteVideoRef.current.srcObject = null;
-    }
+    cleanStreamTracks();
     setCallStatus('idle');
     setIncomingCall(false);
+    setIsMuted(false);
+    setIsVideoOff(false);
     deleteDoc(doc(db, 'signaling', roomId));
   };
 
   const toggleMute = () => {
-    const stream = localVideoRef.current?.srcObject;
-    if (stream) {
-      const audioTrack = stream.getAudioTracks()[0];
-      if (audioTrack) audioTrack.enabled = !audioTrack.enabled;
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
     }
   };
 
   const toggleVideo = () => {
-    const stream = localVideoRef.current?.srcObject;
-    if (stream) {
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) videoTrack.enabled = !videoTrack.enabled;
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoOff(!videoTrack.enabled);
+      }
     }
   };
 
   return (
-    <div className="video-call-modal">
+    <div className="video-call-modal" role="dialog" aria-modal="true">
       <div className="video-call-container">
-        <button className="close-call-btn" onClick={onClose} aria-label="Close">✕</button>
+        <button className="close-call-btn" onClick={onClose} aria-label="Close Interface">✕</button>
 
         <div className="section-title">
-          📹 Video Call with {targetUser.name} 🤟
+          📹 Video Call with {targetUser.name}
         </div>
 
-        <div className="video-grid">
+        <div className={`video-grid ${callStatus}`}>
           <div className="remote-video">
             <video ref={remoteVideoRef} autoPlay playsInline />
             <span>{targetUser.name}</span>
@@ -182,8 +203,12 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
           {callStatus === 'connected' && (
             <>
               <button className="call-end-btn" onClick={endCall}>End Call</button>
-              <button className="call-mute-btn" onClick={toggleMute}>Mute</button>
-              <button className="call-video-btn" onClick={toggleVideo}>Video Off</button>
+              <button className={`call-mute-btn ${isMuted ? 'active' : ''}`} onClick={toggleMute}>
+                {isMuted ? 'Unmute' : 'Mute'}
+              </button>
+              <button className={`call-video-btn ${isVideoOff ? 'active' : ''}`} onClick={toggleVideo}>
+                {isVideoOff ? 'Video On' : 'Video Off'}
+              </button>
             </>
           )}
         </div>
