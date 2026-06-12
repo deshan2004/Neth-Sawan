@@ -26,16 +26,17 @@ const Sidebar = ({ activeTab, setActiveTab, onClose, isOpen, user, isGuest, onLo
     setProfileData(prev => ({ ...prev, ...updatedData }));
   };
 
-  const menuItems = [
-    { id: 'dashboard', icon: '🏠', label: 'Home', sinhala: 'මුල් පිටුව' },
-    { id: 'vision', icon: '👁️', label: 'AI Vision', sinhala: 'AI දෘෂ්ටිය' },
-    { id: 'learn', icon: '🤟', label: 'Learn Signs', sinhala: 'සංඥා ඉගෙන ගන්න' },
-    { id: 'alerts', icon: '🔔', label: 'Alerts', sinhala: 'ඇඟවීම්' },
-    { id: 'contacts', icon: '📇', label: 'Contacts', sinhala: 'සම්බන්ධතා' },
-    { id: 'emergency', icon: '🆘', label: 'SOS', sinhala: 'හදිසි අවස්ථා' },
-    { id: 'roadmonitor', icon: '🛣️', label: 'Road Monitor', sinhala: 'මාර්ග ආරක්ෂාව' },
-    { id: 'settings', icon: '♿', label: 'Accessibility', sinhala: 'ප්‍රවේශ්‍යතාව' }
-  ];
+const menuItems = [
+  { id: 'dashboard', icon: '🏠', label: 'Home', sinhala: 'මුල් පිටුව' },
+  { id: 'vision', icon: '👁️', label: 'AI Vision', sinhala: 'AI දෘෂ්ටිය' },
+  { id: 'learn', icon: '🤟', label: 'Learn Signs', sinhala: 'සංඥා ඉගෙන ගන්න' },
+  { id: 'community', icon: '👥', label: 'Community', sinhala: 'ප්‍රජාව' },  // NEW
+  { id: 'alerts', icon: '🔔', label: 'Alerts', sinhala: 'ඇඟවීම්' },
+  { id: 'contacts', icon: '📇', label: 'Contacts', sinhala: 'සම්බන්ධතා' },
+  { id: 'emergency', icon: '🆘', label: 'SOS', sinhala: 'හදිසි අවස්ථා' },
+  { id: 'roadmonitor', icon: '🛣️', label: 'Road Monitor', sinhala: 'මාර්ග ආරක්ෂාව' },
+  { id: 'settings', icon: '♿', label: 'Accessibility', sinhala: 'ප්‍රවේශ්‍යතාව' }
+];
 
   return (
     <>

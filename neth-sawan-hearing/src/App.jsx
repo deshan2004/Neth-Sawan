@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -22,8 +23,8 @@ import RoadSafetyMonitor from './components/RoadSafetyMonitor';
 import FallDetector from "./components/FallDetector";
 import BackgroundVideo from './components/BackgroundVideo';
 import LandingPage from './components/LandingPage';
-import './components/EmergencyFlash.css';
-import './components/EmergencyContactModal.css';
+import OnlineUsers from './components/OnlineUsers'; // NEW
+
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
 import { useVolume } from './hooks/useVolume';
@@ -33,7 +34,6 @@ import { useNotifications } from './hooks/useNotifications';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
-// src/App.jsx
 
 // WhatsApp message helper for fall detection
 const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
@@ -79,14 +79,17 @@ function AppContent() {
   const [emergencyData, setEmergencyData] = useState(null);
   const [roadSafetyActive, setRoadSafetyActive] = useState(false);
   
+  // Emergency Notifications Toggle
   const [emergencyNotificationsEnabled, setEmergencyNotificationsEnabled] = useState(() => {
     const saved = localStorage.getItem('emergency_notifications_enabled');
     return saved !== null ? saved === 'true' : true;
   });
   
+  // Accessibility States
   const [currentTheme, setCurrentTheme] = useState('default');
   const [currentFontSize, setCurrentFontSize] = useState(16);
 
+  // Logic Hooks
   const { transcript, isListening, startListening, stopListening, clearTranscript, setLang, lang, error: speechError, browserInfo } = useSpeech();
   const { volume, isLoud, soundType, soundHistory, threshold, setThreshold } = useVolume(0.15);
   const { 
@@ -95,6 +98,7 @@ function AppContent() {
     autoSendStatus
   } = useNotifications();
 
+  // Guest mode data
   const [guestRelatives, setGuestRelatives] = useState([]);
   const [guestNotifications, setGuestNotifications] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
@@ -106,10 +110,12 @@ function AppContent() {
     }
   }, [transcript, updateLanguageFromTranscript]);
 
+  // Save emergency toggle
   useEffect(() => {
     localStorage.setItem('emergency_notifications_enabled', emergencyNotificationsEnabled);
   }, [emergencyNotificationsEnabled]);
 
+  // Apply saved accessibility settings
   useEffect(() => {
     const savedFontSize = localStorage.getItem('accessibility_fontSize');
     if (savedFontSize) {
@@ -118,6 +124,7 @@ function AppContent() {
     }
   }, []);
 
+  // Load guest data
   useEffect(() => {
     if (isGuest) {
       const savedRelatives = localStorage.getItem('neth_sawan_guest_relatives');
@@ -129,15 +136,27 @@ function AppContent() {
     }
   }, [isGuest]);
 
+  // Loud sound emergency flash
   useEffect(() => {
     if (isLoud && soundType && !roadSafetyActive && emergencyNotificationsEnabled) {
       setFlashEmergency(true);
       setEmergencyData({ soundType, message: `Emergency: ${soundType}`, timestamp: new Date(), volume });
-      if (isGuest) guestAddNotification({ id: Date.now(), type: 'EMERGENCY', message: `Emergency: ${soundType}`, soundType, timestamp: new Date().toISOString(), read: false, volume });
+      if (isGuest) {
+        guestAddNotification({
+          id: Date.now(),
+          type: 'EMERGENCY',
+          message: `Emergency: ${soundType}`,
+          soundType,
+          timestamp: new Date().toISOString(),
+          read: false,
+          volume
+        });
+      }
       setTimeout(() => setFlashEmergency(false), 3000);
     }
   }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled]);
 
+  // Save sound history for guest
   useEffect(() => {
     if (isGuest && soundHistory?.length > 0) {
       setGuestSoundHistory(prev => {
@@ -148,6 +167,7 @@ function AppContent() {
     }
   }, [soundHistory, isGuest]);
 
+  // Auth listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -163,42 +183,115 @@ function AppContent() {
   };
 
   const handleLogout = async () => {
-    try { await signOut(auth); showToast(t('loggedOut') || "Logged out", "success"); } 
-    catch { showToast(t('logoutFailed') || "Logout failed", "error"); }
+    try {
+      await signOut(auth);
+      showToast(t('loggedOut') || "Logged out", "success");
+    } catch {
+      showToast(t('logoutFailed') || "Logout failed", "error");
+    }
   };
-  const handleGuestMode = () => { setIsGuest(true); setUser(null); showToast(t('guestModeActivated') || "Guest mode activated", "success"); };
-  const handleSignOutGuest = () => { setIsGuest(false); showToast(t('guestSignedOut') || "Signed out from guest mode", "info"); };
-  const handleThemeChange = (theme) => { setCurrentTheme(theme); localStorage.setItem('accessibility_theme', theme); };
+
+  const handleGuestMode = () => {
+    setIsGuest(true);
+    setUser(null);
+    showToast(t('guestModeActivated') || "Guest mode activated", "success");
+  };
+
+  const handleSignOutGuest = () => {
+    setIsGuest(false);
+    showToast(t('guestSignedOut') || "Signed out from guest mode", "info");
+  };
+
+  const handleThemeChange = (theme) => {
+    setCurrentTheme(theme);
+    localStorage.setItem('accessibility_theme', theme);
+  };
+
   const handleFontSizeChange = (size) => setCurrentFontSize(size);
+
   const toggleEmergencyNotifications = () => {
     const newState = !emergencyNotificationsEnabled;
     setEmergencyNotificationsEnabled(newState);
     showToast(newState ? (t('alertsOn') || 'Emergency notifications enabled') : (t('alertsOff') || 'Emergency notifications disabled'), newState ? 'success' : 'info');
   };
 
+  // Guest handlers
   const guestAddRelative = (data) => {
-    const entry = { id: Date.now(), name: data.name.trim(), phone: data.phone?.trim() || '', email: data.email?.trim() || '', relation: data.relation || '', notifyByWhatsApp: data.notifyByWhatsApp !== false, notifyBySMS: data.notifyBySMS || false, notifyByCall: data.notifyByCall || false, notifyByDesktop: data.notifyByDesktop !== false, autoSendWhatsApp: data.autoSendWhatsApp || false, createdAt: new Date().toISOString() };
-    setGuestRelatives(prev => { const updated = [...prev, entry]; localStorage.setItem('neth_sawan_guest_relatives', JSON.stringify(updated)); return updated; });
+    const entry = {
+      id: Date.now(),
+      name: data.name.trim(),
+      phone: data.phone?.trim() || '',
+      email: data.email?.trim() || '',
+      relation: data.relation || '',
+      notifyByWhatsApp: data.notifyByWhatsApp !== false,
+      notifyBySMS: data.notifyBySMS || false,
+      notifyByCall: data.notifyByCall || false,
+      notifyByDesktop: data.notifyByDesktop !== false,
+      autoSendWhatsApp: data.autoSendWhatsApp || false,
+      createdAt: new Date().toISOString(),
+    };
+    setGuestRelatives(prev => {
+      const updated = [...prev, entry];
+      localStorage.setItem('neth_sawan_guest_relatives', JSON.stringify(updated));
+      return updated;
+    });
     return entry;
   };
-  const guestRemoveRelative = (id) => { setGuestRelatives(prev => { const updated = prev.filter(r => r.id !== id); localStorage.setItem('neth_sawan_guest_relatives', JSON.stringify(updated)); return updated; }); };
-  const guestUpdateRelative = (id, updates) => { setGuestRelatives(prev => { const updated = prev.map(r => r.id === id ? { ...r, ...updates } : r); localStorage.setItem('neth_sawan_guest_relatives', JSON.stringify(updated)); return updated; }); };
-  const guestAddNotification = (notification) => { setGuestNotifications(prev => { const updated = [notification, ...prev].slice(0, 50); localStorage.setItem('neth_sawan_guest_notifications', JSON.stringify(updated)); return updated; }); };
-  const guestMarkAsRead = (id) => setGuestNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  const guestClearNotifications = () => { setGuestNotifications([]); localStorage.setItem('neth_sawan_guest_notifications', JSON.stringify([])); };
+
+  const guestRemoveRelative = (id) => {
+    setGuestRelatives(prev => {
+      const updated = prev.filter(r => r.id !== id);
+      localStorage.setItem('neth_sawan_guest_relatives', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const guestUpdateRelative = (id, updates) => {
+    setGuestRelatives(prev => {
+      const updated = prev.map(r => r.id === id ? { ...r, ...updates } : r);
+      localStorage.setItem('neth_sawan_guest_relatives', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const guestAddNotification = (notification) => {
+    setGuestNotifications(prev => {
+      const updated = [notification, ...prev].slice(0, 50);
+      localStorage.setItem('neth_sawan_guest_notifications', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const guestMarkAsRead = (id) => {
+    setGuestNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const guestClearNotifications = () => {
+    setGuestNotifications([]);
+    localStorage.setItem('neth_sawan_guest_notifications', JSON.stringify([]));
+  };
 
   const currentRelatives = isGuest ? guestRelatives : relatives;
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
+  // Fall detection handler
   const handleFallEmergency = async () => {
     let currentLocation = null;
     try {
-      const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, enableHighAccuracy: true }));
+      const pos = await new Promise((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, enableHighAccuracy: true })
+      );
       currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     } catch (e) { console.warn("Location error:", e.message); }
     try {
-      await addDoc(collection(db, "emergency_alerts"), { alertType: "AUTOMATIC_FALL_DETECTION", status: "CRITICAL", timestamp: serverTimestamp(), userId: user ? user.uid : "GUEST_USER", location: currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : "Location Unavailable" });
+      await addDoc(collection(db, "emergency_alerts"), {
+        alertType: "AUTOMATIC_FALL_DETECTION",
+        status: "CRITICAL",
+        timestamp: serverTimestamp(),
+        userId: user ? user.uid : "GUEST_USER",
+        location: currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : "Location Unavailable"
+      });
     } catch (error) { console.error("Firebase error:", error); }
     if (emergencyNotificationsEnabled) {
       setFlashEmergency(true);
@@ -224,13 +317,25 @@ function AppContent() {
     }
   };
 
-  if (authLoading) return ( <div className="loading-screen"><div className="loading-spinner"></div><p>Neth-Sawan Loading...</p><div>🤟</div></div> );
-  if (!user && !isGuest) return <LandingPage onGuestMode={handleGuestMode} />;
+  if (authLoading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Neth-Sawan Loading...</p>
+        <div>🤟</div>
+      </div>
+    );
+  }
+
+  if (!user && !isGuest) {
+    return <LandingPage onGuestMode={handleGuestMode} />;
+  }
 
   return (
     <div className="app-wrapper" style={{ fontSize: `${currentFontSize}px` }}>
       <BackgroundVideo opacity={0.85} />
       <FallDetector onFallDetected={handleFallEmergency} />
+
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
           <filter id="protanopia"><feColorMatrix type="matrix" values="0.567,0.433,0,0,0,0.558,0.442,0,0,0,0,0.242,0.758,0,0,0,0,0,1,0"/></filter>
@@ -238,69 +343,274 @@ function AppContent() {
           <filter id="tritanopia"><feColorMatrix type="matrix" values="0.95,0.05,0,0,0,0,0.433,0.567,0,0,0,0.475,0.525,0,0,0,0,0,1,0"/></filter>
         </defs>
       </svg>
+
       <EmergencyFlash isVisible={flashEmergency && emergencyNotificationsEnabled} emergencyData={emergencyData} />
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={sidebarVisible} onClose={() => setSidebarVisible(false)} user={user} isGuest={isGuest} onLogout={isGuest ? handleSignOutGuest : handleLogout} />
+
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isOpen={sidebarVisible}
+        onClose={() => setSidebarVisible(false)}
+        user={user}
+        isGuest={isGuest}
+        onLogout={isGuest ? handleSignOutGuest : handleLogout}
+      />
+
       <div className={`content-area ${sidebarVisible && window.innerWidth > 1024 ? 'sidebar-open' : ''}`}>
-        <Header isListening={isListening} lang={lang} setLang={setLang} showToast={showToast} user={user} isGuest={isGuest} roadSafetyActive={roadSafetyActive} setRoadSafetyActive={setRoadSafetyActive} emergencyNotificationsEnabled={emergencyNotificationsEnabled} onToggleEmergencyNotifications={toggleEmergencyNotifications} />
+        <Header
+          isListening={isListening}
+          lang={lang}
+          setLang={setLang}
+          showToast={showToast}
+          user={user}
+          isGuest={isGuest}
+          roadSafetyActive={roadSafetyActive}
+          setRoadSafetyActive={setRoadSafetyActive}
+          emergencyNotificationsEnabled={emergencyNotificationsEnabled}
+          onToggleEmergencyNotifications={toggleEmergencyNotifications}
+        />
+
         <main className="main-content">
+          {/* DASHBOARD TAB */}
           {activeTab === 'dashboard' && (
             <>
-              {/* Main row: Live Captions + Sign Language side by side */}
+              {!emergencyNotificationsEnabled && (
+                <div className="notifications-disabled-banner">
+                  <span className="banner-icon">🔕</span>
+                  <div className="banner-content">
+                    <strong>{t('alertsOff')}</strong>
+                    <p>{t('noEmergencyAlerts') || "You won't receive visual alerts or emergency flashes."}</p>
+                  </div>
+                  <button onClick={toggleEmergencyNotifications} className="banner-enable-btn">
+                    {t('enableNow') || "Enable Now"}
+                  </button>
+                </div>
+              )}
+
+              {/* Live Captions + Sign Language side by side */}
               <div className="captions-sign-row">
                 <div className="captions-box">
-                  <div className="section-header"><span className="section-icon">🎤</span><h3>Live Captions</h3>{isListening && <span className="live-badge-small">LIVE</span>}</div>
+                  <div className="section-header">
+                    <span className="section-icon">🎤</span>
+                    <h3>Live Captions</h3>
+                    {isListening && <span className="live-badge-small">LIVE</span>}
+                  </div>
                   <div className="captions-content">
-                    <TranscriptBox transcript={transcript} isListening={isListening} startListening={startListening} stopListening={stopListening} clearTranscript={clearTranscript} error={speechError} browserInfo={browserInfo} setLang={setLang} currentLang={lang} />
+                    <TranscriptBox
+                      transcript={transcript}
+                      isListening={isListening}
+                      startListening={startListening}
+                      stopListening={stopListening}
+                      clearTranscript={clearTranscript}
+                      error={speechError}
+                      browserInfo={browserInfo}
+                      setLang={setLang}
+                      currentLang={lang}
+                    />
                   </div>
                 </div>
                 <div className="sign-box">
-                  <div className="section-header"><span className="section-icon">🤟</span><h3>Sign Language Translator</h3><span className="sign-badge-small">Live from captions</span></div>
-                  <div className="sign-content"><SignLanguageBox transcript={transcript} /></div>
+                  <div className="section-header">
+                    <span className="section-icon">🤟</span>
+                    <h3>Sign Language Translator</h3>
+                    <span className="sign-badge-small">Live from captions</span>
+                  </div>
+                  <div className="sign-content">
+                    <SignLanguageBox transcript={transcript} />
+                  </div>
                 </div>
               </div>
+
               {/* Sound Monitor + Road Safety */}
               <div className="dashboard-primary">
-                <VisualAlert isLoud={isLoud && emergencyNotificationsEnabled} soundType={soundType} volume={volume} threshold={threshold} onThresholdChange={setThreshold} soundHistory={currentSoundHistory} />
-                <RoadSafetyMonitor isActive={roadSafetyActive} onAlert={(alert) => { if(emergencyNotificationsEnabled) { showToast(alert.description,'error'); setFlashEmergency(true); setEmergencyData({ soundType: alert.name, message: alert.description, timestamp: new Date(), volume: alert.volume }); setTimeout(()=>setFlashEmergency(false),5000); if(isGuest) guestAddNotification({ id:Date.now(), type:'ROAD_SAFETY', message:alert.description, soundType:alert.name, timestamp:new Date().toISOString(), read:false }); } }} showToast={showToast} />
+                <VisualAlert
+                  isLoud={isLoud && emergencyNotificationsEnabled}
+                  soundType={soundType}
+                  volume={volume}
+                  threshold={threshold}
+                  onThresholdChange={setThreshold}
+                  soundHistory={currentSoundHistory}
+                />
+                <RoadSafetyMonitor
+                  isActive={roadSafetyActive}
+                  onAlert={(alert) => {
+                    if (emergencyNotificationsEnabled) {
+                      showToast(alert.description, 'error');
+                      setFlashEmergency(true);
+                      setEmergencyData({
+                        soundType: alert.name,
+                        message: alert.description,
+                        timestamp: new Date(),
+                        volume: alert.volume
+                      });
+                      setTimeout(() => setFlashEmergency(false), 5000);
+                      if (isGuest) {
+                        guestAddNotification({
+                          id: Date.now(),
+                          type: 'ROAD_SAFETY',
+                          message: alert.description,
+                          soundType: alert.name,
+                          timestamp: new Date().toISOString(),
+                          read: false
+                        });
+                      }
+                    }
+                  }}
+                  showToast={showToast}
+                />
               </div>
-              {/* Sound Visualizer + History */}
+
+              {/* Sound Visualizer + Sound History */}
               <div className="dashboard-secondary">
                 <SoundVisualizer volume={volume} isLoud={isLoud} soundType={soundType} />
-                <SoundHistory soundHistory={currentSoundHistory.slice(0,5)} />
+                <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
               </div>
             </>
           )}
+
+          {/* AI VISION TAB */}
           {activeTab === 'vision' && <Aivision showToast={showToast} />}
+
+          {/* SIGN LANGUAGE TUTOR TAB */}
           {activeTab === 'learn' && <SignLanguageTutor />}
-          {activeTab === 'alerts' && <NotificationCenter queue={currentNotifications} onMarkRead={isGuest ? guestMarkAsRead : markAsRead} onClear={isGuest ? guestClearNotifications : clearNotifications} />}
-          {activeTab === 'contacts' && <RelativesManager relatives={currentRelatives} onAdd={isGuest ? guestAddRelative : addRelative} onRemove={isGuest ? guestRemoveRelative : removeRelative} onUpdate={isGuest ? guestUpdateRelative : updateRelative} onTest={(rel) => showToast(`Test alert ready for ${rel.name}`,'info')} autoSendStatus={autoSendStatus} isGuest={isGuest} />}
+
+          {/* COMMUNITY TAB (ONLINE USERS + VIDEO CALLS) */}
+          {activeTab === 'community' && <OnlineUsers />}
+
+          {/* ALERTS / NOTIFICATIONS TAB */}
+          {activeTab === 'alerts' && (
+            <NotificationCenter
+              queue={currentNotifications}
+              onMarkRead={isGuest ? guestMarkAsRead : markAsRead}
+              onClear={isGuest ? guestClearNotifications : clearNotifications}
+            />
+          )}
+
+          {/* EMERGENCY CONTACTS TAB */}
+          {activeTab === 'contacts' && (
+            <RelativesManager
+              relatives={currentRelatives}
+              onAdd={isGuest ? guestAddRelative : addRelative}
+              onRemove={isGuest ? guestRemoveRelative : removeRelative}
+              onUpdate={isGuest ? guestUpdateRelative : updateRelative}
+              onTest={(rel) => showToast(`Test alert ready for ${rel.name}`, 'info')}
+              autoSendStatus={autoSendStatus}
+              isGuest={isGuest}
+            />
+          )}
+
+          {/* SOS EMERGENCY TAB */}
           {activeTab === 'emergency' && (
             <div className="emergency-sos-card">
-              <div className="sos-header"><h2>🆘 {t('sosCenter')}</h2></div>
-              <div className="sos-button-large" onClick={() => { if(emergencyNotificationsEnabled) { setFlashEmergency(true); setEmergencyData({ soundType:'SOS', message:'Manual SOS Triggered!', timestamp:new Date() }); setTimeout(()=>setFlashEmergency(false),8000); showToast('🚨 SOS Activated!','error'); if(navigator.vibrate) navigator.vibrate([500,200,500]); } }}><span className="sos-icon">🆘</span><span className="sos-text">{t('sos')}</span></div>
-              <div className="emergency-numbers"><button className="emergency-btn police" onClick={()=>window.location.href='tel:119'}>👮 {t('police')} (119)</button><button className="emergency-btn ambulance" onClick={()=>window.location.href='tel:1990'}>🚑 {t('ambulance')} (1990)</button></div>
-              <div className="emergency-instructions-box"><h4>⚠️ {t('emergencyInstructions')}</h4><ul><li>{t('redFlashing')}</li><li>{t('vibration')}</li><li>{t('contactsNotify')}</li><li>{t('liveLocation')}</li><li>{t('notificationToggle') || "🔕 Notification Toggle = Disable alerts when needed (top of screen)"}</li></ul></div>
+              <div className="sos-header">
+                <h2>🆘 {t('sosCenter')}</h2>
+              </div>
+              <div
+                className="sos-button-large"
+                onClick={() => {
+                  if (emergencyNotificationsEnabled) {
+                    setFlashEmergency(true);
+                    setEmergencyData({
+                      soundType: 'SOS',
+                      message: 'Manual SOS Triggered!',
+                      timestamp: new Date()
+                    });
+                    setTimeout(() => setFlashEmergency(false), 8000);
+                    showToast('🚨 SOS Activated!', 'error');
+                    if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+                  }
+                }}
+              >
+                <span className="sos-icon">🆘</span>
+                <span className="sos-text">{t('sos')}</span>
+              </div>
+              <div className="emergency-numbers">
+                <button className="emergency-btn police" onClick={() => window.location.href = 'tel:119'}>
+                  👮 {t('police')} (119)
+                </button>
+                <button className="emergency-btn ambulance" onClick={() => window.location.href = 'tel:1990'}>
+                  🚑 {t('ambulance')} (1990)
+                </button>
+              </div>
+              <div className="emergency-instructions-box">
+                <h4>⚠️ {t('emergencyInstructions')}</h4>
+                <ul>
+                  <li>{t('redFlashing')}</li>
+                  <li>{t('vibration')}</li>
+                  <li>{t('contactsNotify')}</li>
+                  <li>{t('liveLocation')}</li>
+                  <li>{t('notificationToggle') || "🔕 Notification Toggle = Disable alerts when needed (top of screen)"}</li>
+                </ul>
+              </div>
             </div>
           )}
+
+          {/* DEDICATED ROAD SAFETY MONITOR TAB */}
           {activeTab === 'roadmonitor' && (
-            <div style={{ maxWidth:'900px', margin:'0 auto' }}>
-              <div style={{ marginBottom:'20px', textAlign:'center' }}><h2 style={{ fontSize:'28px', marginBottom:'8px' }}>🛣️ {t('roadSafetyMonitor')}</h2><p style={{ color:'var(--text-secondary)' }}>{t('dedicatedRoadSafety') || "Full‑screen detection of horns, sirens, engines – with direction & distance hints"}</p></div>
-              <RoadSafetyMonitor isActive={true} onAlert={(alert) => { if(emergencyNotificationsEnabled) { showToast(alert.description,'error'); setFlashEmergency(true); setEmergencyData({ soundType:alert.name, message:alert.description, timestamp:new Date(), volume:alert.volume }); setTimeout(()=>setFlashEmergency(false),5000); if(isGuest) guestAddNotification({ id:Date.now(), type:'ROAD_SAFETY', message:alert.description, soundType:alert.name, timestamp:new Date().toISOString(), read:false }); } }} showToast={showToast} />
+            <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+              <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+                <h2 style={{ fontSize: '28px', marginBottom: '8px' }}>🛣️ {t('roadSafetyMonitor')}</h2>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  {t('dedicatedRoadSafety') || "Full‑screen detection of horns, sirens, engines – with direction & distance hints"}
+                </p>
+              </div>
+              <RoadSafetyMonitor
+                isActive={true}
+                onAlert={(alert) => {
+                  if (emergencyNotificationsEnabled) {
+                    showToast(alert.description, 'error');
+                    setFlashEmergency(true);
+                    setEmergencyData({
+                      soundType: alert.name,
+                      message: alert.description,
+                      timestamp: new Date(),
+                      volume: alert.volume
+                    });
+                    setTimeout(() => setFlashEmergency(false), 5000);
+                    if (isGuest) {
+                      guestAddNotification({
+                        id: Date.now(),
+                        type: 'ROAD_SAFETY',
+                        message: alert.description,
+                        soundType: alert.name,
+                        timestamp: new Date().toISOString(),
+                        read: false
+                      });
+                    }
+                  }
+                }}
+                showToast={showToast}
+              />
             </div>
           )}
-          {activeTab === 'settings' && <AccessibilitySettings onThemeChange={handleThemeChange} onFontSizeChange={handleFontSizeChange} currentTheme={currentTheme} currentFontSize={currentFontSize} />}
+
+          {/* ACCESSIBILITY SETTINGS TAB */}
+          {activeTab === 'settings' && (
+            <AccessibilitySettings
+              onThemeChange={handleThemeChange}
+              onFontSizeChange={handleFontSizeChange}
+              currentTheme={currentTheme}
+              currentFontSize={currentFontSize}
+            />
+          )}
         </main>
       </div>
+
       {toastMessage.show && <div className={`toast-message ${toastMessage.type}`}>{toastMessage.message}</div>}
-      {!sidebarVisible && window.innerWidth <= 1024 && <button className="mobile-menu-btn" onClick={() => setSidebarVisible(true)}>☰</button>}
+      {!sidebarVisible && window.innerWidth <= 1024 && (
+        <button className="mobile-menu-btn" onClick={() => setSidebarVisible(true)}>☰</button>
+      )}
     </div>
   );
 }
 
-export default function App() {
+// Main App wrapper with LanguageProvider
+function App() {
   return (
     <LanguageProvider>
       <AppContent />
     </LanguageProvider>
   );
 }
+
+export default App;
