@@ -50,4 +50,21 @@
   color: var(--red);
   font-size: 14px;
   font-weight: 600;
+}.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.color-blind-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+@media (max-width: 768px) {
+  .theme-grid, .color-blind-options {
+    grid-template-columns: 1fr;
+  }
+}
+.font-size-control {
+  gap: 16px;
 }

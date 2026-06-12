@@ -250,4 +250,48 @@
     justify-content: space-between;
     width: 100%;
   }
+}/* Add these styles to your existing Header.css */
+.emergency-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-radius: 60px;
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.emergency-toggle-btn.enabled {
+  background: linear-gradient(135deg, #00CCAA, #00997a);
+  color: #000;
+  animation: pulse-glow 1.5s infinite;
+}
+.emergency-toggle-btn.disabled {
+  background: #2A2F55;
+  color: #FF3355;
+  border: 1px solid #FF3355;
+}
+.emergency-toggle-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,204,170,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(0,204,170,0); }
+}.app-header {
+  padding: 12px 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+@media (min-width: 768px) {
+  .app-header {
+    padding: 16px 24px;
+  }
+}
+.logo-section, .header-right {
+  flex-wrap: wrap;
+  gap: 8px;
 }

@@ -46,4 +46,46 @@
   padding: 12px 20px;
   border-radius: 60px;
   animation: pulse 0.5s infinite;
+}.rel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+@media (min-width: 768px) {
+  .rel-item {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+.rel-actions {
+  display: flex;
+  gap: 10px;
+  align-self: flex-end;
+}
+@media (min-width: 768px) {
+  .rel-actions {
+    align-self: center;
+  }
+}
+.method-tag {
+  padding: 4px 10px;
+  font-size: 0.7rem;
+}.direction-indicator {
+  flex-direction: column;
+  gap: 20px;
+}
+@media (min-width: 768px) {
+  .direction-indicator {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+.direction span {
+  font-size: 28px;
+}
+@media (min-width: 768px) {
+  .direction span {
+    font-size: 32px;
+  }
 }

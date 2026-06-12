@@ -22,7 +22,8 @@ import RoadSafetyMonitor from './components/RoadSafetyMonitor';
 import FallDetector from "./components/FallDetector";
 import BackgroundVideo from './components/BackgroundVideo';
 import LandingPage from './components/LandingPage';
-
+import './components/EmergencyFlash.css';
+import './components/EmergencyContactModal.css';
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
 import { useVolume } from './hooks/useVolume';
@@ -32,6 +33,7 @@ import { useNotifications } from './hooks/useNotifications';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
+// src/App.jsx
 
 // WhatsApp message helper for fall detection
 const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
@@ -243,19 +245,12 @@ function AppContent() {
         <main className="main-content">
           {activeTab === 'dashboard' && (
             <>
-              {!emergencyNotificationsEnabled && (
-                <div className="notifications-disabled-banner">
-                  <span className="banner-icon">🔕</span>
-                  <div className="banner-content"><strong>{t('alertsOff')}</strong><p>{t('noEmergencyAlerts') || "You won't receive visual alerts or emergency flashes."}</p></div>
-                  <button onClick={toggleEmergencyNotifications} className="banner-enable-btn">{t('enableNow') || "Enable Now"}</button>
-                </div>
-              )}
               {/* Main row: Live Captions + Sign Language side by side */}
               <div className="captions-sign-row">
                 <div className="captions-box">
                   <div className="section-header"><span className="section-icon">🎤</span><h3>Live Captions</h3>{isListening && <span className="live-badge-small">LIVE</span>}</div>
                   <div className="captions-content">
-                    <TranscriptBox transcript={transcript} isListening={isListening} startListening={startListening} stopListening={stopListening} clearTranscript={clearTranscript} error={speechError} browserInfo={browserInfo} />
+                    <TranscriptBox transcript={transcript} isListening={isListening} startListening={startListening} stopListening={stopListening} clearTranscript={clearTranscript} error={speechError} browserInfo={browserInfo} setLang={setLang} currentLang={lang} />
                   </div>
                 </div>
                 <div className="sign-box">

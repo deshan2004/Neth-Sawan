@@ -207,4 +207,37 @@
     font-size: 0.7rem;
     padding: 4px 10px;
   }
+}.alert-card {
+  padding: 20px;
+}
+@media (max-width: 768px) {
+  .alert-card {
+    padding: 16px;
+  }
+}
+.vol-num {
+  font-size: 1.8rem;
+}
+@media (min-width: 768px) {
+  .vol-num {
+    font-size: 2rem;
+  }
+}
+.vol-track {
+  height: 12px;
+}
+.alert-box {
+  padding: 16px;
+}
+.alert-icon {
+  font-size: 1.8rem;
+}
+.sound-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sound-chip {
+  padding: 6px 12px;
+  font-size: 0.75rem;
 }

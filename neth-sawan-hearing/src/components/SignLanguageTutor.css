@@ -268,4 +268,18 @@
   font-size: 0.8rem;
   text-align: center;
   border-left: 3px solid #F5C842;
+}.sign-display-tutor {
+  flex-direction: column;
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .sign-display-tutor {
+    flex-direction: row;
+    text-align: left;
+  }
+}
+.lesson-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }

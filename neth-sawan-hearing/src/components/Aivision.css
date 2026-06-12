@@ -524,4 +524,25 @@
     font-size: 14px;
     padding: 12px;
   }
+}.upload-area {
+  padding: 32px;
+}
+@media (min-width: 768px) {
+  .upload-area {
+    padding: 48px;
+  }
+}
+.gallery-scroll {
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+.sign-card-big {
+  flex-direction: column;
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .sign-card-big {
+    flex-direction: row;
+    text-align: left;
+  }
 }

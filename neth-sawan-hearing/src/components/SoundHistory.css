@@ -75,4 +75,16 @@
 .history-list::-webkit-scrollbar-thumb {
   background: #00DDB3;
   border-radius: 4px;
+}.history-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px;
+}
+@media (max-width: 480px) {
+  .history-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
