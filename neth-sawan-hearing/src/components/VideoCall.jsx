@@ -1,8 +1,9 @@
-// src/components/VideoCall.jsx – Video/Audio only
+// src/components/VideoCall.jsx – Video/Audio only, sign language friendly
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { doc, onSnapshot, deleteDoc, setDoc } from 'firebase/firestore';
 import Peer from 'peerjs';
+import './VideoCall.css';
 
 const VideoCall = ({ targetUser, currentUser, onClose }) => {
   const [callStatus, setCallStatus] = useState('idle');
@@ -150,9 +151,11 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
   return (
     <div className="video-call-modal">
       <div className="video-call-container">
-        <button className="close-call-btn" onClick={onClose}>✕</button>
+        <button className="close-call-btn" onClick={onClose} aria-label="Close">✕</button>
 
-        <div className="section-title">📹 Video Call with {targetUser.name}</div>
+        <div className="section-title">
+          📹 Video Call with {targetUser.name} 🤟
+        </div>
 
         <div className="video-grid">
           <div className="remote-video">
@@ -169,7 +172,7 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
           {callStatus === 'idle' && (
             <button className="call-start-btn" onClick={startCall}>Start Call</button>
           )}
-          {callStatus === 'calling' && <p className="call-status-text">Calling...</p>}
+          {callStatus === 'calling' && <p className="call-status-text">Calling... 🤙</p>}
           {callStatus === 'ringing' && incomingCall && (
             <div className="incoming-buttons">
               <button className="call-answer-btn" onClick={answerCall}>Answer</button>
@@ -184,101 +187,11 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
             </>
           )}
         </div>
-      </div>
 
-      <style>{`
-        .video-call-modal {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.95);
-          z-index: 3000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 10px;
-        }
-        .video-call-container {
-          background: #0A0C1A;
-          border-radius: 28px;
-          width: 90%;
-          max-width: 800px;
-          padding: 20px;
-          position: relative;
-        }
-        .close-call-btn {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          background: rgba(0,0,0,0.5);
-          border: none;
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          color: white;
-          font-size: 20px;
-          cursor: pointer;
-        }
-        .section-title {
-          font-size: 20px;
-          font-weight: 700;
-          color: #00DDB3;
-          text-align: center;
-          margin-bottom: 20px;
-        }
-        .video-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          margin-bottom: 20px;
-        }
-        .remote-video, .local-video {
-          background: #000;
-          border-radius: 20px;
-          overflow: hidden;
-          position: relative;
-          aspect-ratio: 16 / 9;
-        }
-        .remote-video video, .local-video video {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-        .remote-video span, .local-video span {
-          position: absolute;
-          bottom: 8px;
-          left: 8px;
-          background: rgba(0,0,0,0.6);
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 12px;
-        }
-        .call-controls {
-          display: flex;
-          gap: 12px;
-          justify-content: center;
-          flex-wrap: wrap;
-        }
-        .call-start-btn, .call-answer-btn, .call-reject-btn, .call-end-btn, .call-mute-btn, .call-video-btn {
-          padding: 10px 20px;
-          border-radius: 40px;
-          font-weight: bold;
-          border: none;
-          cursor: pointer;
-          font-size: 14px;
-        }
-        .call-start-btn { background: #00CCAA; color: #000; }
-        .call-answer-btn { background: #00FF88; color: #000; }
-        .call-reject-btn, .call-end-btn { background: #FF0033; color: #fff; }
-        .call-mute-btn, .call-video-btn { background: #2A2F55; color: #fff; }
-        .call-status-text { color: #00DDB3; font-weight: 500; }
-        @media (max-width: 768px) {
-          .video-call-container { width: 95%; padding: 16px; }
-          .call-start-btn, .call-answer-btn, .call-reject-btn, .call-end-btn, .call-mute-btn, .call-video-btn {
-            padding: 8px 16px;
-            font-size: 12px;
-          }
-        }
-      `}</style>
+        <div className="sign-language-tip">
+          <span>🤟</span> Use sign language – keep hands visible and face camera
+        </div>
+      </div>
     </div>
   );
 };
