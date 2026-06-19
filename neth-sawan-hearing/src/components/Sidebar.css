@@ -23,24 +23,7 @@
   transform: translateX(0);
 }
 
-/* Hide scrollbar for cleaner look */
-.app-sidebar::-webkit-scrollbar {
-  width: 4px;
-}
-.app-sidebar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.app-sidebar::-webkit-scrollbar-thumb {
-  background: #00DDB3;
-  border-radius: 4px;
-}
-
-/* Desktop: always visible */
-@media (min-width: 1025px) {
-  .app-sidebar {
-    transform: translateX(0);
-  }
-}
+/* 👇 REMOVED the media query that forced visibility on desktop */
 
 /* ===== SIDEBAR HEADER – CLEAN, NO ICON ===== */
 .sidebar-header {
@@ -118,7 +101,6 @@
   margin-top: 8px;
 }
 
-/* Avatar – large, glowing, interactive */
 .avatar {
   position: relative;
   width: 88px;
@@ -153,7 +135,6 @@
   text-shadow: 0 2px 4px rgba(255, 255, 255, 0.2);
 }
 
-/* Edit icon on avatar – subtle and elegant */
 .avatar-edit-icon {
   position: absolute;
   bottom: 2px;
@@ -176,7 +157,6 @@
   transform: scale(1.1);
 }
 
-/* Profile text */
 .profile-name {
   position: relative;
   z-index: 2;
@@ -195,7 +175,6 @@
   margin: 0 0 8px;
 }
 
-/* Badges – Guest and Accessibility */
 .guest-badge {
   position: relative;
   z-index: 2;
@@ -311,7 +290,6 @@
   flex-shrink: 0;
 }
 
-/* Help button – elegant, matches brand */
 .help-btn-sidebar {
   width: 100%;
   padding: 12px;
@@ -338,7 +316,6 @@
   border-color: rgba(0, 221, 179, 0.5);
 }
 
-/* Sign Out button – subtle red */
 .logout-btn-sidebar {
   width: 100%;
   padding: 12px;
@@ -363,7 +340,6 @@
   border-color: rgba(255, 0, 51, 0.4);
 }
 
-/* Version text – subtle, informative */
 .version {
   margin-top: 12px;
   font-size: 0.6rem;
@@ -402,8 +378,6 @@
 }
 
 /* ===== RESPONSIVE BREAKPOINTS ===== */
-
-/* Tablet and below: sidebar becomes overlay, hamburger shows */
 @media (max-width: 1024px) {
   .mobile-menu-btn {
     display: flex !important;
@@ -420,7 +394,6 @@
   }
 }
 
-/* Small phones: narrower sidebar */
 @media (max-width: 480px) {
   .app-sidebar {
     width: 100%;
@@ -470,8 +443,7 @@
   }
 }
 
-/* ===== ANIMATION KEYFRAMES ===== */
-
+/* ===== ANIMATIONS ===== */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -493,7 +465,6 @@
   opacity: 0;
 }
 
-/* Staggered animation for nav items */
 .nav-item:nth-child(1) { --item-index: 1; }
 .nav-item:nth-child(2) { --item-index: 2; }
 .nav-item:nth-child(3) { --item-index: 3; }
@@ -504,7 +475,7 @@
 .nav-item:nth-child(8) { --item-index: 8; }
 .nav-item:nth-child(9) { --item-index: 9; }
 
-/* ===== UTILITY – Focus styles for accessibility ===== */
+/* ===== ACCESSIBILITY FOCUS ===== */
 .nav-item:focus-visible,
 .logout-btn-sidebar:focus-visible,
 .help-btn-sidebar:focus-visible,
@@ -514,12 +485,11 @@
   outline-offset: 2px;
 }
 
-/* ===== DARK MODE COMPATIBILITY ===== */
+/* ===== LIGHT MODE COMPATIBILITY ===== */
 @media (prefers-color-scheme: light) {
   .app-sidebar {
     background: #12152F;
   }
-  
   .profile-section {
     background: linear-gradient(145deg, rgba(26, 30, 58, 0.9), rgba(10, 12, 26, 0.95));
   }

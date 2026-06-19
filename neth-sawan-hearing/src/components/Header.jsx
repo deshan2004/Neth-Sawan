@@ -6,7 +6,6 @@ const Header = ({
   isListening, lang, setLang, showToast, user, isGuest,
   roadSafetyActive, setRoadSafetyActive,
   emergencyNotificationsEnabled, onToggleEmergencyNotifications
-  // onShowInstructions is removed – no longer needed here
 }) => {
   return (
     <header className="app-header">
@@ -14,29 +13,46 @@ const Header = ({
         <h1 className="logo-text">Neth-Sawan</h1>
         <span className="tagline">Visual Hearing Assistant</span>
         <div className="lang-switcher">
-          <button className={`lang-btn ${lang === 'si-LK' ? 'active' : ''}`} onClick={() => { setLang('si-LK'); showToast('Switched to Sinhala', 'success'); }}>🇱🇰 සිංහල</button>
-          <button className={`lang-btn ${lang === 'en-US' ? 'active' : ''}`} onClick={() => { setLang('en-US'); showToast('Switched to English', 'success'); }}>🇬🇧 English</button>
+          <button 
+            className={`lang-btn ${lang === 'si-LK' ? 'active' : ''}`} 
+            onClick={() => { setLang('si-LK'); showToast('Switched to Sinhala', 'success'); }}
+          >
+            🇱🇰 සිංහල
+          </button>
+          <button 
+            className={`lang-btn ${lang === 'en-US' ? 'active' : ''}`} 
+            onClick={() => { setLang('en-US'); showToast('Switched to English', 'success'); }}
+          >
+            🇬🇧 English
+          </button>
         </div>
       </div>
       <div className="header-right">
+        {/* Emergency Toggle – with stopPropagation */}
         <button 
           className={`emergency-toggle-btn ${emergencyNotificationsEnabled ? 'enabled' : 'disabled'}`}
-          onClick={onToggleEmergencyNotifications}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleEmergencyNotifications();
+          }}
           title={emergencyNotificationsEnabled ? 'Disable emergency alerts' : 'Enable emergency alerts'}
         >
           <span className="emergency-icon">{emergencyNotificationsEnabled ? '🔔' : '🔕'}</span>
           <span className="emergency-text">{emergencyNotificationsEnabled ? 'Alerts ON' : 'Alerts OFF'}</span>
         </button>
 
+        {/* Road Safety Toggle – with stopPropagation */}
         <button 
           className={`road-safety-toggle ${roadSafetyActive ? 'active' : ''}`}
-          onClick={() => { setRoadSafetyActive(!roadSafetyActive); showToast(roadSafetyActive ? 'Road safety off' : 'Road safety on', 'info'); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setRoadSafetyActive(!roadSafetyActive);
+            showToast(roadSafetyActive ? 'Road safety off' : 'Road safety on', 'info');
+          }}
         >
           <span>🚗</span>
           <span>{roadSafetyActive ? 'Road Safe ON' : 'Road Safe OFF'}</span>
         </button>
-
-        {/* ❓ Help button REMOVED from header */}
 
         <div className={`listening-status ${isListening ? 'active' : ''}`}>
           <div className="status-dot"></div>

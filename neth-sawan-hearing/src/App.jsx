@@ -362,7 +362,7 @@ function AppContent() {
         user={user}
         isGuest={isGuest}
         onLogout={isGuest ? handleSignOutGuest : handleLogout}
-        onShowInstructions={() => setShowInstructions(true)}   // 👈 Pass to Sidebar
+        onShowInstructions={() => setShowInstructions(true)}
       />
 
       <div className={`content-area ${sidebarVisible && window.innerWidth > 1024 ? 'sidebar-open' : ''}`}>
@@ -377,7 +377,6 @@ function AppContent() {
           setRoadSafetyActive={setRoadSafetyActive}
           emergencyNotificationsEnabled={emergencyNotificationsEnabled}
           onToggleEmergencyNotifications={toggleEmergencyNotifications}
-          // onShowInstructions is NOT passed to Header (removed)
         />
 
         <main className="main-content">
@@ -594,8 +593,19 @@ function AppContent() {
       </div>
 
       {toastMessage.show && <div className={`toast-message ${toastMessage.type}`}>{toastMessage.message}</div>}
-      {!sidebarVisible && window.innerWidth <= 1024 && (
-        <button className="mobile-menu-btn" onClick={() => setSidebarVisible(true)}>☰</button>
+      
+      {/* 👇 Sidebar toggle button – always visible when sidebar is closed, with stopPropagation */}
+      {!sidebarVisible && (
+        <button 
+          className="sidebar-toggle-btn" 
+          onClick={(e) => {
+            e.stopPropagation();
+            setSidebarVisible(true);
+          }} 
+          aria-label="Open menu"
+        >
+          ☰
+        </button>
       )}
     </div>
   );
