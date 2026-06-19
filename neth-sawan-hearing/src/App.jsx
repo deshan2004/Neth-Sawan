@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -60,7 +60,7 @@ const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
   return message;
 };
 
-// Inner component that uses language context
+// ===== INNER COMPONENT =====
 function AppContent() {
   const { updateLanguageFromTranscript, t } = useLanguage();
 
@@ -87,6 +87,10 @@ function AppContent() {
     const saved = localStorage.getItem('emergency_notifications_enabled');
     return saved !== null ? saved === 'true' : true;
   });
+
+  // ===== FALL DETECTOR REF & STATE =====
+  const fallDetectorRef = useRef(null);
+  const [fallDetectorBlocked, setFallDetectorBlocked] = useState(false);
 
   // ===== HOOKS =====
   const { transcript, isListening, startListening, stopListening, clearTranscript, setLang, lang, error: speechError, browserInfo } = useSpeech();
@@ -136,6 +140,19 @@ function AppContent() {
       if (savedSoundHistory) setGuestSoundHistory(JSON.parse(savedSoundHistory));
     }
   }, [isGuest]);
+
+  // ===== FALL DETECTOR STATUS CHECK =====
+  useEffect(() => {
+    const checkStatus = () => {
+      if (fallDetectorRef.current) {
+        const blocked = fallDetectorRef.current.isBlocked?.() || false;
+        setFallDetectorBlocked(blocked);
+      }
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   // ===== LOUD SOUND EMERGENCY FLASH =====
   useEffect(() => {
@@ -224,6 +241,19 @@ function AppContent() {
     const newState = !emergencyNotificationsEnabled;
     setEmergencyNotificationsEnabled(newState);
     showToast(newState ? (t('alertsOn') || 'Emergency notifications enabled') : (t('alertsOff') || 'Emergency notifications disabled'), newState ? 'success' : 'info');
+  };
+
+  // ===== FALL PERMISSION REQUEST =====
+  const handleRequestFallPermission = async () => {
+    if (fallDetectorRef.current) {
+      const granted = await fallDetectorRef.current.requestPermission();
+      if (granted) {
+        showToast('✅ Fall detection enabled!', 'success');
+        setFallDetectorBlocked(false);
+      } else {
+        showToast('❌ Permission denied. Please allow motion sensors in settings.', 'error');
+      }
+    }
   };
 
   // ===== GUEST HANDLERS =====
@@ -347,7 +377,7 @@ function AppContent() {
     return <InstructionsPage onClose={() => setShowInstructions(false)} />;
   }
 
-  // ===== LANDING PAGE (not logged in) =====
+  // ===== LANDING PAGE =====
   if (!user && !isGuest) {
     return <LandingPage onGuestMode={handleGuestMode} onShowInstructions={() => setShowInstructions(true)} />;
   }
@@ -358,9 +388,14 @@ function AppContent() {
   return (
     <div className="app-wrapper" style={{ fontSize: `${currentFontSize}px` }}>
       <BackgroundVideo opacity={0.85} />
-      <FallDetector onFallDetected={handleFallEmergency} />
 
-      {/* SVG filters for color blindness */}
+      {/* ===== FALL DETECTOR ===== */}
+      <FallDetector
+        ref={fallDetectorRef}
+        onFallDetected={handleFallEmergency}
+      />
+
+      {/* ===== SVG FILTERS FOR COLOR BLINDNESS ===== */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
           <filter id="protanopia"><feColorMatrix type="matrix" values="0.567,0.433,0,0,0,0.558,0.442,0,0,0,0,0.242,0.758,0,0,0,0,0,1,0"/></filter>
@@ -369,8 +404,13 @@ function AppContent() {
         </defs>
       </svg>
 
-      <EmergencyFlash isVisible={flashEmergency && emergencyNotificationsEnabled} emergencyData={emergencyData} />
+      {/* ===== EMERGENCY FLASH ===== */}
+      <EmergencyFlash
+        isVisible={flashEmergency && emergencyNotificationsEnabled}
+        emergencyData={emergencyData}
+      />
 
+      {/* ===== SIDEBAR ===== */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -382,13 +422,16 @@ function AppContent() {
         onShowInstructions={() => setShowInstructions(true)}
       />
 
-      {/* 👇 SIDEBAR BACKDROP (only visible on mobile when sidebar is open) */}
-      <div 
+      {/* ===== SIDEBAR BACKDROP (mobile only) ===== */}
+      <div
         className={`sidebar-backdrop ${sidebarOpen && isMobile ? 'active' : ''}`}
         onClick={() => setSidebarOpen(false)}
       />
 
+      {/* ===== CONTENT AREA ===== */}
       <div className={`content-area ${sidebarOpen ? 'sidebar-open' : ''}`}>
+
+        {/* ===== HEADER ===== */}
         <Header
           isListening={isListening}
           lang={lang}
@@ -402,9 +445,13 @@ function AppContent() {
           onToggleEmergencyNotifications={toggleEmergencyNotifications}
           onToggleSidebar={toggleSidebar}
           sidebarOpen={sidebarOpen}
+          fallDetectorBlocked={fallDetectorBlocked}
+          onRequestFallPermission={handleRequestFallPermission}
         />
 
+        {/* ===== MAIN CONTENT ===== */}
         <main className="main-content">
+
           {/* ===== DASHBOARD TAB ===== */}
           {activeTab === 'dashboard' && (
             <>
@@ -486,7 +533,7 @@ function AppContent() {
             </>
           )}
 
-          {/* ===== AI VISION TAB ===== */}
+          {/* ===== AI VISION ===== */}
           {activeTab === 'vision' && <Aivision showToast={showToast} />}
 
           {/* ===== SIGN LANGUAGE TUTOR ===== */}
@@ -624,9 +671,11 @@ function AppContent() {
               currentFontSize={currentFontSize}
             />
           )}
+
         </main>
       </div>
 
+      {/* ===== TOAST ===== */}
       {toastMessage.show && <div className={`toast-message ${toastMessage.type}`}>{toastMessage.message}</div>}
     </div>
   );

@@ -7,7 +7,8 @@ const Header = ({
   isListening, lang, setLang, showToast, user, isGuest,
   roadSafetyActive, setRoadSafetyActive,
   emergencyNotificationsEnabled, onToggleEmergencyNotifications,
-  onToggleSidebar, sidebarOpen
+  onToggleSidebar, sidebarOpen,
+  fallDetectorBlocked, onRequestFallPermission   // <-- new props
 }) => {
   const { t } = useLanguage();
 
@@ -25,6 +26,17 @@ const Header = ({
       </div>
 
       <div className="header-right">
+        {/* 🔥 FALL PERMISSION BUTTON – appears only when blocked */}
+        {fallDetectorBlocked && (
+          <button 
+            className="fall-permission-btn"
+            onClick={onRequestFallPermission}
+            title="Enable fall detection (requires motion sensors)"
+          >
+            <span>📳 Enable Fall Detection</span>
+          </button>
+        )}
+
         <div className="lang-switcher">
           <button className={`lang-btn ${lang === 'si-LK' ? 'active' : ''}`} onClick={() => { setLang('si-LK'); showToast(t('switchedToSinhala'), 'success'); }}>
             🇱🇰 සිංහල
@@ -34,19 +46,15 @@ const Header = ({
           </button>
         </div>
 
-        {/* 🔔 EMERGENCY TOGGLE – larger & clearer */}
         <button 
           className={`emergency-toggle-btn ${emergencyNotificationsEnabled ? 'enabled' : 'disabled'}`}
           onClick={onToggleEmergencyNotifications}
           title={emergencyNotificationsEnabled ? 'Disable emergency alerts' : 'Enable emergency alerts'}
         >
           <span className="emergency-icon">{emergencyNotificationsEnabled ? '🔔' : '🔕'}</span>
-          <span className="emergency-text">
-            {emergencyNotificationsEnabled ? t('alertsOn') : t('alertsOff')}
-          </span>
+          <span className="emergency-text">{emergencyNotificationsEnabled ? t('alertsOn') : t('alertsOff')}</span>
         </button>
 
-        {/* 🚗 ROAD SAFETY TOGGLE – larger & clearer */}
         <button 
           className={`road-safety-toggle ${roadSafetyActive ? 'active' : ''}`}
           onClick={() => {

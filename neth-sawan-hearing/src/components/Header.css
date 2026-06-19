@@ -341,4 +341,54 @@
     font-size: 0.7rem;
     min-height: 40px;
   }
+}/* src/components/Header.css – add these new rules */
+
+/* ===== FALL PERMISSION BUTTON ===== */
+.fall-permission-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 60px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s;
+  white-space: nowrap;
+  min-height: 48px;
+  background: linear-gradient(135deg, #FF8800, #FF5500);
+  color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(255, 85, 0, 0.3);
+  animation: pulseFallBtn 1.8s ease-in-out infinite;
+}
+
+.fall-permission-btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 6px 24px rgba(255, 85, 0, 0.5);
+}
+
+.fall-permission-btn:active {
+  transform: scale(0.96);
+}
+
+@keyframes pulseFallBtn {
+  0%, 100% { box-shadow: 0 4px 16px rgba(255, 85, 0, 0.3); }
+  50% { box-shadow: 0 4px 32px rgba(255, 85, 0, 0.6); }
+}
+
+/* Mobile: hide text, show only icon */
+@media (max-width: 480px) {
+  .fall-permission-btn {
+    padding: 10px 14px;
+    font-size: 0;
+    min-height: 48px;
+  }
+  .fall-permission-btn::before {
+    content: "📳";
+    font-size: 1.6rem;
+  }
+  .fall-permission-btn span {
+    display: none;
+  }
 }

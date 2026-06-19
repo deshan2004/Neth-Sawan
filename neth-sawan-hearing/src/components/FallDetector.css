@@ -1,6 +1,5 @@
 /* src/components/FallDetector.css */
 
-/* Subtle warning bar when fall detection is unavailable */
 .fall-detector-warning {
   position: fixed;
   bottom: 20px;
@@ -26,7 +25,6 @@
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* ===== COUNTDOWN OVERLAY ===== */
 .fall-countdown-overlay {
   position: fixed;
   top: 0;
@@ -115,37 +113,16 @@
   color: rgba(255,255,255,0.8);
 }
 
-/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-  .fall-countdown-title {
-    font-size: 2.2rem;
-  }
-  .fall-countdown-number {
-    font-size: 5rem;
-  }
-  .fall-countdown-message {
-    font-size: 1.2rem;
-  }
-  .fall-ok-btn {
-    font-size: 1.2rem;
-    padding: 14px 32px;
-    min-height: 60px;
-  }
+  .fall-countdown-title { font-size: 2.2rem; }
+  .fall-countdown-number { font-size: 5rem; }
+  .fall-countdown-message { font-size: 1.2rem; }
+  .fall-ok-btn { font-size: 1.2rem; padding: 14px 32px; min-height: 60px; }
 }
 
 @media (max-width: 480px) {
-  .fall-countdown-title {
-    font-size: 1.8rem;
-  }
-  .fall-countdown-number {
-    font-size: 4rem;
-  }
-  .fall-countdown-message {
-    font-size: 1rem;
-  }
-  .fall-ok-btn {
-    font-size: 1rem;
-    padding: 12px 28px;
-    min-height: 54px;
-  }
+  .fall-countdown-title { font-size: 1.8rem; }
+  .fall-countdown-number { font-size: 4rem; }
+  .fall-countdown-message { font-size: 1rem; }
+  .fall-ok-btn { font-size: 1rem; padding: 12px 28px; min-height: 54px; }
 }
