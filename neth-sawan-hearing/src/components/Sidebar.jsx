@@ -70,8 +70,13 @@ const Sidebar = ({
   return (
     <>
       <aside className={`app-sidebar ${isOpen ? 'open' : ''}`}>
-        {/* ----- HEADER: empty (no close button) ----- */}
-        <div className="sidebar-header"></div>
+        {/* ----- HEADER: Close button (visible only on mobile) ----- */}
+        <div className="sidebar-header">
+          <span className="sidebar-header-spacer"></span>
+          <button className="close-sidebar" onClick={onClose} aria-label="Close sidebar">
+            ✕
+          </button>
+        </div>
 
         {/* ----- PROFILE CARD ----- */}
         <div className="profile-section" onClick={() => setShowProfileModal(true)}>
@@ -114,7 +119,6 @@ const Sidebar = ({
               className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab(item.id);
-                // Close sidebar on mobile after navigation
                 if (window.innerWidth <= 1024) onClose();
               }}
             >

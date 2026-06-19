@@ -353,6 +353,8 @@ function AppContent() {
   }
 
   // ===== MAIN APP =====
+  const isMobile = window.innerWidth <= 1024;
+
   return (
     <div className="app-wrapper" style={{ fontSize: `${currentFontSize}px` }}>
       <BackgroundVideo opacity={0.85} />
@@ -378,6 +380,12 @@ function AppContent() {
         isGuest={isGuest}
         onLogout={isGuest ? handleSignOutGuest : handleLogout}
         onShowInstructions={() => setShowInstructions(true)}
+      />
+
+      {/* 👇 SIDEBAR BACKDROP (only visible on mobile when sidebar is open) */}
+      <div 
+        className={`sidebar-backdrop ${sidebarOpen && isMobile ? 'active' : ''}`}
+        onClick={() => setSidebarOpen(false)}
       />
 
       <div className={`content-area ${sidebarOpen ? 'sidebar-open' : ''}`}>

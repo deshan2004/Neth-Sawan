@@ -8,34 +8,36 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 2px solid rgba(0, 221, 179, 0.3);
-  padding: 10px 20px;
+  padding: 8px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-wrap: wrap; /* allows wrapping if needed, but we try to keep row */
+  gap: 8px;
   transition: all 0.3s;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .hamburger-btn {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  width: 44px;
-  height: 44px;
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
   color: white;
-  font-size: 22px;
+  font-size: 20px;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .hamburger-btn:hover {
@@ -48,59 +50,70 @@
 .header-brand {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .brand-icon {
-  font-size: 28px;
+  font-size: 24px;
 }
 
 .brand-name {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   background: linear-gradient(135deg, #00DDB3, #F5C842);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  white-space: nowrap;
 }
 
 .brand-tagline {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: #8899CC;
   font-weight: 400;
   letter-spacing: 0.3px;
   background: rgba(255, 255, 255, 0.04);
-  padding: 2px 12px;
+  padding: 2px 10px;
   border-radius: 40px;
   border: 1px solid rgba(255, 255, 255, 0.06);
+  display: none; /* hidden on small screens, show on desktop */
+}
+
+@media (min-width: 768px) {
+  .brand-tagline {
+    display: inline-block;
+  }
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 1 1 auto;
 }
 
 .lang-switcher {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   background: rgba(0, 0, 0, 0.2);
-  padding: 4px;
+  padding: 3px;
   border-radius: 40px;
 }
 
 .lang-btn {
-  padding: 6px 14px;
+  padding: 4px 10px;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   border: none;
   border-radius: 40px;
   background: transparent;
   color: #8899CC;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .lang-btn.active {
@@ -117,14 +130,15 @@
 .road-safety-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 4px;
+  padding: 6px 12px;
   border-radius: 40px;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   border: none;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .emergency-toggle-btn.enabled {
@@ -149,15 +163,29 @@
   color: #000;
 }
 
+/* Hide text labels on very small screens, show only icons */
+@media (max-width: 480px) {
+  .emergency-toggle-btn .emergency-text,
+  .road-safety-toggle span:last-child {
+    display: none;
+  }
+  .emergency-toggle-btn,
+  .road-safety-toggle {
+    padding: 6px 10px;
+    font-size: 1.1rem;
+  }
+}
+
 .listening-status {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
+  gap: 6px;
+  padding: 4px 12px;
   border-radius: 40px;
   background: #2A2F55;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .listening-status.active {
@@ -166,8 +194,8 @@
 }
 
 .status-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #6B7280;
 }
@@ -185,24 +213,35 @@
 .user-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
+  gap: 6px;
+  padding: 4px 12px;
   background: rgba(26, 30, 58, 0.8);
   border-radius: 40px;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 500;
   border: 1px solid rgba(0, 221, 179, 0.2);
+  white-space: nowrap;
 }
 
 .guest-badge-header {
   background: rgba(245, 200, 66, 0.12);
   color: #F5C842;
-  padding: 0 8px;
+  padding: 0 6px;
   border-radius: 30px;
-  font-size: 0.6rem;
+  font-size: 0.5rem;
   font-weight: 600;
   border: 1px solid rgba(245, 200, 66, 0.2);
   margin-left: 4px;
+}
+
+/* Hide "STOPPED" text on very small screens, show just dot */
+@media (max-width: 400px) {
+  .listening-status .status-text {
+    display: none;
+  }
+  .listening-status {
+    padding: 4px 8px;
+  }
 }
 
 @keyframes pulse-glow {
@@ -210,51 +249,59 @@
   50% { box-shadow: 0 0 0 8px rgba(0, 204, 170, 0); }
 }
 
-/* Responsive */
+/* Responsive: keep row layout, let it wrap if needed */
 @media (max-width: 1024px) {
   .app-header {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 12px 16px;
+    padding: 8px 12px;
+    flex-wrap: wrap;
   }
   .header-left {
-    justify-content: space-between;
+    flex: 1 1 auto;
   }
   .header-right {
-    justify-content: space-around;
-    flex-wrap: wrap;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  /* On tablet, language switcher might be long, let it shrink */
+  .lang-btn {
+    font-size: 0.6rem;
+    padding: 3px 8px;
   }
   .brand-tagline {
     display: none;
   }
-  .lang-switcher {
-    order: 1;
+  .brand-name {
+    font-size: 17px;
   }
 }
 
 @media (max-width: 768px) {
   .header-right {
-    gap: 8px;
+    gap: 4px;
   }
   .emergency-toggle-btn,
   .road-safety-toggle {
-    padding: 6px 12px;
-    font-size: 0.7rem;
-  }
-  .listening-status {
-    padding: 4px 12px;
+    padding: 4px 8px;
     font-size: 0.65rem;
   }
   .user-badge {
-    padding: 4px 12px;
-    font-size: 0.75rem;
-  }
-  .brand-name {
-    font-size: 18px;
+    font-size: 0.65rem;
+    padding: 3px 8px;
   }
   .hamburger-btn {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-icon {
+    font-size: 20px;
+  }
+  .brand-name {
+    font-size: 15px;
   }
 }
