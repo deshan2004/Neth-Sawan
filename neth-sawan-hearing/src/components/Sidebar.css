@@ -42,36 +42,28 @@
   }
 }
 
-/* ===== SIDEBAR HEADER ===== */
+/* ===== SIDEBAR HEADER – CLEAN, NO ICON ===== */
 .sidebar-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  padding: 20px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
+  min-height: 60px;
 }
 
-.logo-mini {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #00DDB3;
-}
-
-.logo-mini span:first-child {
-  font-size: 1.8rem;
+.sidebar-header-spacer {
+  flex: 1;
 }
 
 .close-sidebar {
-  background: #2A2F55;
+  background: rgba(255, 255, 255, 0.05);
   border: none;
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  color: white;
+  color: #8899CC;
   font-size: 16px;
   cursor: pointer;
   transition: all 0.2s;
@@ -81,7 +73,8 @@
 }
 
 .close-sidebar:hover {
-  background: rgba(255, 51, 85, 0.8);
+  background: rgba(255, 51, 85, 0.15);
+  color: #FF3355;
   transform: scale(1.05);
 }
 
@@ -413,7 +406,7 @@
 /* Tablet and below: sidebar becomes overlay, hamburger shows */
 @media (max-width: 1024px) {
   .mobile-menu-btn {
-    display: flex;
+    display: flex !important;
   }
   
   .app-sidebar {
@@ -462,11 +455,18 @@
   }
   
   .sidebar-header {
-    padding: 16px 18px;
+    padding: 12px 16px;
+    min-height: 50px;
   }
   
   .sidebar-footer {
     padding: 12px 18px 18px;
+  }
+  
+  .help-btn-sidebar,
+  .logout-btn-sidebar {
+    font-size: 0.8rem;
+    padding: 10px;
   }
 }
 

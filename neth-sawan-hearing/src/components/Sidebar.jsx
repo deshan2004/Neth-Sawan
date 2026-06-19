@@ -32,7 +32,7 @@ const Sidebar = ({
     }
   }, [isGuest]);
 
-  // Also listen for auth changes to update profile data when user logs in/out
+  // Also listen for auth changes to update profile data
   useEffect(() => {
     if (user && !isGuest) {
       setProfileData(prev => ({
@@ -62,15 +62,15 @@ const Sidebar = ({
   return (
     <>
       <aside className={`app-sidebar ${isOpen ? 'open' : ''}`}>
+        {/* 👇 Clean header – no icon, only close button */}
         <div className="sidebar-header">
-          <div className="logo-mini">
-            <span>👂</span>
-            <span>Neth-Sawan</span>
-          </div>
-          <button className="close-sidebar" onClick={onClose}>✕</button>
+          <div className="sidebar-header-spacer"></div>
+          <button className="close-sidebar" onClick={onClose} aria-label="Close sidebar">
+            ✕
+          </button>
         </div>
         
-        {/* 👇 Enhanced Profile Section */}
+        {/* Profile Section – enhanced, clickable */}
         <div className="profile-section" onClick={() => setShowProfileModal(true)}>
           <div className="profile-bg"></div>
           <div className="profile-avatar-wrapper">
