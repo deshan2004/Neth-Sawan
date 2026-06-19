@@ -123,7 +123,7 @@
   color: white;
 }
 
-/* ===== TOGGLE BUTTONS ===== */
+/* Toggle buttons */
 .emergency-toggle-btn,
 .road-safety-toggle {
   display: flex;
@@ -312,7 +312,7 @@
   }
 }
 
-/* ===== RESPONSIVE ===== */
+/* Responsive */
 @media (max-width: 1024px) {
   .app-header {
     padding: 10px 14px;

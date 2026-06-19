@@ -8,16 +8,22 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
   const [permissionState, setPermissionState] = useState('unknown');
   const [deviceMotionAvailable, setDeviceMotionAvailable] = useState(true);
   const [motionDetected, setMotionDetected] = useState(false);
+  const [lastAccel, setLastAccel] = useState(0);
+  const [debugText, setDebugText] = useState('⏳ Waiting for motion...');
 
   const countdownIntervalRef = useRef(null);
   const motionListenerActive = useRef(false);
+  const fallTriggeredRef = useRef(false);
+  const eventCounter = useRef(0);
 
-  // Expose requestPermission to parent (App.jsx)
+  // Expose methods to parent
   useImperativeHandle(ref, () => ({
     requestPermission: async () => {
+      console.log('[FallDetector] requestPermission called');
       if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         try {
           const permission = await DeviceMotionEvent.requestPermission();
+          console.log('[FallDetector] Permission result:', permission);
           setPermissionState(permission);
           if (permission === 'granted') {
             startMotionListener();
@@ -25,42 +31,84 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
           }
           return false;
         } catch (error) {
-          console.error("Error requesting motion permission:", error);
+          console.error('[FallDetector] Permission error:', error);
           return false;
         }
       } else {
-        // Android / Desktop – grant automatically if hardware is available
+        // Android / Desktop – auto‑grant
+        console.log('[FallDetector] Auto‑granting permission (Android or non‑iOS)');
         setPermissionState('granted');
         startMotionListener();
         return true;
       }
     },
     isBlocked: () => {
+      // Blocked if permission denied, OR permission granted but no motion event yet
       if (permissionState === 'denied') return true;
       if (permissionState === 'granted' && !motionDetected) return true;
       return false;
-    }
+    },
+    getStatus: () => ({
+      permissionState,
+      deviceMotionAvailable,
+      motionDetected,
+      debugText,
+      isListening: motionListenerActive.current,
+    }),
   }));
 
   const startMotionListener = () => {
-    if (motionListenerActive.current) return;
+    if (motionListenerActive.current) {
+      console.log('[FallDetector] Listener already active');
+      return;
+    }
+    console.log('[FallDetector] Adding devicemotion listener');
     window.removeEventListener('devicemotion', handleMotion);
     window.addEventListener('devicemotion', handleMotion);
     motionListenerActive.current = true;
-    setMotionDetected(true);
+    setDebugText('👂 Listening for motion...');
+
+    // Fallback: if no event after 5s, show a hint
+    setTimeout(() => {
+      if (!motionDetected && motionListenerActive.current) {
+        setDebugText('⚠️ No motion yet – try shaking your device');
+      }
+    }, 5000);
   };
 
   const handleMotion = (event) => {
     const acc = event.accelerationIncludingGravity || event.acceleration;
-    if (!acc) return;
+    if (!acc) {
+      console.warn('[FallDetector] No acceleration data');
+      return;
+    }
 
-    // Fall detection: when sudden acceleration > 30 m/s² (impact)
-    const totalAcceleration = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
-    
-    if (totalAcceleration > 30 && !isCountingDown) {
+    // First real motion event – mark as detected
+    if (!motionDetected) {
+      console.log('[FallDetector] ✅ First motion event received!', acc);
+      setMotionDetected(true);
+      setDebugText('✅ Motion active – monitoring for falls');
+      setDeviceMotionAvailable(true);
+    }
+
+    const totalAccel = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+    setLastAccel(totalAccel);
+
+    // Log every 10th event to avoid console spam
+    eventCounter.current++;
+    if (eventCounter.current % 10 === 0) {
+      console.log(`[FallDetector] Accel: ${totalAccel.toFixed(2)} m/s² (x:${acc.x.toFixed(1)}, y:${acc.y.toFixed(1)}, z:${acc.z.toFixed(1)})`);
+      setDebugText(`📊 ${totalAccel.toFixed(2)} m/s²`);
+    }
+
+    // FALL THRESHOLD – lowered to 18 for better sensitivity
+    const FALL_THRESHOLD = 18;
+    if (totalAccel > FALL_THRESHOLD && !isCountingDown && !fallTriggeredRef.current) {
+      console.log(`🚨 FALL DETECTED! Accel: ${totalAccel.toFixed(2)} m/s²`);
+      fallTriggeredRef.current = true;
       setIsCountingDown(true);
       setCountdown(10);
-      showToast("⚠️ Fall Detected! Checking user status...", "warning");
+      showToast('⚠️ Fall Detected! Checking user status...', 'warning');
     }
   };
 
@@ -72,9 +120,9 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
           if (prev <= 1) {
             clearInterval(countdownIntervalRef.current);
             setIsCountingDown(false);
-            // Trigger emergency
+            fallTriggeredRef.current = false;
             if (onFallDetected) onFallDetected();
-            showToast("🚨 EMERGENCY: Fall alert dispatched!", "error");
+            showToast('🚨 EMERGENCY: Fall alert dispatched!', 'error');
             return 0;
           }
           return prev - 1;
@@ -87,29 +135,43 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
   const handleIImOkay = () => {
     clearInterval(countdownIntervalRef.current);
     setIsCountingDown(false);
-    showToast("✅ Alert cancelled. Glad you are safe!", "success");
+    fallTriggeredRef.current = false;
+    showToast('✅ Alert cancelled. Glad you are safe!', 'success');
   };
 
-  // Initial check for Android / non-iOS
+  // Initial setup
   useEffect(() => {
     if (typeof DeviceMotionEvent === 'undefined') {
+      console.warn('[FallDetector] DeviceMotionEvent not supported');
       setDeviceMotionAvailable(false);
       setPermissionState('denied');
-    } else if (typeof DeviceMotionEvent.requestPermission !== 'function') {
+      setDebugText('❌ No motion sensors');
+      return;
+    }
+
+    if (typeof DeviceMotionEvent.requestPermission !== 'function') {
       // Android: auto‑grant
+      console.log('[FallDetector] Android: auto‑starting');
       setPermissionState('granted');
       startMotionListener();
+    } else {
+      // iOS: wait for user gesture
+      console.log('[FallDetector] iOS: waiting for user permission');
+      setPermissionState('unknown');
+      setDebugText('📱 Tap "Enable Fall Detection" in header');
     }
+
     return () => {
       window.removeEventListener('devicemotion', handleMotion);
+      motionListenerActive.current = false;
     };
   }, []);
 
-  // Warning messages
-  if (!deviceMotionAvailable) {
+  // Render warnings
+  if (!deviceMotionAvailable && permissionState !== 'granted') {
     return (
       <div className="fall-detector-warning">
-        ⚠️ Fall detection unavailable – Device lacks motion sensors.
+        ⚠️ Fall detection unavailable – this device lacks motion sensors.
       </div>
     );
   }
@@ -122,7 +184,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     );
   }
 
-  // Countdown overlay
+  // Main UI (countdown overlay + debug bar)
   return (
     <>
       {isCountingDown && (
@@ -136,6 +198,29 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
           <div className="fall-countdown-hint">Tap "I am OK" to cancel the alert.</div>
         </div>
       )}
+
+      {/* Debug overlay – shows acceleration and status */}
+      <div style={{
+        position: 'fixed',
+        bottom: '80px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'rgba(0,0,0,0.75)',
+        color: '#00FF88',
+        padding: '6px 18px',
+        borderRadius: '30px',
+        fontSize: '13px',
+        zIndex: 999,
+        fontFamily: 'monospace',
+        textAlign: 'center',
+        pointerEvents: 'none',
+        border: '1px solid rgba(0,255,136,0.2)',
+        backdropFilter: 'blur(4px)',
+        whiteSpace: 'nowrap',
+      }}>
+        {debugText}
+        {motionDetected && `  •  ${lastAccel.toFixed(1)} m/s²`}
+      </div>
     </>
   );
 });

@@ -534,6 +534,37 @@ function AppContent() {
                 <SoundVisualizer volume={volume} isLoud={isLoud} soundType={soundType} />
                 <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
               </div>
+
+              {/* ===== 🔥 TEST FALL BUTTON ===== */}
+              <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                <button
+                  onClick={() => {
+                    if (fallDetectorRef.current) {
+                      handleFallEmergency();
+                      showToast('🧪 Test fall triggered!', 'warning');
+                    }
+                  }}
+                  style={{
+                    background: '#FF8800',
+                    color: 'white',
+                    border: 'none',
+                    padding: '14px 28px',
+                    borderRadius: '40px',
+                    fontWeight: 'bold',
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(255, 136, 0, 0.3)',
+                    transition: 'transform 0.2s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  🧪 Test Fall (Simulate)
+                </button>
+                <p style={{ fontSize: '0.75rem', color: '#8899CC', marginTop: '8px' }}>
+                  Triggers emergency alert without shaking your device
+                </p>
+              </div>
             </>
           )}
 
