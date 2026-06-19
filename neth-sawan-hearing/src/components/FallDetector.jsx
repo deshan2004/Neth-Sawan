@@ -10,7 +10,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
   const [motionDetected, setMotionDetected] = useState(false);
   const [lastAccel, setLastAccel] = useState(0);
   const [debugText, setDebugText] = useState('⏳ Waiting for motion...');
-  const [threshold, setThreshold] = useState(14); // lower for iPhone
+  const [threshold, setThreshold] = useState(14);
 
   const countdownIntervalRef = useRef(null);
   const motionListenerActive = useRef(false);
@@ -44,7 +44,11 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
       }
     },
     isBlocked: () => {
-      // Blocked if permission denied, OR permission granted but no motion event yet
+      // Show the "Enable Fall Detection" button when:
+      // - permission is unknown (iOS initial state)
+      // - permission is denied
+      // - permission is granted but no motion event has been received yet
+      if (permissionState === 'unknown') return true;
       if (permissionState === 'denied') return true;
       if (permissionState === 'granted' && !motionDetected) return true;
       return false;
@@ -71,7 +75,6 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     motionListenerActive.current = true;
     setDebugText('👂 Listening for motion...');
 
-    // Fallback: if no event after 5s, show a hint
     setTimeout(() => {
       if (!motionDetected && motionListenerActive.current) {
         setDebugText('⚠️ No motion yet – try shaking your device');
@@ -86,7 +89,6 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
       return;
     }
 
-    // First real motion event – mark as detected
     if (!motionDetected) {
       console.log('[FallDetector] ✅ First motion event received!', acc);
       setMotionDetected(true);
@@ -97,14 +99,12 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     const totalAccel = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
     setLastAccel(totalAccel);
 
-    // Log every 10th event to avoid console spam
     eventCounter.current++;
     if (eventCounter.current % 10 === 0) {
       console.log(`[FallDetector] Accel: ${totalAccel.toFixed(2)} m/s² (x:${acc.x.toFixed(1)}, y:${acc.y.toFixed(1)}, z:${acc.z.toFixed(1)})`);
       setDebugText(`📊 ${totalAccel.toFixed(2)} m/s² (threshold: ${threshold})`);
     }
 
-    // FALL DETECTION – using the current threshold
     if (totalAccel > threshold && !isCountingDown && !fallTriggeredRef.current) {
       console.log(`🚨 FALL DETECTED! Accel: ${totalAccel.toFixed(2)} m/s² (threshold: ${threshold})`);
       fallTriggeredRef.current = true;
@@ -114,7 +114,6 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     }
   };
 
-  // Countdown timer
   useEffect(() => {
     if (isCountingDown) {
       countdownIntervalRef.current = setInterval(() => {
@@ -141,7 +140,6 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     showToast('✅ Alert cancelled. Glad you are safe!', 'success');
   };
 
-  // Initial setup
   useEffect(() => {
     if (typeof DeviceMotionEvent === 'undefined') {
       console.warn('[FallDetector] DeviceMotionEvent not supported');
@@ -169,7 +167,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     };
   }, []);
 
-  // Render warnings
+  // Render warnings – show for 'unknown' and 'denied'
   if (!deviceMotionAvailable && permissionState !== 'granted') {
     return (
       <div className="fall-detector-warning">
@@ -178,15 +176,14 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     );
   }
 
-  if (permissionState === 'denied') {
+  if (permissionState === 'unknown' || permissionState === 'denied') {
     return (
       <div className="fall-detector-warning">
-        ⚠️ Fall detection blocked – Tap the "Enable Fall Detection" button in the header.
+        ⚠️ {permissionState === 'unknown' ? 'Enable Fall Detection' : 'Fall detection blocked'} – Tap the "Enable Fall Detection" button in the header.
       </div>
     );
   }
 
-  // Main UI (countdown overlay + debug bar)
   return (
     <>
       {isCountingDown && (
@@ -201,7 +198,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
         </div>
       )}
 
-      {/* Debug overlay – shows acceleration and status */}
+      {/* Debug overlay */}
       <div style={{
         position: 'fixed',
         bottom: '80px',
@@ -224,7 +221,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
         {motionDetected && `  •  ${lastAccel.toFixed(1)} m/s²`}
       </div>
 
-      {/* Sensitivity slider (optional – remove if not needed) */}
+      {/* Sensitivity slider */}
       <div style={{
         position: 'fixed',
         bottom: '130px',
