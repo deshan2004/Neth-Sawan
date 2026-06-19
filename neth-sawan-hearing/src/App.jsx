@@ -318,6 +318,7 @@ function AppContent() {
 
   // ===== FALL DETECTION HANDLER =====
   const handleFallEmergency = async () => {
+    console.log("🚨 Fall emergency triggered!");
     let currentLocation = null;
     try {
       const pos = await new Promise((resolve, reject) =>
@@ -392,6 +393,9 @@ function AppContent() {
       {/* ===== FALL DETECTOR ===== */}
       <FallDetector
         ref={fallDetectorRef}
+        user={user}
+        isGuest={isGuest}
+        showToast={showToast}
         onFallDetected={handleFallEmergency}
       />
 

@@ -8,7 +8,7 @@ const Header = ({
   roadSafetyActive, setRoadSafetyActive,
   emergencyNotificationsEnabled, onToggleEmergencyNotifications,
   onToggleSidebar, sidebarOpen,
-  fallDetectorBlocked, onRequestFallPermission   // <-- new props
+  fallDetectorBlocked, onRequestFallPermission
 }) => {
   const { t } = useLanguage();
 
@@ -26,7 +26,6 @@ const Header = ({
       </div>
 
       <div className="header-right">
-        {/* 🔥 FALL PERMISSION BUTTON – appears only when blocked */}
         {fallDetectorBlocked && (
           <button 
             className="fall-permission-btn"
