@@ -285,4 +285,29 @@ body {
     --focus-ring: #FFFFFF;
   }
   button, .btn, .card, .nav-item { border: 2px solid white; }
+}/* src/App.css */
+.content-area {
+  flex: 1;
+  width: 100%;
+  transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+/* When sidebar is open, shift content right on desktop */
+.content-area.sidebar-open {
+  margin-left: 280px;
+  width: calc(100% - 280px);
+}
+
+/* When sidebar is closed, content fills full width */
+.content-area:not(.sidebar-open) {
+  margin-left: 0;
+  width: 100%;
+}
+
+/* On mobile/tablet, the sidebar overlays, so content is always full width */
+@media (max-width: 1024px) {
+  .content-area {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
 }

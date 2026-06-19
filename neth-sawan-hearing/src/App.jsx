@@ -15,7 +15,6 @@ import SoundVisualizer from './components/SoundVisualizer';
 import RelativesManager from './components/RelativesManager';
 import NotificationCenter from './components/NotificationCenter';
 import Aivision from './components/Aivision';
-import Auth from './components/Auth';
 import SignLanguageTutor from './components/SignLanguageTutor';
 import EmergencyFlash from './components/EmergencyFlash';
 import AccessibilitySettings from './components/AccessibilitySettings';
@@ -30,8 +29,6 @@ import InstructionsPage from './components/InstructionsPage';
 import { useSpeech } from './hooks/useSpeech';
 import { useVolume } from './hooks/useVolume';
 import { useNotifications } from './hooks/useNotifications';
-
-// Context
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
@@ -67,31 +64,31 @@ const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
 function AppContent() {
   const { updateLanguageFromTranscript, t } = useLanguage();
 
-  // Auth States
+  // ===== AUTH STATES =====
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
 
-  // UI States
+  // ===== UI STATES =====
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [sidebarVisible, setSidebarVisible] = useState(window.innerWidth > 1024);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1024);
   const [toastMessage, setToastMessage] = useState({ show: false, message: '', type: '' });
   const [flashEmergency, setFlashEmergency] = useState(false);
   const [emergencyData, setEmergencyData] = useState(null);
   const [roadSafetyActive, setRoadSafetyActive] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
-  // Emergency Notifications Toggle
+  // ===== ACCESSIBILITY STATES =====
+  const [currentTheme, setCurrentTheme] = useState('default');
+  const [currentFontSize, setCurrentFontSize] = useState(16);
+
+  // ===== EMERGENCY NOTIFICATIONS TOGGLE =====
   const [emergencyNotificationsEnabled, setEmergencyNotificationsEnabled] = useState(() => {
     const saved = localStorage.getItem('emergency_notifications_enabled');
     return saved !== null ? saved === 'true' : true;
   });
 
-  // Accessibility States
-  const [currentTheme, setCurrentTheme] = useState('default');
-  const [currentFontSize, setCurrentFontSize] = useState(16);
-
-  // Logic Hooks
+  // ===== HOOKS =====
   const { transcript, isListening, startListening, stopListening, clearTranscript, setLang, lang, error: speechError, browserInfo } = useSpeech();
   const { volume, isLoud, soundType, soundHistory, threshold, setThreshold } = useVolume(0.15);
   const {
@@ -100,33 +97,35 @@ function AppContent() {
     autoSendStatus
   } = useNotifications();
 
-  // Guest mode data
+  // ===== GUEST DATA =====
   const [guestRelatives, setGuestRelatives] = useState([]);
   const [guestNotifications, setGuestNotifications] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
 
-  // Auto language switch
+  // ===== AUTO LANGUAGE SWITCH =====
   useEffect(() => {
     if (transcript && transcript.trim().length > 0) {
       updateLanguageFromTranscript(transcript);
     }
   }, [transcript, updateLanguageFromTranscript]);
 
-  // Save emergency toggle
+  // ===== SAVE EMERGENCY TOGGLE =====
   useEffect(() => {
     localStorage.setItem('emergency_notifications_enabled', emergencyNotificationsEnabled);
   }, [emergencyNotificationsEnabled]);
 
-  // Apply saved accessibility settings
+  // ===== APPLY SAVED ACCESSIBILITY SETTINGS =====
   useEffect(() => {
     const savedFontSize = localStorage.getItem('accessibility_fontSize');
     if (savedFontSize) {
       setCurrentFontSize(parseInt(savedFontSize));
       document.documentElement.style.setProperty('--dynamic-font-size', `${savedFontSize}px`);
     }
+    const savedTheme = localStorage.getItem('accessibility_theme');
+    if (savedTheme) setCurrentTheme(savedTheme);
   }, []);
 
-  // Load guest data
+  // ===== LOAD GUEST DATA =====
   useEffect(() => {
     if (isGuest) {
       const savedRelatives = localStorage.getItem('neth_sawan_guest_relatives');
@@ -138,7 +137,7 @@ function AppContent() {
     }
   }, [isGuest]);
 
-  // Loud sound emergency flash
+  // ===== LOUD SOUND EMERGENCY FLASH =====
   useEffect(() => {
     if (isLoud && soundType && !roadSafetyActive && emergencyNotificationsEnabled) {
       setFlashEmergency(true);
@@ -158,7 +157,7 @@ function AppContent() {
     }
   }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled]);
 
-  // Save sound history for guest
+  // ===== SAVE SOUND HISTORY FOR GUEST =====
   useEffect(() => {
     if (isGuest && soundHistory?.length > 0) {
       setGuestSoundHistory(prev => {
@@ -169,7 +168,7 @@ function AppContent() {
     }
   }, [soundHistory, isGuest]);
 
-  // Auth listener
+  // ===== AUTH LISTENER =====
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -179,11 +178,16 @@ function AppContent() {
     return () => unsubscribe();
   }, []);
 
+  // ===== TOAST HELPER =====
   const showToast = (message, type = 'info') => {
     setToastMessage({ show: true, message, type });
     setTimeout(() => setToastMessage({ show: false, message: '', type: '' }), 3000);
   };
 
+  // ===== TOGGLE SIDEBAR =====
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+
+  // ===== AUTH HANDLERS =====
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -204,20 +208,25 @@ function AppContent() {
     showToast(t('guestSignedOut') || "Signed out from guest mode", "info");
   };
 
+  // ===== ACCESSIBILITY HANDLERS =====
   const handleThemeChange = (theme) => {
     setCurrentTheme(theme);
     localStorage.setItem('accessibility_theme', theme);
   };
 
-  const handleFontSizeChange = (size) => setCurrentFontSize(size);
+  const handleFontSizeChange = (size) => {
+    setCurrentFontSize(size);
+    localStorage.setItem('accessibility_fontSize', size);
+  };
 
+  // ===== EMERGENCY TOGGLE =====
   const toggleEmergencyNotifications = () => {
     const newState = !emergencyNotificationsEnabled;
     setEmergencyNotificationsEnabled(newState);
     showToast(newState ? (t('alertsOn') || 'Emergency notifications enabled') : (t('alertsOff') || 'Emergency notifications disabled'), newState ? 'success' : 'info');
   };
 
-  // Guest handlers
+  // ===== GUEST HANDLERS =====
   const guestAddRelative = (data) => {
     const entry = {
       id: Date.now(),
@@ -277,7 +286,7 @@ function AppContent() {
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
-  // Fall detection handler
+  // ===== FALL DETECTION HANDLER =====
   const handleFallEmergency = async () => {
     let currentLocation = null;
     try {
@@ -286,6 +295,7 @@ function AppContent() {
       );
       currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     } catch (e) { console.warn("Location error:", e.message); }
+
     try {
       await addDoc(collection(db, "emergency_alerts"), {
         alertType: "AUTOMATIC_FALL_DETECTION",
@@ -295,13 +305,15 @@ function AppContent() {
         location: currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : "Location Unavailable"
       });
     } catch (error) { console.error("Firebase error:", error); }
+
     if (emergencyNotificationsEnabled) {
       setFlashEmergency(true);
       setEmergencyData({ soundType: '🛑 FALL DETECTED', message: 'An automatic fall was detected!', timestamp: new Date(), volume: 1.0 });
       showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
-      if (navigator.vibrate) navigator.vibrate([500,200,500,200,500]);
+      if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
       setTimeout(() => setFlashEmergency(false), 8000);
     }
+
     if (currentRelatives && currentRelatives.length > 0) {
       const userConfirmed = window.confirm("🚨 Fall Detected! Click OK to send emergency WhatsApp alerts to your relatives.");
       if (userConfirmed) {
@@ -319,31 +331,34 @@ function AppContent() {
     }
   };
 
-  // ----- RENDER -----
+  // ===== LOADING SCREEN =====
   if (authLoading) {
     return (
       <div className="loading-screen">
         <div className="loading-spinner"></div>
         <p>Neth-Sawan Loading...</p>
-        <div>🤟</div>
+        <div style={{ fontSize: '48px', marginTop: '16px' }}>🤟</div>
       </div>
     );
   }
 
-  // Show instructions page if active
+  // ===== INSTRUCTIONS PAGE =====
   if (showInstructions) {
     return <InstructionsPage onClose={() => setShowInstructions(false)} />;
   }
 
+  // ===== LANDING PAGE (not logged in) =====
   if (!user && !isGuest) {
     return <LandingPage onGuestMode={handleGuestMode} onShowInstructions={() => setShowInstructions(true)} />;
   }
 
+  // ===== MAIN APP =====
   return (
     <div className="app-wrapper" style={{ fontSize: `${currentFontSize}px` }}>
       <BackgroundVideo opacity={0.85} />
       <FallDetector onFallDetected={handleFallEmergency} />
 
+      {/* SVG filters for color blindness */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
           <filter id="protanopia"><feColorMatrix type="matrix" values="0.567,0.433,0,0,0,0.558,0.442,0,0,0,0,0.242,0.758,0,0,0,0,0,1,0"/></filter>
@@ -357,15 +372,15 @@ function AppContent() {
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        isOpen={sidebarVisible}
-        onClose={() => setSidebarVisible(false)}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
         user={user}
         isGuest={isGuest}
         onLogout={isGuest ? handleSignOutGuest : handleLogout}
         onShowInstructions={() => setShowInstructions(true)}
       />
 
-      <div className={`content-area ${sidebarVisible && window.innerWidth > 1024 ? 'sidebar-open' : ''}`}>
+      <div className={`content-area ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <Header
           isListening={isListening}
           lang={lang}
@@ -377,13 +392,14 @@ function AppContent() {
           setRoadSafetyActive={setRoadSafetyActive}
           emergencyNotificationsEnabled={emergencyNotificationsEnabled}
           onToggleEmergencyNotifications={toggleEmergencyNotifications}
+          onToggleSidebar={toggleSidebar}
+          sidebarOpen={sidebarOpen}
         />
 
         <main className="main-content">
-          {/* DASHBOARD TAB */}
+          {/* ===== DASHBOARD TAB ===== */}
           {activeTab === 'dashboard' && (
             <>
-              {/* Live Captions + Sign Language side by side */}
               <div className="captions-sign-row">
                 <div className="captions-box">
                   <div className="section-header">
@@ -417,7 +433,6 @@ function AppContent() {
                 </div>
               </div>
 
-              {/* Sound Monitor + Road Safety */}
               <div className="dashboard-primary">
                 <VisualAlert
                   isLoud={isLoud && emergencyNotificationsEnabled}
@@ -456,7 +471,6 @@ function AppContent() {
                 />
               </div>
 
-              {/* Sound Visualizer + Sound History */}
               <div className="dashboard-secondary">
                 <SoundVisualizer volume={volume} isLoud={isLoud} soundType={soundType} />
                 <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
@@ -464,16 +478,16 @@ function AppContent() {
             </>
           )}
 
-          {/* AI VISION TAB */}
+          {/* ===== AI VISION TAB ===== */}
           {activeTab === 'vision' && <Aivision showToast={showToast} />}
 
-          {/* SIGN LANGUAGE TUTOR TAB */}
+          {/* ===== SIGN LANGUAGE TUTOR ===== */}
           {activeTab === 'learn' && <SignLanguageTutor />}
 
-          {/* COMMUNITY TAB (ONLINE USERS + VIDEO CALLS) */}
+          {/* ===== COMMUNITY ===== */}
           {activeTab === 'community' && <OnlineUsers />}
 
-          {/* ALERTS / NOTIFICATIONS TAB */}
+          {/* ===== NOTIFICATIONS ===== */}
           {activeTab === 'alerts' && (
             <NotificationCenter
               queue={currentNotifications}
@@ -482,7 +496,7 @@ function AppContent() {
             />
           )}
 
-          {/* EMERGENCY CONTACTS TAB */}
+          {/* ===== EMERGENCY CONTACTS ===== */}
           {activeTab === 'contacts' && (
             <RelativesManager
               relatives={currentRelatives}
@@ -495,14 +509,23 @@ function AppContent() {
             />
           )}
 
-          {/* SOS EMERGENCY TAB */}
+          {/* ===== SOS EMERGENCY ===== */}
           {activeTab === 'emergency' && (
-            <div className="emergency-sos-card">
-              <div className="sos-header">
-                <h2>🆘 {t('sosCenter')}</h2>
+            <div className="emergency-sos-card card">
+              <div className="sos-header card-head">
+                <h2>🆘 {t('sosCenter') || 'SOS Emergency Center'}</h2>
               </div>
               <div
                 className="sos-button-large"
+                style={{
+                  padding: '48px',
+                  textAlign: 'center',
+                  background: 'linear-gradient(135deg, #FF0033, #CC0022)',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  marginBottom: '20px',
+                  transition: 'transform 0.2s'
+                }}
                 onClick={() => {
                   if (emergencyNotificationsEnabled) {
                     setFlashEmergency(true);
@@ -516,36 +539,40 @@ function AppContent() {
                     if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
                   }
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
-                <span className="sos-icon">🆘</span>
-                <span className="sos-text">{t('sos')}</span>
+                <span style={{ fontSize: '80px', display: 'block' }}>🆘</span>
+                <span style={{ fontSize: '32px', fontWeight: 800, color: 'white' }}>{t('sos') || 'SOS'}</span>
+                <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', display: 'block', marginTop: '8px' }}>
+                  Tap to send emergency alert
+                </span>
               </div>
-              <div className="emergency-numbers">
-                <button className="emergency-btn police" onClick={() => window.location.href = 'tel:119'}>
-                  👮 {t('police')} (119)
+              <div className="emergency-numbers" style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                <button className="emergency-btn police" style={{ flex: 1, padding: '16px', borderRadius: '16px', background: '#1A1E3A', border: '1px solid #4488FF', color: '#4488FF', fontWeight: 700, fontSize: '16px', cursor: 'pointer' }} onClick={() => window.location.href = 'tel:119'}>
+                  👮 {t('police') || 'Police'} (119)
                 </button>
-                <button className="emergency-btn ambulance" onClick={() => window.location.href = 'tel:1990'}>
-                  🚑 {t('ambulance')} (1990)
+                <button className="emergency-btn ambulance" style={{ flex: 1, padding: '16px', borderRadius: '16px', background: '#1A1E3A', border: '1px solid #FF3355', color: '#FF3355', fontWeight: 700, fontSize: '16px', cursor: 'pointer' }} onClick={() => window.location.href = 'tel:1990'}>
+                  🚑 {t('ambulance') || 'Ambulance'} (1990)
                 </button>
               </div>
-              <div className="emergency-instructions-box">
-                <h4>⚠️ {t('emergencyInstructions')}</h4>
-                <ul>
-                  <li>{t('redFlashing')}</li>
-                  <li>{t('vibration')}</li>
-                  <li>{t('contactsNotify')}</li>
-                  <li>{t('liveLocation')}</li>
-                  <li>{t('notificationToggle') || "🔕 Notification Toggle = Disable alerts when needed (top of screen)"}</li>
+              <div className="emergency-instructions-box" style={{ padding: '20px', background: 'rgba(255,0,51,0.05)', borderRadius: '16px', borderLeft: '4px solid #FF0033' }}>
+                <h4 style={{ color: '#FF0033', marginBottom: '12px' }}>⚠️ {t('emergencyInstructions') || 'Emergency Instructions'}</h4>
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>🔴 {t('redFlashing') || 'Red Flashing Screen = Emergency detected or SOS activated'}</li>
+                  <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📳 {t('vibration') || 'Phone Vibration = Alert being sent to your contacts'}</li>
+                  <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📱 {t('contactsNotify') || 'Emergency Contacts = Will receive WhatsApp/SMS alerts'}</li>
+                  <li style={{ padding: '8px 0' }}>📍 {t('liveLocation') || 'Live Location = Automatically shared with emergency contacts'}</li>
                 </ul>
               </div>
             </div>
           )}
 
-          {/* DEDICATED ROAD SAFETY MONITOR TAB */}
+          {/* ===== ROAD MONITOR ===== */}
           {activeTab === 'roadmonitor' && (
             <div style={{ maxWidth: '900px', margin: '0 auto' }}>
               <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-                <h2 style={{ fontSize: '28px', marginBottom: '8px' }}>🛣️ {t('roadSafetyMonitor')}</h2>
+                <h2 style={{ fontSize: '28px', marginBottom: '8px' }}>🛣️ {t('roadSafetyMonitor') || 'Road Safety Monitor'}</h2>
                 <p style={{ color: 'var(--text-secondary)' }}>
                   {t('dedicatedRoadSafety') || "Full‑screen detection of horns, sirens, engines – with direction & distance hints"}
                 </p>
@@ -580,7 +607,7 @@ function AppContent() {
             </div>
           )}
 
-          {/* ACCESSIBILITY SETTINGS TAB */}
+          {/* ===== ACCESSIBILITY SETTINGS ===== */}
           {activeTab === 'settings' && (
             <AccessibilitySettings
               onThemeChange={handleThemeChange}
@@ -593,18 +620,11 @@ function AppContent() {
       </div>
 
       {toastMessage.show && <div className={`toast-message ${toastMessage.type}`}>{toastMessage.message}</div>}
-      
-      {/* Hamburger menu button – appears only on mobile/tablet when sidebar is closed */}
-      {!sidebarVisible && window.innerWidth <= 1024 && (
-        <button className="mobile-menu-btn" onClick={() => setSidebarVisible(true)} aria-label="Open menu">
-          ☰
-        </button>
-      )}
     </div>
   );
 }
 
-// Main App wrapper with LanguageProvider
+// ===== MAIN APP WRAPPER =====
 function App() {
   return (
     <LanguageProvider>

@@ -5,25 +5,38 @@ import './Header.css';
 const Header = ({ 
   isListening, lang, setLang, showToast, user, isGuest,
   roadSafetyActive, setRoadSafetyActive,
-  emergencyNotificationsEnabled, onToggleEmergencyNotifications
+  emergencyNotificationsEnabled, onToggleEmergencyNotifications,
+  onToggleSidebar, sidebarOpen
 }) => {
   return (
     <header className="app-header">
-      <div className="logo-section">
-        <h1 className="logo-text">Neth-Sawan</h1>
-        <span className="tagline">Visual Hearing Assistant</span>
-        <div className="lang-switcher">
-          <button className={`lang-btn ${lang === 'si-LK' ? 'active' : ''}`} onClick={() => { setLang('si-LK'); showToast('Switched to Sinhala', 'success'); }}>🇱🇰 සිංහල</button>
-          <button className={`lang-btn ${lang === 'en-US' ? 'active' : ''}`} onClick={() => { setLang('en-US'); showToast('Switched to English', 'success'); }}>🇬🇧 English</button>
+      <div className="header-left">
+        {/* Hamburger button to toggle sidebar */}
+        <button className="hamburger-btn" onClick={onToggleSidebar} aria-label="Toggle sidebar">
+          {sidebarOpen ? '✕' : '☰'}
+        </button>
+
+        {/* Brand – now in the header */}
+        <div className="header-brand">
+          <span className="brand-icon">👂</span>
+          <span className="brand-name">Neth-Sawan</span>
+          <span className="brand-tagline">Visual Hearing Assistant</span>
         </div>
       </div>
+
       <div className="header-right">
+        <div className="lang-switcher">
+          <button className={`lang-btn ${lang === 'si-LK' ? 'active' : ''}`} onClick={() => { setLang('si-LK'); showToast('Switched to Sinhala', 'success'); }}>
+            🇱🇰 සිංහල
+          </button>
+          <button className={`lang-btn ${lang === 'en-US' ? 'active' : ''}`} onClick={() => { setLang('en-US'); showToast('Switched to English', 'success'); }}>
+            🇬🇧 English
+          </button>
+        </div>
+
         <button 
           className={`emergency-toggle-btn ${emergencyNotificationsEnabled ? 'enabled' : 'disabled'}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleEmergencyNotifications();
-          }}
+          onClick={onToggleEmergencyNotifications}
           title={emergencyNotificationsEnabled ? 'Disable emergency alerts' : 'Enable emergency alerts'}
         >
           <span className="emergency-icon">{emergencyNotificationsEnabled ? '🔔' : '🔕'}</span>
@@ -32,8 +45,7 @@ const Header = ({
 
         <button 
           className={`road-safety-toggle ${roadSafetyActive ? 'active' : ''}`}
-          onClick={(e) => {
-            e.stopPropagation();
+          onClick={() => {
             setRoadSafetyActive(!roadSafetyActive);
             showToast(roadSafetyActive ? 'Road safety off' : 'Road safety on', 'info');
           }}

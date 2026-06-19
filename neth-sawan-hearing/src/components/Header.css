@@ -1,121 +1,149 @@
-/* ============================================================
-   HEADER – MODERN, RESPONSIVE, BEAUTIFUL
-   ============================================================ */
+/* src/components/Header.css */
+
 .app-header {
   position: sticky;
   top: 0;
   z-index: 500;
   background: rgba(10, 12, 26, 0.9);
   backdrop-filter: blur(12px);
-  border-bottom: 3px solid var(--border-highlight, #FFFF00);
-  padding: 12px 20px;
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 2px solid rgba(0, 221, 179, 0.3);
+  padding: 10px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
-  transition: 0.3s;
-}
-@media (min-width: 768px) {
-  .app-header { padding: 16px 28px; }
-}
-@media (max-width: 768px) {
-  .app-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .logo-section, .header-right {
-    justify-content: space-between;
-    width: 100%;
-  }
+  gap: 12px;
+  transition: all 0.3s;
 }
 
-.logo-section, .header-right {
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hamburger-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hamburger-btn:hover {
+  background: rgba(0, 221, 179, 0.15);
+  border-color: #00DDB3;
+  color: #00DDB3;
+  transform: scale(1.05);
+}
+
+.header-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.brand-icon {
+  font-size: 28px;
+}
+
+.brand-name {
+  font-size: 22px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #00DDB3, #F5C842);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-tagline {
+  font-size: 0.75rem;
+  color: #8899CC;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px 12px;
+  border-radius: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.header-right {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
-.logo-text {
-  font-size: 28px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #00FFCC, #F5C842);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 0;
-}
-.tagline {
-  font-size: 14px;
-  color: #D0D8FF;
-  background: rgba(0,221,179,0.1);
-  padding: 4px 12px;
-  border-radius: 40px;
-}
+
 .lang-switcher {
   display: flex;
-  gap: 8px;
-  background: rgba(0,0,0,0.2);
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.2);
   padding: 4px;
-  border-radius: 48px;
-}
-.lang-btn {
-  padding: 8px 16px;
-  font-weight: 600;
-  border: none;
   border-radius: 40px;
-  background: #2A2F55;
-  color: white;
-  cursor: pointer;
-  transition: 0.2s;
-}
-.lang-btn.active {
-  background: #00CCAA;
-  color: #000;
-}
-.lang-btn:hover:not(.active) {
-  background: #3A3F6A;
-  transform: translateY(-1px);
 }
 
-.emergency-toggle-btn {
+.lang-btn {
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  border: none;
+  border-radius: 40px;
+  background: transparent;
+  color: #8899CC;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lang-btn.active {
+  background: #00DDB3;
+  color: #000;
+}
+
+.lang-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.emergency-toggle-btn,
+.road-safety-toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 20px;
-  border-radius: 60px;
-  font-weight: 800;
-  font-size: 14px;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 40px;
+  font-weight: 600;
+  font-size: 0.8rem;
   border: none;
   cursor: pointer;
+  transition: all 0.2s;
 }
+
 .emergency-toggle-btn.enabled {
   background: linear-gradient(135deg, #00CCAA, #00997a);
   color: #000;
   animation: pulse-glow 1.5s infinite;
 }
+
 .emergency-toggle-btn.disabled {
   background: #2A2F55;
   color: #FF3355;
   border: 1px solid #FF3355;
 }
-@keyframes pulse-glow {
-  0%,100% { box-shadow: 0 0 0 0 rgba(0,204,170,0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(0,204,170,0); }
-}
 
 .road-safety-toggle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 20px;
-  border-radius: 60px;
-  font-weight: 700;
   background: #2A2F55;
   color: white;
-  border: none;
-  cursor: pointer;
 }
+
 .road-safety-toggle.active {
   background: #FF8800;
   color: #000;
@@ -124,117 +152,109 @@
 .listening-status {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 20px;
-  border-radius: 60px;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 40px;
   background: #2A2F55;
-}
-.listening-status.active {
-  background: rgba(0,204,170,0.15);
-  border: 2px solid #00FFCC;
-}
-.status-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #888;
-}
-.listening-status.active .status-dot {
-  background: #00FFCC;
-  animation: pulse 1.2s infinite;
-}
-@keyframes pulse {
-  0%,100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
-/* 👇 User Badge – now with proper guest styling */
+.listening-status.active {
+  background: rgba(0, 204, 170, 0.15);
+  border: 1px solid #00FFCC;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6B7280;
+}
+
+.listening-status.active .status-dot {
+  background: #00FFCC;
+  animation: pulseDot 1.2s infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
 .user-badge {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 18px;
-  background: #1A1E3A;
-  border-radius: 60px;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(26, 30, 58, 0.8);
+  border-radius: 40px;
+  font-size: 0.85rem;
   font-weight: 500;
-  border: 1px solid rgba(0,221,179,0.3);
-  transition: 0.2s;
-}
-.user-badge:hover {
-  border-color: #00DDB3;
-  background: #222842;
+  border: 1px solid rgba(0, 221, 179, 0.2);
 }
 
-/* 👇 Guest badge inside header – styled differently */
-.user-badge .guest-badge-header {
-  background: rgba(245, 200, 66, 0.15);
+.guest-badge-header {
+  background: rgba(245, 200, 66, 0.12);
   color: #F5C842;
-  padding: 2px 10px;
-  border-radius: 40px;
+  padding: 0 8px;
+  border-radius: 30px;
   font-size: 0.6rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-weight: 600;
   border: 1px solid rgba(245, 200, 66, 0.2);
   margin-left: 4px;
 }
 
-/* Help button in header (if you still have it) */
-.help-btn-header {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  width: 44px;
-  height: 44px;
-  font-size: 1.4rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  color: var(--text-secondary);
-}
-.help-btn-header:hover {
-  background: rgba(0, 221, 179, 0.15);
-  border-color: #00DDB3;
-  color: #00DDB3;
-  transform: scale(1.05);
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 204, 170, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(0, 204, 170, 0); }
 }
 
-/* ===== SIDEBAR TOGGLE BUTTON ===== */
-.sidebar-toggle-btn {
-  position: fixed;
-  left: 16px;
-  top: 16px;
-  width: 48px;
-  height: 48px;
-  background: rgba(26, 30, 58, 0.9);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 2px solid var(--border-highlight, #FFFF00);
-  border-radius: 16px;
-  color: white;
-  font-size: 24px;
-  cursor: pointer;
-  z-index: 1100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.sidebar-toggle-btn:hover {
-  background: #00DDB3;
-  color: #000;
-  transform: scale(1.05);
+/* Responsive */
+@media (max-width: 1024px) {
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 16px;
+  }
+  .header-left {
+    justify-content: space-between;
+  }
+  .header-right {
+    justify-content: space-around;
+    flex-wrap: wrap;
+  }
+  .brand-tagline {
+    display: none;
+  }
+  .lang-switcher {
+    order: 1;
+  }
 }
 
 @media (max-width: 768px) {
-  .sidebar-toggle-btn {
-    width: 44px;
-    height: 44px;
-    font-size: 20px;
-    left: 12px;
-    top: 12px;
+  .header-right {
+    gap: 8px;
+  }
+  .emergency-toggle-btn,
+  .road-safety-toggle {
+    padding: 6px 12px;
+    font-size: 0.7rem;
+  }
+  .listening-status {
+    padding: 4px 12px;
+    font-size: 0.65rem;
+  }
+  .user-badge {
+    padding: 4px 12px;
+    font-size: 0.75rem;
+  }
+  .brand-name {
+    font-size: 18px;
+  }
+  .hamburger-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
   }
 }
