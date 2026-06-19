@@ -10,12 +10,18 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
   const [motionDetected, setMotionDetected] = useState(false);
   const [lastAccel, setLastAccel] = useState(0);
   const [debugText, setDebugText] = useState('⏳ Waiting for motion...');
-  const [threshold, setThreshold] = useState(14);
+
+  // Detect iOS vs Android for default threshold
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const defaultThreshold = isIOS ? 14 : 22;
+  const [threshold, setThreshold] = useState(defaultThreshold);
 
   const countdownIntervalRef = useRef(null);
   const motionListenerActive = useRef(false);
   const fallTriggeredRef = useRef(false);
   const eventCounter = useRef(0);
+  const lastAccelData = useRef({ x: 0, y: 0, z: 0 });
+  const cooldownRef = useRef(false);
 
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
@@ -44,10 +50,6 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
       }
     },
     isBlocked: () => {
-      // Show the "Enable Fall Detection" button when:
-      // - permission is unknown (iOS initial state)
-      // - permission is denied
-      // - permission is granted but no motion event has been received yet
       if (permissionState === 'unknown') return true;
       if (permissionState === 'denied') return true;
       if (permissionState === 'granted' && !motionDetected) return true;
@@ -77,7 +79,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
 
     setTimeout(() => {
       if (!motionDetected && motionListenerActive.current) {
-        setDebugText('⚠️ No motion yet – try shaking your device');
+        setDebugText('⚠️ No motion yet – try moving your device');
       }
     }, 5000);
   };
@@ -89,6 +91,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
       return;
     }
 
+    // First real motion event
     if (!motionDetected) {
       console.log('[FallDetector] ✅ First motion event received!', acc);
       setMotionDetected(true);
@@ -99,21 +102,49 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     const totalAccel = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
     setLastAccel(totalAccel);
 
+    // Calculate delta (sudden change) from previous reading
+    const prev = lastAccelData.current;
+    const delta = Math.sqrt(
+      (acc.x - prev.x) ** 2 +
+      (acc.y - prev.y) ** 2 +
+      (acc.z - prev.z) ** 2
+    );
+    lastAccelData.current = { x: acc.x, y: acc.y, z: acc.z };
+
+    // Log every 10th event
     eventCounter.current++;
     if (eventCounter.current % 10 === 0) {
-      console.log(`[FallDetector] Accel: ${totalAccel.toFixed(2)} m/s² (x:${acc.x.toFixed(1)}, y:${acc.y.toFixed(1)}, z:${acc.z.toFixed(1)})`);
+      console.log(`[FallDetector] Accel: ${totalAccel.toFixed(2)} m/s², delta: ${delta.toFixed(2)}`);
       setDebugText(`📊 ${totalAccel.toFixed(2)} m/s² (threshold: ${threshold})`);
     }
 
-    if (totalAccel > threshold && !isCountingDown && !fallTriggeredRef.current) {
-      console.log(`🚨 FALL DETECTED! Accel: ${totalAccel.toFixed(2)} m/s² (threshold: ${threshold})`);
+    // Cooldown: if we just triggered, ignore further motion for 5 seconds
+    if (cooldownRef.current) return;
+
+    // FALL DETECTION LOGIC:
+    // 1. Peak acceleration > threshold
+    // 2. OR sudden change (delta) > 12 (sharp impact)
+    // 3. NOT already counting down
+    // 4. NOT already triggered (prevent re‑trigger)
+    const peakDetected = totalAccel > threshold;
+    const impactDetected = delta > 12 && totalAccel > 10;
+
+    if ((peakDetected || impactDetected) && !isCountingDown && !fallTriggeredRef.current) {
+      console.log(`🚨 FALL DETECTED! Accel: ${totalAccel.toFixed(2)} m/s², delta: ${delta.toFixed(2)}, threshold: ${threshold}`);
       fallTriggeredRef.current = true;
+      cooldownRef.current = true;
       setIsCountingDown(true);
       setCountdown(10);
       showToast('⚠️ Fall Detected! Checking user status...', 'warning');
+
+      // Reset cooldown after 5 seconds
+      setTimeout(() => {
+        cooldownRef.current = false;
+      }, 5000);
     }
   };
 
+  // Countdown timer
   useEffect(() => {
     if (isCountingDown) {
       countdownIntervalRef.current = setInterval(() => {
@@ -122,6 +153,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
             clearInterval(countdownIntervalRef.current);
             setIsCountingDown(false);
             fallTriggeredRef.current = false;
+            cooldownRef.current = false;
             if (onFallDetected) onFallDetected();
             showToast('🚨 EMERGENCY: Fall alert dispatched!', 'error');
             return 0;
@@ -137,9 +169,11 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     clearInterval(countdownIntervalRef.current);
     setIsCountingDown(false);
     fallTriggeredRef.current = false;
+    cooldownRef.current = false;
     showToast('✅ Alert cancelled. Glad you are safe!', 'success');
   };
 
+  // Initial setup
   useEffect(() => {
     if (typeof DeviceMotionEvent === 'undefined') {
       console.warn('[FallDetector] DeviceMotionEvent not supported');
@@ -167,7 +201,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     };
   }, []);
 
-  // Render warnings – show for 'unknown' and 'denied'
+  // Render warnings
   if (!deviceMotionAvailable && permissionState !== 'granted') {
     return (
       <div className="fall-detector-warning">
@@ -184,6 +218,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     );
   }
 
+  // Main UI
   return (
     <>
       {isCountingDown && (
@@ -241,13 +276,16 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
         <input
           type="range"
           min="8"
-          max="25"
+          max="30"
           step="0.5"
           value={threshold}
           onChange={(e) => setThreshold(parseFloat(e.target.value))}
           style={{ width: '100px', accentColor: '#00FF88' }}
         />
         <span style={{ color: '#00FF88', fontSize: '12px', minWidth: '30px' }}>{threshold}</span>
+        <span style={{ color: '#8899CC', fontSize: '10px' }}>
+          {isIOS ? '(iOS)' : '(Android)'}
+        </span>
       </div>
     </>
   );
