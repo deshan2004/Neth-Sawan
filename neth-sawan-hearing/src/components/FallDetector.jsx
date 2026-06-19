@@ -10,6 +10,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
   const [motionDetected, setMotionDetected] = useState(false);
   const [lastAccel, setLastAccel] = useState(0);
   const [debugText, setDebugText] = useState('⏳ Waiting for motion...');
+  const [threshold, setThreshold] = useState(14); // lower for iPhone
 
   const countdownIntervalRef = useRef(null);
   const motionListenerActive = useRef(false);
@@ -54,7 +55,9 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
       motionDetected,
       debugText,
       isListening: motionListenerActive.current,
+      threshold,
     }),
+    setThreshold: (val) => setThreshold(val),
   }));
 
   const startMotionListener = () => {
@@ -98,13 +101,12 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     eventCounter.current++;
     if (eventCounter.current % 10 === 0) {
       console.log(`[FallDetector] Accel: ${totalAccel.toFixed(2)} m/s² (x:${acc.x.toFixed(1)}, y:${acc.y.toFixed(1)}, z:${acc.z.toFixed(1)})`);
-      setDebugText(`📊 ${totalAccel.toFixed(2)} m/s²`);
+      setDebugText(`📊 ${totalAccel.toFixed(2)} m/s² (threshold: ${threshold})`);
     }
 
-    // FALL THRESHOLD – lowered to 18 for better sensitivity
-    const FALL_THRESHOLD = 18;
-    if (totalAccel > FALL_THRESHOLD && !isCountingDown && !fallTriggeredRef.current) {
-      console.log(`🚨 FALL DETECTED! Accel: ${totalAccel.toFixed(2)} m/s²`);
+    // FALL DETECTION – using the current threshold
+    if (totalAccel > threshold && !isCountingDown && !fallTriggeredRef.current) {
+      console.log(`🚨 FALL DETECTED! Accel: ${totalAccel.toFixed(2)} m/s² (threshold: ${threshold})`);
       fallTriggeredRef.current = true;
       setIsCountingDown(true);
       setCountdown(10);
@@ -220,6 +222,35 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
       }}>
         {debugText}
         {motionDetected && `  •  ${lastAccel.toFixed(1)} m/s²`}
+      </div>
+
+      {/* Sensitivity slider (optional – remove if not needed) */}
+      <div style={{
+        position: 'fixed',
+        bottom: '130px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'rgba(0,0,0,0.6)',
+        padding: '8px 16px',
+        borderRadius: '30px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        zIndex: 999,
+        backdropFilter: 'blur(4px)',
+        border: '1px solid rgba(255,255,255,0.1)',
+      }}>
+        <span style={{ color: '#8899CC', fontSize: '12px' }}>Sensitivity</span>
+        <input
+          type="range"
+          min="8"
+          max="25"
+          step="0.5"
+          value={threshold}
+          onChange={(e) => setThreshold(parseFloat(e.target.value))}
+          style={{ width: '100px', accentColor: '#00FF88' }}
+        />
+        <span style={{ color: '#00FF88', fontSize: '12px', minWidth: '30px' }}>{threshold}</span>
       </div>
     </>
   );
