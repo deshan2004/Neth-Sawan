@@ -594,16 +594,9 @@ function AppContent() {
 
       {toastMessage.show && <div className={`toast-message ${toastMessage.type}`}>{toastMessage.message}</div>}
       
-      {/* 👇 Sidebar toggle button – always visible when sidebar is closed, with stopPropagation */}
-      {!sidebarVisible && (
-        <button 
-          className="sidebar-toggle-btn" 
-          onClick={(e) => {
-            e.stopPropagation();
-            setSidebarVisible(true);
-          }} 
-          aria-label="Open menu"
-        >
+      {/* Hamburger menu button – appears only on mobile/tablet when sidebar is closed */}
+      {!sidebarVisible && window.innerWidth <= 1024 && (
+        <button className="mobile-menu-btn" onClick={() => setSidebarVisible(true)} aria-label="Open menu">
           ☰
         </button>
       )}

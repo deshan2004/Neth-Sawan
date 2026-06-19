@@ -13,22 +13,11 @@ const Header = ({
         <h1 className="logo-text">Neth-Sawan</h1>
         <span className="tagline">Visual Hearing Assistant</span>
         <div className="lang-switcher">
-          <button 
-            className={`lang-btn ${lang === 'si-LK' ? 'active' : ''}`} 
-            onClick={() => { setLang('si-LK'); showToast('Switched to Sinhala', 'success'); }}
-          >
-            🇱🇰 සිංහල
-          </button>
-          <button 
-            className={`lang-btn ${lang === 'en-US' ? 'active' : ''}`} 
-            onClick={() => { setLang('en-US'); showToast('Switched to English', 'success'); }}
-          >
-            🇬🇧 English
-          </button>
+          <button className={`lang-btn ${lang === 'si-LK' ? 'active' : ''}`} onClick={() => { setLang('si-LK'); showToast('Switched to Sinhala', 'success'); }}>🇱🇰 සිංහල</button>
+          <button className={`lang-btn ${lang === 'en-US' ? 'active' : ''}`} onClick={() => { setLang('en-US'); showToast('Switched to English', 'success'); }}>🇬🇧 English</button>
         </div>
       </div>
       <div className="header-right">
-        {/* Emergency Toggle – with stopPropagation */}
         <button 
           className={`emergency-toggle-btn ${emergencyNotificationsEnabled ? 'enabled' : 'disabled'}`}
           onClick={(e) => {
@@ -41,7 +30,6 @@ const Header = ({
           <span className="emergency-text">{emergencyNotificationsEnabled ? 'Alerts ON' : 'Alerts OFF'}</span>
         </button>
 
-        {/* Road Safety Toggle – with stopPropagation */}
         <button 
           className={`road-safety-toggle ${roadSafetyActive ? 'active' : ''}`}
           onClick={(e) => {
@@ -61,7 +49,10 @@ const Header = ({
         
         <div className="user-badge">
           <span>{isGuest ? '👤' : '👂'}</span>
-          <span>{isGuest ? 'Guest' : (user?.displayName || user?.email?.split('@')[0] || 'User')}</span>
+          <span>
+            {isGuest ? 'Guest' : (user?.displayName || user?.email?.split('@')[0] || 'User')}
+            {isGuest && <span className="guest-badge-header">Guest</span>}
+          </span>
         </div>
       </div>
     </header>

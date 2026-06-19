@@ -1,25 +1,29 @@
-/* FallDetector – Permission prompt and countdown overlay */
+/* FallDetector – minimal, no intrusive buttons */
 
-.fall-permission-btn {
-  padding: 12px 24px;
-  background: #FF3355;
-  color: white;
-  border: none;
+.fall-detector-warning {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 200, 0, 0.15);
+  border: 1px solid #F5C842;
+  color: #F5C842;
+  padding: 8px 18px;
   border-radius: 40px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.fall-permission-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(255, 51, 85, 0.4);
+  font-size: 0.8rem;
+  z-index: 999;
+  backdrop-filter: blur(4px);
+  text-align: center;
+  max-width: 90%;
+  animation: fadeInUp 0.3s ease;
 }
 
-/* Full‑screen countdown overlay */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Countdown overlay (unchanged) */
 .fall-countdown-overlay {
   position: fixed;
   top: 0;
@@ -93,7 +97,6 @@
   box-shadow: 0 10px 30px rgba(0, 255, 204, 0.3);
 }
 
-/* Mobile */
 @media (max-width: 768px) {
   .fall-countdown-title {
     font-size: 1.8rem;
@@ -103,22 +106,10 @@
   }
   .fall-countdown-message {
     font-size: 1rem;
-    text-align: center;
     padding: 0 20px;
   }
   .fall-ok-btn {
     padding: 12px 24px;
     font-size: 1rem;
   }
-}.fall-countdown-number {
-  font-size: 4rem;
-}
-@media (min-width: 768px) {
-  .fall-countdown-number {
-    font-size: 6rem;
-  }
-}
-.fall-ok-btn {
-  padding: 12px 24px;
-  font-size: 1rem;
 }
