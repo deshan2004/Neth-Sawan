@@ -34,15 +34,19 @@ const Header = ({
           </button>
         </div>
 
+        {/* 🔔 EMERGENCY TOGGLE – larger & clearer */}
         <button 
           className={`emergency-toggle-btn ${emergencyNotificationsEnabled ? 'enabled' : 'disabled'}`}
           onClick={onToggleEmergencyNotifications}
           title={emergencyNotificationsEnabled ? 'Disable emergency alerts' : 'Enable emergency alerts'}
         >
           <span className="emergency-icon">{emergencyNotificationsEnabled ? '🔔' : '🔕'}</span>
-          <span className="emergency-text">{emergencyNotificationsEnabled ? t('alertsOn') : t('alertsOff')}</span>
+          <span className="emergency-text">
+            {emergencyNotificationsEnabled ? t('alertsOn') : t('alertsOff')}
+          </span>
         </button>
 
+        {/* 🚗 ROAD SAFETY TOGGLE – larger & clearer */}
         <button 
           className={`road-safety-toggle ${roadSafetyActive ? 'active' : ''}`}
           onClick={() => {
