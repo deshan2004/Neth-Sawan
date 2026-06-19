@@ -11,17 +11,17 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
   const [lastAccel, setLastAccel] = useState(0);
   const [debugText, setDebugText] = useState('⏳ Waiting for motion...');
 
-  // Detect iOS vs Android for default threshold
+  // Auto‑detect iOS vs Android for default threshold
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   const defaultThreshold = isIOS ? 14 : 22;
   const [threshold, setThreshold] = useState(defaultThreshold);
 
-  const countdownIntervalRef = useRef(null);
   const motionListenerActive = useRef(false);
   const fallTriggeredRef = useRef(false);
+  const cooldownRef = useRef(false);
   const eventCounter = useRef(0);
   const lastAccelData = useRef({ x: 0, y: 0, z: 0 });
-  const cooldownRef = useRef(false);
+  const countdownTimerRef = useRef(null);
 
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
@@ -42,7 +42,6 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
           return false;
         }
       } else {
-        // Android / Desktop – auto‑grant
         console.log('[FallDetector] Auto‑granting permission (Android or non‑iOS)');
         setPermissionState('granted');
         startMotionListener();
@@ -91,7 +90,6 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
       return;
     }
 
-    // First real motion event
     if (!motionDetected) {
       console.log('[FallDetector] ✅ First motion event received!', acc);
       setMotionDetected(true);
@@ -111,62 +109,91 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     );
     lastAccelData.current = { x: acc.x, y: acc.y, z: acc.z };
 
-    // Log every 10th event
     eventCounter.current++;
     if (eventCounter.current % 10 === 0) {
       console.log(`[FallDetector] Accel: ${totalAccel.toFixed(2)} m/s², delta: ${delta.toFixed(2)}`);
       setDebugText(`📊 ${totalAccel.toFixed(2)} m/s² (threshold: ${threshold})`);
     }
 
-    // Cooldown: if we just triggered, ignore further motion for 5 seconds
+    // Cooldown: after a trigger, ignore for 5 seconds
     if (cooldownRef.current) return;
 
-    // FALL DETECTION LOGIC:
-    // 1. Peak acceleration > threshold
-    // 2. OR sudden change (delta) > 12 (sharp impact)
-    // 3. NOT already counting down
-    // 4. NOT already triggered (prevent re‑trigger)
-    const peakDetected = totalAccel > threshold;
-    const impactDetected = delta > 12 && totalAccel > 10;
+    // FALL DETECTION LOGIC – now requires BOTH peak AND sudden change
+    const peakExceeded = totalAccel > threshold;
+    const deltaExceeded = delta > 12 && totalAccel > 12; // sudden impact
 
-    if ((peakDetected || impactDetected) && !isCountingDown && !fallTriggeredRef.current) {
-      console.log(`🚨 FALL DETECTED! Accel: ${totalAccel.toFixed(2)} m/s², delta: ${delta.toFixed(2)}, threshold: ${threshold}`);
-      fallTriggeredRef.current = true;
-      cooldownRef.current = true;
-      setIsCountingDown(true);
-      setCountdown(10);
-      showToast('⚠️ Fall Detected! Checking user status...', 'warning');
+    // Also trigger if peak is extremely high (e.g., > 30) even if delta is moderate
+    const extremePeak = totalAccel > 30;
 
-      // Reset cooldown after 5 seconds
-      setTimeout(() => {
-        cooldownRef.current = false;
-      }, 5000);
+    if ((peakExceeded && deltaExceeded) || extremePeak) {
+      if (!isCountingDown && !fallTriggeredRef.current) {
+        console.log(`🚨 FALL DETECTED! Accel: ${totalAccel.toFixed(2)} m/s², delta: ${delta.toFixed(2)}`);
+        fallTriggeredRef.current = true;
+        cooldownRef.current = true;
+        setIsCountingDown(true);
+        setCountdown(10);
+        showToast('⚠️ Fall Detected! Checking user status...', 'warning');
+
+        // Reset cooldown after 5 seconds
+        setTimeout(() => {
+          cooldownRef.current = false;
+        }, 5000);
+      }
     }
   };
 
-  // Countdown timer
+  // ===== COUNTDOWN LOGIC – using recursive setTimeout =====
   useEffect(() => {
-    if (isCountingDown) {
-      countdownIntervalRef.current = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdownIntervalRef.current);
-            setIsCountingDown(false);
-            fallTriggeredRef.current = false;
-            cooldownRef.current = false;
-            if (onFallDetected) onFallDetected();
-            showToast('🚨 EMERGENCY: Fall alert dispatched!', 'error');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    if (!isCountingDown) {
+      // Clear any pending timer when not counting
+      if (countdownTimerRef.current) {
+        clearTimeout(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+      return;
     }
-    return () => clearInterval(countdownIntervalRef.current);
+
+    // Start countdown from 10
+    let currentCount = 10;
+    setCountdown(currentCount);
+
+    const tick = () => {
+      currentCount -= 1;
+      setCountdown(currentCount);
+      console.log(`[FallDetector] Countdown: ${currentCount}`);
+
+      if (currentCount <= 0) {
+        // Countdown finished → trigger emergency
+        setIsCountingDown(false);
+        fallTriggeredRef.current = false;
+        cooldownRef.current = false;
+        if (onFallDetected) onFallDetected();
+        showToast('🚨 EMERGENCY: Fall alert dispatched!', 'error');
+        return;
+      }
+
+      // Schedule next tick in 1 second
+      countdownTimerRef.current = setTimeout(tick, 1000);
+    };
+
+    // Start the first tick after 1 second
+    countdownTimerRef.current = setTimeout(tick, 1000);
+
+    // Cleanup on unmount or when isCountingDown becomes false
+    return () => {
+      if (countdownTimerRef.current) {
+        clearTimeout(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
   }, [isCountingDown, onFallDetected, showToast]);
 
   const handleIImOkay = () => {
-    clearInterval(countdownIntervalRef.current);
+    // Cancel the countdown
+    if (countdownTimerRef.current) {
+      clearTimeout(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
     setIsCountingDown(false);
     fallTriggeredRef.current = false;
     cooldownRef.current = false;
@@ -184,12 +211,10 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     }
 
     if (typeof DeviceMotionEvent.requestPermission !== 'function') {
-      // Android: auto‑grant
       console.log('[FallDetector] Android: auto‑starting');
       setPermissionState('granted');
       startMotionListener();
     } else {
-      // iOS: wait for user gesture
       console.log('[FallDetector] iOS: waiting for user permission');
       setPermissionState('unknown');
       setDebugText('📱 Tap "Enable Fall Detection" in header');
@@ -198,6 +223,10 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     return () => {
       window.removeEventListener('devicemotion', handleMotion);
       motionListenerActive.current = false;
+      if (countdownTimerRef.current) {
+        clearTimeout(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
     };
   }, []);
 
