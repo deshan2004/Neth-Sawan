@@ -11,14 +11,14 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
 
   // Auto‑detect iOS vs Android for default threshold
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  const defaultThreshold = isIOS ? 14 : 22;
-  const [threshold] = useState(defaultThreshold);
+  const threshold = isIOS ? 14 : 22;
 
   const motionListenerActive = useRef(false);
   const fallTriggeredRef = useRef(false);
   const cooldownRef = useRef(false);
   const lastAccelData = useRef({ x: 0, y: 0, z: 0 });
   const countdownIntervalRef = useRef(null);
+  const isCountingDownRef = useRef(false); // track without causing re-renders
 
   // ===== Expose methods to parent =====
   useImperativeHandle(ref, () => ({
@@ -102,14 +102,14 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     const deltaExceeded = delta > 12 && totalAccel > 12;
     const extremePeak = totalAccel > 30;
 
+    // Only trigger if not already counting down
     if ((peakExceeded && deltaExceeded) || extremePeak) {
-      if (!isCountingDown && !fallTriggeredRef.current) {
+      if (!isCountingDownRef.current && !fallTriggeredRef.current) {
         console.log(`🚨 FALL DETECTED! Accel: ${totalAccel.toFixed(2)} m/s², delta: ${delta.toFixed(2)}`);
         fallTriggeredRef.current = true;
         cooldownRef.current = true;
-        setIsCountingDown(true);
-        setCountdown(10);
-        showToast('⚠️ Fall Detected! Checking user status...', 'warning');
+        // Start the countdown
+        startCountdown();
 
         setTimeout(() => {
           cooldownRef.current = false;
@@ -118,16 +118,17 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     }
   };
 
-  // ===== Countdown logic =====
-  useEffect(() => {
-    if (!isCountingDown) {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
-      return;
+  // ===== Start countdown (separate function to avoid re-render issues) =====
+  const startCountdown = () => {
+    // Clear any previous interval
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
     }
 
+    // Reset state
+    setIsCountingDown(true);
+    isCountingDownRef.current = true;
     setCountdown(10);
     let currentCount = 10;
 
@@ -142,22 +143,17 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
         clearInterval(interval);
         countdownIntervalRef.current = null;
         setIsCountingDown(false);
+        isCountingDownRef.current = false;
         fallTriggeredRef.current = false;
         cooldownRef.current = false;
+        // Trigger emergency
         if (onFallDetected) onFallDetected();
         showToast('🚨 EMERGENCY: Fall alert dispatched!', 'error');
       }
     }, 1000);
 
     countdownIntervalRef.current = interval;
-
-    return () => {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
-    };
-  }, [isCountingDown, onFallDetected, showToast]);
+  };
 
   // ===== Cancel countdown =====
   const handleIImOkay = () => {
@@ -166,6 +162,7 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
       countdownIntervalRef.current = null;
     }
     setIsCountingDown(false);
+    isCountingDownRef.current = false;
     fallTriggeredRef.current = false;
     cooldownRef.current = false;
     showToast('✅ Alert cancelled. Glad you are safe!', 'success');
