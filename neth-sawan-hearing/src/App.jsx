@@ -23,7 +23,8 @@ import RoadSafetyMonitor from './components/RoadSafetyMonitor';
 import FallDetector from "./components/FallDetector";
 import BackgroundVideo from './components/BackgroundVideo';
 import LandingPage from './components/LandingPage';
-import OnlineUsers from './components/OnlineUsers'; // NEW: Community tab
+import OnlineUsers from './components/OnlineUsers';
+import InstructionsPage from './components/InstructionsPage';
 
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
@@ -70,7 +71,7 @@ function AppContent() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
-  
+
   // UI States
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarVisible, setSidebarVisible] = useState(window.innerWidth > 1024);
@@ -78,13 +79,14 @@ function AppContent() {
   const [flashEmergency, setFlashEmergency] = useState(false);
   const [emergencyData, setEmergencyData] = useState(null);
   const [roadSafetyActive, setRoadSafetyActive] = useState(false);
-  
+  const [showInstructions, setShowInstructions] = useState(false);
+
   // Emergency Notifications Toggle
   const [emergencyNotificationsEnabled, setEmergencyNotificationsEnabled] = useState(() => {
     const saved = localStorage.getItem('emergency_notifications_enabled');
     return saved !== null ? saved === 'true' : true;
   });
-  
+
   // Accessibility States
   const [currentTheme, setCurrentTheme] = useState('default');
   const [currentFontSize, setCurrentFontSize] = useState(16);
@@ -92,8 +94,8 @@ function AppContent() {
   // Logic Hooks
   const { transcript, isListening, startListening, stopListening, clearTranscript, setLang, lang, error: speechError, browserInfo } = useSpeech();
   const { volume, isLoud, soundType, soundHistory, threshold, setThreshold } = useVolume(0.15);
-  const { 
-    notificationQueue, markAsRead, clearNotifications, 
+  const {
+    notificationQueue, markAsRead, clearNotifications,
     relatives, addRelative, removeRelative, updateRelative,
     autoSendStatus
   } = useNotifications();
@@ -317,6 +319,7 @@ function AppContent() {
     }
   };
 
+  // ----- RENDER -----
   if (authLoading) {
     return (
       <div className="loading-screen">
@@ -327,8 +330,13 @@ function AppContent() {
     );
   }
 
+  // Show instructions page if active
+  if (showInstructions) {
+    return <InstructionsPage onClose={() => setShowInstructions(false)} />;
+  }
+
   if (!user && !isGuest) {
-    return <LandingPage onGuestMode={handleGuestMode} />;
+    return <LandingPage onGuestMode={handleGuestMode} onShowInstructions={() => setShowInstructions(true)} />;
   }
 
   return (
@@ -354,6 +362,7 @@ function AppContent() {
         user={user}
         isGuest={isGuest}
         onLogout={isGuest ? handleSignOutGuest : handleLogout}
+        onShowInstructions={() => setShowInstructions(true)}   // 👈 Pass to Sidebar
       />
 
       <div className={`content-area ${sidebarVisible && window.innerWidth > 1024 ? 'sidebar-open' : ''}`}>
@@ -368,13 +377,13 @@ function AppContent() {
           setRoadSafetyActive={setRoadSafetyActive}
           emergencyNotificationsEnabled={emergencyNotificationsEnabled}
           onToggleEmergencyNotifications={toggleEmergencyNotifications}
+          // onShowInstructions is NOT passed to Header (removed)
         />
 
         <main className="main-content">
           {/* DASHBOARD TAB */}
           {activeTab === 'dashboard' && (
             <>
-            
               {/* Live Captions + Sign Language side by side */}
               <div className="captions-sign-row">
                 <div className="captions-box">

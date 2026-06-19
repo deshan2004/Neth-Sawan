@@ -1,10 +1,20 @@
+// src/components/Sidebar.jsx
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import ProfileEditModal from './ProfileEditModal';
 import './Sidebar.css';
 
-const Sidebar = ({ activeTab, setActiveTab, onClose, isOpen, user, isGuest, onLogout }) => {
+const Sidebar = ({ 
+  activeTab, 
+  setActiveTab, 
+  onClose, 
+  isOpen, 
+  user, 
+  isGuest, 
+  onLogout,
+  onShowInstructions 
+}) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileData, setProfileData] = useState({
     displayName: isGuest ? 'Guest User' : (user?.displayName || user?.email?.split('@')[0] || 'User'),
@@ -22,21 +32,32 @@ const Sidebar = ({ activeTab, setActiveTab, onClose, isOpen, user, isGuest, onLo
     }
   }, [isGuest]);
 
+  // Also listen for auth changes to update profile data when user logs in/out
+  useEffect(() => {
+    if (user && !isGuest) {
+      setProfileData(prev => ({
+        ...prev,
+        displayName: user.displayName || user.email?.split('@')[0] || 'User',
+        photoURL: user.photoURL || null,
+      }));
+    }
+  }, [user, isGuest]);
+
   const handleProfileUpdate = (updatedData) => {
     setProfileData(prev => ({ ...prev, ...updatedData }));
   };
 
-const menuItems = [
-  { id: 'dashboard', icon: '🏠', label: 'Home', sinhala: 'මුල් පිටුව' },
-  { id: 'vision', icon: '👁️', label: 'AI Vision', sinhala: 'AI දෘෂ්ටිය' },
-  { id: 'learn', icon: '🤟', label: 'Learn Signs', sinhala: 'සංඥා ඉගෙන ගන්න' },
-  { id: 'community', icon: '👥', label: 'Community', sinhala: 'ප්‍රජාව' },  // NEW
-  { id: 'alerts', icon: '🔔', label: 'Alerts', sinhala: 'ඇඟවීම්' },
-  { id: 'contacts', icon: '📇', label: 'Contacts', sinhala: 'සම්බන්ධතා' },
-  { id: 'emergency', icon: '🆘', label: 'SOS', sinhala: 'හදිසි අවස්ථා' },
-  { id: 'roadmonitor', icon: '🛣️', label: 'Road Monitor', sinhala: 'මාර්ග ආරක්ෂාව' },
-  { id: 'settings', icon: '♿', label: 'Accessibility', sinhala: 'ප්‍රවේශ්‍යතාව' }
-];
+  const menuItems = [
+    { id: 'dashboard', icon: '🏠', label: 'Home', sinhala: 'මුල් පිටුව' },
+    { id: 'vision', icon: '👁️', label: 'AI Vision', sinhala: 'AI දෘෂ්ටිය' },
+    { id: 'learn', icon: '🤟', label: 'Learn Signs', sinhala: 'සංඥා ඉගෙන ගන්න' },
+    { id: 'community', icon: '👥', label: 'Community', sinhala: 'ප්‍රජාව' },
+    { id: 'alerts', icon: '🔔', label: 'Alerts', sinhala: 'ඇඟවීම්' },
+    { id: 'contacts', icon: '📇', label: 'Contacts', sinhala: 'සම්බන්ධතා' },
+    { id: 'emergency', icon: '🆘', label: 'SOS', sinhala: 'හදිසි අවස්ථා' },
+    { id: 'roadmonitor', icon: '🛣️', label: 'Road Monitor', sinhala: 'මාර්ග ආරක්ෂාව' },
+    { id: 'settings', icon: '♿', label: 'Accessibility', sinhala: 'ප්‍රවේශ්‍යතාව' }
+  ];
 
   return (
     <>
@@ -49,20 +70,25 @@ const menuItems = [
           <button className="close-sidebar" onClick={onClose}>✕</button>
         </div>
         
-        {/* Profile Section – clickable to edit */}
+        {/* 👇 Enhanced Profile Section */}
         <div className="profile-section" onClick={() => setShowProfileModal(true)}>
-          <div className="avatar">
-            {profileData.photoURL ? (
-              <img src={profileData.photoURL} alt="Profile" className="profile-img" />
-            ) : (
-              <div className="avatar-initial">
-                {profileData.displayName?.charAt(0)?.toUpperCase() || '👤'}
-              </div>
-            )}
-            <div className="avatar-edit-icon">✎</div>
+          <div className="profile-bg"></div>
+          <div className="profile-avatar-wrapper">
+            <div className="avatar">
+              {profileData.photoURL ? (
+                <img src={profileData.photoURL} alt="Profile" className="profile-img" />
+              ) : (
+                <div className="avatar-initial">
+                  {profileData.displayName?.charAt(0)?.toUpperCase() || '👤'}
+                </div>
+              )}
+              <div className="avatar-edit-icon">✎</div>
+            </div>
           </div>
-          <h3>{profileData.displayName}</h3>
-          <p>{isGuest ? 'Guest Mode' : (user?.email || 'Logged In')}</p>
+          <h3 className="profile-name">{profileData.displayName}</h3>
+          <p className="profile-status">
+            {isGuest ? '👤 Guest Mode · Local Data' : '✅ Logged In'}
+          </p>
           {isGuest && <span className="guest-badge">Local Data Only</span>}
           <div className="accessibility-badge">
             <span>♿ Accessibility Ready</span>
@@ -87,13 +113,14 @@ const menuItems = [
         </nav>
 
         <div className="sidebar-footer">
-          <div className="accessibility-info">
-            <p>🎯 Designed for Deaf & Hard of Hearing</p>
-            <p>• 🚗 Road Safety Monitor</p>
-            <p>• 🤟 Sign Language Translation</p>
-            <p>• 🔴 Visual Emergency Alerts</p>
-            <p>• 📳 Haptic Feedback</p>
-          </div>
+          <button 
+            className="help-btn-sidebar" 
+            onClick={onShowInstructions}
+            title="How to use Neth-Sawan"
+          >
+            ❓ How It Works
+          </button>
+
           <button className="logout-btn-sidebar" onClick={onLogout}>
             🚪 Sign Out
           </button>

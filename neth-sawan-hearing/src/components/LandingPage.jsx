@@ -1,10 +1,11 @@
+// src/components/LandingPage.jsx
 import React, { useState } from 'react';
 import Auth from './Auth';
 import BackgroundVideo from './BackgroundVideo';
 import { useLanguage } from '../context/LanguageContext';
 import './LandingPage.css';
 
-const LandingPage = ({ onGuestMode }) => {
+const LandingPage = ({ onGuestMode, onShowInstructions }) => {
   const { t } = useLanguage();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
@@ -12,7 +13,6 @@ const LandingPage = ({ onGuestMode }) => {
 
   return (
     <div className="landing-page">
-      {/* Opacity 1.0 kelya mule video purn transparent ani clear disel */}
       <BackgroundVideo videoSrc={videoSrc} opacity={1.0} />
       
       <div className="landing-hero">
@@ -25,6 +25,7 @@ const LandingPage = ({ onGuestMode }) => {
             <button className="btn-primary" onClick={() => { setAuthMode('login'); setShowAuthModal(true); }}>Sign In</button>
             <button className="btn-secondary" onClick={() => { setAuthMode('signup'); setShowAuthModal(true); }}>Create Account</button>
             <button className="btn-guest" onClick={onGuestMode}>Continue as Guest</button>
+            <button className="btn-secondary" onClick={onShowInstructions}>📖 How It Works</button>
           </div>
         </div>
       </div>

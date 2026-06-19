@@ -1,3 +1,4 @@
+// src/components/Header.jsx
 import React from 'react';
 import './Header.css';
 
@@ -5,6 +6,7 @@ const Header = ({
   isListening, lang, setLang, showToast, user, isGuest,
   roadSafetyActive, setRoadSafetyActive,
   emergencyNotificationsEnabled, onToggleEmergencyNotifications
+  // onShowInstructions is removed – no longer needed here
 }) => {
   return (
     <header className="app-header">
@@ -33,6 +35,8 @@ const Header = ({
           <span>🚗</span>
           <span>{roadSafetyActive ? 'Road Safe ON' : 'Road Safe OFF'}</span>
         </button>
+
+        {/* ❓ Help button REMOVED from header */}
 
         <div className={`listening-status ${isListening ? 'active' : ''}`}>
           <div className="status-dot"></div>
