@@ -1,15 +1,21 @@
 // src/components/OnlineUsers.jsx
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import VideoCall from './VideoCall';
 import ChatComponent from './ChatComponent';
+import InPersonTranslator from './InPersonTranslator';
 import './OnlineUsers.css';
 
 const OnlineUsers = () => {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [chatUser, setChatUser] = useState(null);
+  const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
+  
+  // 🌟 Close කළත් History එක නොමැකී තබා ගැනීමට State එක මෙතනට ගෙනාවා!
+  const [translationHistory, setTranslationHistory] = useState([]);
+
   const currentUser = auth.currentUser;
 
   useEffect(() => {
@@ -36,30 +42,25 @@ const OnlineUsers = () => {
       });
       setOnlineUsers(users);
     });
-
-    const setOffline = async () => {
-      await updateDoc(userStatusRef, { online: false, lastSeen: new Date() });
-    };
-    window.addEventListener('beforeunload', setOffline);
-    return () => {
-      unsubscribe();
-      window.removeEventListener('beforeunload', setOffline);
-      setOffline();
-    };
+    return () => unsubscribe();
   }, [currentUser]);
 
-  if (!currentUser) return <div className="card">Please log in to see online users.</div>;
-
   return (
-    <div className="online-users-container card">
-      <div className="card-head">
-        <div className="card-title">
-          <span className="card-title-icon icon-teal">👥</span>
-          Community – Online Users
-        </div>
+    <div className="online-users-container">
+      
+      {/* 🌟 Translate Screen එක Open කරන Button එකක් */}
+      <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+        <button 
+          className="video-call-btn" 
+          onClick={() => setIsTranslatorOpen(true)}
+          style={{ padding: '15px 30px', fontSize: '16px', cursor: 'pointer' }}
+        >
+          📸 Open In-Person Translator
+        </button>
       </div>
+
       {onlineUsers.length === 0 ? (
-        <p className="no-users">🤟 No other users online right now. Share the app with friends!</p>
+        <div className="no-users"> දැනට කිසිවෙකු online නැත. </div>
       ) : (
         <div className="online-users-list">
           {onlineUsers.map(user => (
@@ -88,6 +89,16 @@ const OnlineUsers = () => {
           ))}
         </div>
       )}
+
+      {/* 🌟 Translator Component එකට History State සහ Setter එක Props විදිහට යැවීම */}
+      {isTranslatorOpen && (
+        <InPersonTranslator 
+          translationHistory={translationHistory}
+          setTranslationHistory={setTranslationHistory}
+          onClose={() => setIsTranslatorOpen(false)}
+        />
+      )}
+
       {selectedUser && (
         <VideoCall
           targetUser={selectedUser}

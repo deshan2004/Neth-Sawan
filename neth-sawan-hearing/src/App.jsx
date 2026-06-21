@@ -24,6 +24,7 @@ import BackgroundVideo from './components/BackgroundVideo';
 import LandingPage from './components/LandingPage';
 import OnlineUsers from './components/OnlineUsers';
 import InstructionsPage from './components/InstructionsPage';
+import InPersonTranslator from './components/InPersonTranslator';
 
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
@@ -459,6 +460,7 @@ function AppContent() {
           {/* ===== DASHBOARD TAB ===== */}
           {activeTab === 'dashboard' && (
             <>
+              {/* ===== Live Captions + Sign Language Row ===== */}
               <div className="captions-sign-row">
                 <div className="captions-box">
                   <div className="section-header">
@@ -492,6 +494,7 @@ function AppContent() {
                 </div>
               </div>
 
+              {/* ===== Sound Monitor + Road Safety Row ===== */}
               <div className="dashboard-primary">
                 <VisualAlert
                   isLoud={isLoud && emergencyNotificationsEnabled}
@@ -530,12 +533,13 @@ function AppContent() {
                 />
               </div>
 
+              {/* ===== Sound Visualizer + Sound History Row ===== */}
               <div className="dashboard-secondary">
                 <SoundVisualizer volume={volume} isLoud={isLoud} soundType={soundType} />
                 <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
               </div>
 
-              {/* ===== 🔥 TEST FALL BUTTON ===== */}
+              {/* ===== Test Fall Button ===== */}
               <div style={{ textAlign: 'center', marginTop: '20px' }}>
                 <button
                   onClick={() => {
@@ -573,6 +577,11 @@ function AppContent() {
 
           {/* ===== SIGN LANGUAGE TUTOR ===== */}
           {activeTab === 'learn' && <SignLanguageTutor />}
+
+          {/* ===== IN-PERSON TRANSLATOR ===== */}
+          {activeTab === 'inperson' && (
+            <InPersonTranslator onClose={() => setActiveTab('dashboard')} />
+          )}
 
           {/* ===== COMMUNITY ===== */}
           {activeTab === 'community' && <OnlineUsers />}

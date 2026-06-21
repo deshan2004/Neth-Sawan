@@ -57,10 +57,12 @@ const Sidebar = ({
     setProfileData(prev => ({ ...prev, ...updatedData }));
   };
 
+  // 👇 Added "inperson" tab here
   const menuItems = [
     { id: 'dashboard', icon: '🏠', label: t('home'), en: t('homeEn') },
     { id: 'vision', icon: '👁️', label: t('aiVision'), en: t('aiVisionEn') },
     { id: 'learn', icon: '🤟', label: t('learnSigns'), en: t('learnSignsEn') },
+    { id: 'inperson', icon: '📸', label: 'සජීවී පරිවර්තකය', en: 'Live Translator' },
     { id: 'community', icon: '👥', label: t('community'), en: t('communityEn') },
     { id: 'alerts', icon: '🔔', label: t('alerts'), en: t('alertsEn') },
     { id: 'contacts', icon: '📇', label: t('contacts'), en: t('contactsEn') },

@@ -1,8 +1,23 @@
+// src/components/VideoCall.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { doc, onSnapshot, deleteDoc, setDoc } from 'firebase/firestore';
+import * as tmImage from '@teachablemachine/image'; // 🌟 TensorFlow සහ Teachable Machine ඉම්පෝර්ට් කරන ලදී
 import Peer from 'peerjs';
 import './VideoCall.css';
+
+// ⚠️ ඔයාගේ Teachable Machine ලින්ක් එක මෙතනට දෙන්න!
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/YOUR_MODEL_LINK_HERE/"; 
+
+const SINHALA_CLASS_MAP = {
+  "Ayubowan": "ආයුබෝවන්! 🙏",
+  "Sthuthi": "ස්තුතියි! ❤️",
+  "Ow": "ඔව් 👍",
+  "Nae": "නැහැ 👎",
+  "Udavvak": "මට උදව් කරන්න! 🆘",
+  "Vathura": "මට වතුර ටිකක් ඕනේ... 💧",
+  "Kama": "මට බඩගිනියි, කෑම ඕනේ... 🍽️"
+};
 
 const VideoCall = ({ targetUser, currentUser, onClose }) => {
   const [callStatus, setCallStatus] = useState('idle');
@@ -10,11 +25,19 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   
+  // 🌟 AI Translation සඳහා අලුතින් එකතු කරන ලද State ටික
+  const [aiStatusText, setAiStatusText] = useState('පද්ධතිය සූදානම්... 🧠');
+  const [isAiScanning, setIsAiScanning] = useState(false);
+  
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
   const peerRef = useRef(null);
   const callRef = useRef(null);
   const localStreamRef = useRef(null);
+  const modelRef = useRef(null);
+  const maxPredictionsRef = useRef(0);
+  const aiIntervalRef = useRef(null);
+
   const roomId = [currentUser.uid, targetUser.uid].sort().join('_');
 
   useEffect(() => {
@@ -32,153 +55,139 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
     return () => {
       cleanStreamTracks();
       if (peerRef.current) peerRef.current.destroy();
+      if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
     };
-  }, [currentUser.uid]);
+  }, []);
 
-  useEffect(() => {
-    const signalingRef = doc(db, 'signaling', roomId);
-    const unsubscribe = onSnapshot(signalingRef, async (docSnap) => {
-      if (!docSnap.exists()) return;
-      const data = docSnap.data();
+  // 🌟 AI මොඩලය Load කර කැමරාව ස්කෑන් කිරීම ආරම්භ කිරීම
+  const startAiScanner = async () => {
+    if (!localVideoRef.current || !localVideoRef.current.srcObject) {
+      setAiStatusText("කැමරාව ක්‍රියාත්මක වන තුරු මඳක් රැඳී සිටින්න...");
+      return;
+    }
+    
+    setIsAiScanning(true);
+    setAiStatusText("AI මොඩලය ලෝඩ් වෙමින් පවතී... 🧠");
 
-      if (data.offer && data.to === currentUser.uid && callStatus === 'idle' && !incomingCall) {
-        setIncomingCall(true);
-        setCallStatus('ringing');
-        if (!callRef.current) {
-          const peer = peerRef.current;
-          if (peer) {
-            const call = peer.call(targetUser.uid, await getLocalStream());
-            callRef.current = call;
-            setupCallHandlers(call);
+    try {
+      const modelPath = MODEL_URL + "model.json";
+      const metadataPath = MODEL_URL + "metadata.json";
+      
+      modelRef.current = await tmImage.load(modelPath, metadataPath);
+      maxPredictionsRef.current = modelRef.current.getTotalClasses();
+      
+      setAiStatusText("සජීවී AI සංඥා පරිවර්තනය ක්‍රියාත්මකයි! 🤟");
+
+      // දේශීය කැමරා වීඩියෝව ස්කෑන් කර පරීක්ෂා කරන ලූප් එක
+      aiIntervalRef.current = setInterval(async () => {
+        if (modelRef.current && localVideoRef.current) {
+          const prediction = await modelRef.current.predict(localVideoRef.current);
+          
+          let highestPrediction = { className: "", probability: 0 };
+          for (let i = 0; i < maxPredictionsRef.current; i++) {
+            if (prediction[i].probability > highestPrediction.probability) {
+              highestPrediction = prediction[i];
+            }
+          }
+
+          if (highestPrediction.probability > 0.85 && highestPrediction.className !== "Neutral") {
+            const sinhalaText = SINHALA_CLASS_MAP[highestPrediction.className] || highestPrediction.className;
+            setAiStatusText(sinhalaText);
           }
         }
-      }
+      }, 1000); // තත්පරයකට වරක් පරික්ෂා කරයි
 
-      if (data.answer && callRef.current && callRef.current.peer === data.from) {
-        callRef.current.answer(data.answer);
-      }
-
-      if (data.candidate && callRef.current) {
-        callRef.current.addIceCandidate(data.candidate);
-      }
-    });
-    return () => unsubscribe();
-  }, [roomId, currentUser.uid, callStatus, incomingCall, targetUser.uid]);
-
-  const getLocalStream = async () => {
-    if (localStreamRef.current) return localStreamRef.current;
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      return stream;
     } catch (err) {
-      console.error("Failed to access hardware devices: ", err);
-      return null;
+      console.error("VideoCall AI Error:", err);
+      setAiStatusText("මොඩලය ලෝඩ් කිරීමේ දෝෂයක්. Link එක පරීක්ෂා කරන්න.");
+      setIsAiScanning(false);
     }
+  };
+
+  const stopAiScanner = () => {
+    if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
+    setIsAiScanning(false);
+    setAiStatusText("පද්ධතිය සූදානම්... 🧠");
   };
 
   const cleanStreamTracks = () => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
-      localStreamRef.current = null;
     }
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    stopAiScanner();
   };
 
-  const setupCallHandlers = (call) => {
-    call.on('stream', (remoteStream) => {
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
-      setCallStatus('connected');
-      setIncomingCall(false);
-    });
-    call.on('close', () => endCall());
+  const startCall = () => {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        localStreamRef.current = stream;
+        localVideoRef.current.srcObject = stream;
+        setCallStatus('calling');
+
+        const call = peerRef.current.call(targetUser.uid, stream);
+        callRef.current = call;
+
+        call.on('stream', remoteStream => {
+          remoteVideoRef.current.srcObject = remoteStream;
+        });
+      })
+      .catch(err => console.error('Get media error:', err));
   };
 
-  const startCall = async () => {
-    setCallStatus('calling');
-    const stream = await getLocalStream();
-    if (!stream) { setCallStatus('idle'); return; }
-    
-    const call = peerRef.current.call(targetUser.uid, stream);
-    callRef.current = call;
-    setupCallHandlers(call);
-    
-    const offer = call.peerConnection.localDescription;
-    await setDoc(doc(db, 'signaling', roomId), {
-      offer,
-      from: currentUser.uid,
-      to: targetUser.uid,
-      timestamp: Date.now()
-    });
-  };
+  const answerCall = () => {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        localStreamRef.current = stream;
+        localVideoRef.current.srcObject = stream;
+        setCallStatus('connected');
 
-  const answerCall = async () => {
-    if (!callRef.current) return;
-    const stream = await getLocalStream();
-    callRef.current.answer(stream);
-    setupCallHandlers(callRef.current);
-    setCallStatus('connected');
-    setIncomingCall(false);
-    
-    const answer = callRef.current.peerConnection.localDescription;
-    await setDoc(doc(db, 'signaling', roomId), {
-      answer,
-      from: currentUser.uid,
-      to: targetUser.uid,
-      timestamp: Date.now()
-    }, { merge: true });
+        callRef.current.answer(stream);
+        callRef.current.on('stream', remoteStream => {
+          remoteVideoRef.current.srcObject = remoteStream;
+        });
+
+        setDoc(doc(db, 'calls', roomId), { answered: true }, { merge: true });
+      })
+      .catch(err => console.error('Answer call error:', err));
   };
 
   const rejectCall = () => {
-    if (callRef.current) callRef.current.close();
-    setIncomingCall(false);
-    setCallStatus('idle');
-    deleteDoc(doc(db, 'signaling', roomId));
+    setCallStatus('rejected');
+    setDoc(doc(db, 'calls', roomId), { rejected: true }, { merge: true });
+    onClose();
   };
 
   const endCall = () => {
-    if (callRef.current) callRef.current.close();
     cleanStreamTracks();
-    setCallStatus('idle');
-    setIncomingCall(false);
-    setIsMuted(false);
-    setIsVideoOff(false);
-    deleteDoc(doc(db, 'signaling', roomId));
+    deleteDoc(doc(db, 'calls', roomId));
+    setCallStatus('ended');
+    onClose();
   };
 
   const toggleMute = () => {
-    if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMuted(!audioTrack.enabled);
-      }
+    const audioTrack = localStreamRef.current?.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = isMuted;
+      setIsMuted(!isMuted);
     }
   };
 
   const toggleVideo = () => {
-    if (localStreamRef.current) {
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoOff(!videoTrack.enabled);
-      }
+    const videoTrack = localStreamRef.current?.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = isVideoOff;
+      setIsVideoOff(!isVideoOff);
     }
   };
 
   return (
-    <div className="video-call-modal" role="dialog" aria-modal="true">
+    <div className="video-call-modal">
       <div className="video-call-container">
-        <button className="close-call-btn" onClick={onClose} aria-label="Close Interface">✕</button>
+        <button className="close-call-btn" onClick={endCall}>✕</button>
+        
+        <h2>📹 Video Call with {targetUser.name}</h2>
 
-        <div className="section-title">
-          📹 Video Call with {targetUser.name}
-        </div>
-
-        <div className={`video-grid ${callStatus}`}>
+        <div className="video-frames">
           <div className="remote-video">
             <video ref={remoteVideoRef} autoPlay playsInline />
             <span>{targetUser.name}</span>
@@ -188,6 +197,27 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
             <span>You</span>
           </div>
         </div>
+
+        {/* 🌟 VIDEO CALL AI TRANSLATION HUD */}
+        {callStatus === 'connected' && (
+          <div style={{ background: '#07091A', padding: '15px', borderRadius: '15px', margin: '15px 0', border: '1px solid #00DDB3' }}>
+            <h4 style={{ color: '#00DDB3', margin: '0 0 10px 0', textAlign: 'center' }}>🤟 Live Sign Language Translator (AI)</h4>
+            <div style={{ textAlign: 'center', marginBottom: '10px', color: '#fff', fontSize: '16px', fontWeight: 'bold' }}>
+              {aiStatusText}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+              {!isAiScanning ? (
+                <button onClick={startAiScanner} style={{ background: '#00DDB3', border: 'none', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  🔍 මගේ කැමරාව ස්කෑන් කරන්න
+                </button>
+              ) : (
+                <button onClick={stopAiScanner} style={{ background: '#FF3355', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  🛑 ස්කෑන් කිරීම නවත්වන්න
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="call-controls">
           {callStatus === 'idle' && (

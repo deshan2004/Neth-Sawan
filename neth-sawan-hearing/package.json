@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@teachablemachine/image": "^0.8.5",
+    "@tensorflow/tfjs": "^4.22.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
