@@ -12,9 +12,6 @@ const OnlineUsers = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [chatUser, setChatUser] = useState(null);
   const [isTranslatorOpen, setIsTranslatorOpen] = useState(false);
-  
-  // 🌟 Close කළත් History එක නොමැකී තබා ගැනීමට State එක මෙතනට ගෙනාවා!
-  const [translationHistory, setTranslationHistory] = useState([]);
 
   const currentUser = auth.currentUser;
 
@@ -42,25 +39,24 @@ const OnlineUsers = () => {
       });
       setOnlineUsers(users);
     });
+
     return () => unsubscribe();
   }, [currentUser]);
 
   return (
     <div className="online-users-container">
-      
-      {/* 🌟 Translate Screen එක Open කරන Button එකක් */}
-      <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-        <button 
-          className="video-call-btn" 
+      {/* Translator Button */}
+      <div className="translator-section">
+        <button
+          className="translator-open-btn"
           onClick={() => setIsTranslatorOpen(true)}
-          style={{ padding: '15px 30px', fontSize: '16px', cursor: 'pointer' }}
         >
-          📸 Open In-Person Translator
+          📸 සජීවී සංඥා පරිවර්තකය විවෘත කරන්න
         </button>
       </div>
 
       {onlineUsers.length === 0 ? (
-        <div className="no-users"> දැනට කිසිවෙකු online නැත. </div>
+        <div className="no-users">👤 දැනට කිසිවෙකු online නැත. මිතුරන්ට යෙදුම බෙදාගන්න!</div>
       ) : (
         <div className="online-users-list">
           {onlineUsers.map(user => (
@@ -75,14 +71,14 @@ const OnlineUsers = () => {
               </div>
               <div className="user-info">
                 <span className="user-name">{user.name || 'User'}</span>
-                <span className="user-status">Online</span>
+                <span className="user-status">🟢 Online</span>
               </div>
               <div className="user-buttons">
                 <button className="video-call-btn" onClick={() => setSelectedUser(user)}>
-                  📹 Video Call (Sign Language)
+                  📹 Video Call
                 </button>
                 <button className="chat-btn" onClick={() => setChatUser(user)}>
-                  💬 Text Chat
+                  💬 Chat
                 </button>
               </div>
             </div>
@@ -90,13 +86,8 @@ const OnlineUsers = () => {
         </div>
       )}
 
-      {/* 🌟 Translator Component එකට History State සහ Setter එක Props විදිහට යැවීම */}
       {isTranslatorOpen && (
-        <InPersonTranslator 
-          translationHistory={translationHistory}
-          setTranslationHistory={setTranslationHistory}
-          onClose={() => setIsTranslatorOpen(false)}
-        />
+        <InPersonTranslator onClose={() => setIsTranslatorOpen(false)} />
       )}
 
       {selectedUser && (
@@ -106,6 +97,7 @@ const OnlineUsers = () => {
           onClose={() => setSelectedUser(null)}
         />
       )}
+
       {chatUser && (
         <ChatComponent
           targetUser={chatUser}

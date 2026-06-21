@@ -1,30 +1,41 @@
-/* ==========================================================================
-   InPersonTranslator.css - Full Viewfinder Scanner Styles
-   ========================================================================== */
+/* src/components/InPersonTranslator.css */
 
 .in-person-translator-overlay {
   position: fixed;
   inset: 0;
   background: rgba(5, 6, 18, 0.95);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 3500;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .translator-window {
-  background: #0D0F22;
+  background: linear-gradient(145deg, #0D0F22, #1A1E3A);
   border: 1px solid rgba(0, 221, 179, 0.3);
   border-radius: 28px;
   width: 100%;
-  max-width: 600px;
-  padding: 20px;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+  max-width: 640px;
+  padding: 24px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .translator-header {
@@ -34,23 +45,34 @@
 }
 
 .translator-header h3 {
-  font-size: 18px;
+  font-size: 20px;
   color: #00DDB3;
   margin: 0;
+  font-weight: 700;
 }
 
 .exit-btn {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   border: none;
   color: #8899CC;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   cursor: pointer;
-  font-weight: bold;
+  font-size: 18px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Viewfinder Area */
+.exit-btn:hover {
+  background: rgba(255, 51, 85, 0.15);
+  color: #FF3355;
+  transform: scale(1.05);
+}
+
+/* Camera View */
 .camera-viewfinder-zone {
   position: relative;
   width: 100%;
@@ -58,7 +80,7 @@
   background: #040510;
   border-radius: 20px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .live-scanner-video {
@@ -67,7 +89,7 @@
   object-fit: cover;
 }
 
-/* Scanner Brackets [ ] Overlay */
+/* Scanner Brackets */
 .viewfinder-brackets {
   position: absolute;
   inset: 30px;
@@ -76,16 +98,16 @@
 
 .corner {
   position: absolute;
-  width: 20px;
-  height: 20px;
-  border: 3px solid #00DDB3;
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(0, 221, 179, 0.7);
 }
 .top-left { top: 0; left: 0; border-right: none; border-bottom: none; }
 .top-right { top: 0; right: 0; border-left: none; border-bottom: none; }
 .bottom-left { bottom: 0; left: 0; border-right: none; border-top: none; }
 .bottom-right { bottom: 0; right: 0; border-left: none; border-top: none; }
 
-/* Camera Activation Screen */
+/* Camera Prompt */
 .camera-prompt {
   position: absolute;
   inset: 0;
@@ -94,77 +116,100 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
 }
 
 .camera-icon {
-  font-size: 44px;
+  font-size: 52px;
 }
 
 .activate-cam-btn {
-  background: #00DDB3;
+  background: linear-gradient(135deg, #00DDB3, #00B899);
   color: #07091A;
   border: none;
-  padding: 12px 24px;
-  border-radius: 30px;
+  padding: 14px 32px;
+  border-radius: 40px;
   font-weight: 700;
   cursor: pointer;
-  font-size: 14px;
-  box-shadow: 0 4px 15px rgba(0, 221, 179, 0.3);
+  font-size: 16px;
+  box-shadow: 0 4px 20px rgba(0, 221, 179, 0.3);
+  transition: all 0.2s;
 }
 
-/* 🌟 HUD Text overlay directly over the live camera */
+.activate-cam-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 221, 179, 0.4);
+}
+
+.activate-cam-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Live HUD */
 .live-hud-caption {
   position: absolute;
-  bottom: 16px;
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  width: 90%;
-  background: rgba(7, 9, 26, 0.85);
+  width: 92%;
+  background: rgba(7, 9, 26, 0.88);
   border: 1px solid rgba(245, 200, 66, 0.4);
-  border-radius: 14px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 14px 18px;
   text-align: center;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
 }
 
 .hud-tag {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   color: #F5C842;
   display: block;
   margin-bottom: 4px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .hud-text {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #ffffff;
   margin: 0;
 }
 
-/* Control Buttons */
+/* Controls */
 .translator-actions {
   display: flex;
   justify-content: center;
+  gap: 12px;
 }
 
 .stop-scan-btn {
-  background: rgba(255, 51, 85, 0.2);
+  background: rgba(255, 51, 85, 0.15);
   border: 1px solid #FF3355;
   color: #FF3355;
-  padding: 10px 20px;
-  border-radius: 30px;
+  padding: 12px 28px;
+  border-radius: 40px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
-/* History Box Styles */
+.stop-scan-btn:hover {
+  background: rgba(255, 51, 85, 0.25);
+  transform: translateY(-2px);
+}
+
+/* History */
 .history-log-section {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.25);
   border-radius: 16px;
-  padding: 14px;
-  border: 1px solid rgba(255,255,255,0.03);
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .history-log-section h4 {
@@ -177,16 +222,17 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 110px;
+  max-height: 120px;
   overflow-y: auto;
 }
 
 .history-item-row {
   font-size: 13px;
-  color: #A0A8D0;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 6px 12px;
+  color: #D0D8FF;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 14px;
   border-radius: 8px;
+  border-left: 3px solid #00DDB3;
 }
 
 .empty-history-text {
@@ -200,4 +246,38 @@
   font-size: 11px;
   color: #5C628A;
   text-align: center;
+  padding: 4px 0;
+}
+
+/* Scrollbar */
+.history-box::-webkit-scrollbar {
+  width: 4px;
+}
+.history-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+.history-box::-webkit-scrollbar-thumb {
+  background: #00DDB3;
+  border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .translator-window {
+    padding: 16px;
+    border-radius: 20px;
+  }
+  .translator-header h3 {
+    font-size: 16px;
+  }
+  .hud-text {
+    font-size: 15px;
+  }
+  .viewfinder-brackets {
+    inset: 16px;
+  }
+  .corner {
+    width: 16px;
+    height: 16px;
+  }
 }
