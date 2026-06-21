@@ -4,7 +4,7 @@ import * as tf from '@tensorflow/tfjs';
 import * as tmImage from '@teachablemachine/image';
 import './InPersonTranslator.css';
 
-// ⚠️ ඔයාගේ Teachable Machine ලින්ක් එක මෙතනට දෙන්න!
+// ⚠️ Replace with your Teachable Machine URL
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/q7qApyLqo/";
 
 const SINHALA_CLASS_MAP = {
@@ -23,6 +23,8 @@ const InPersonTranslator = ({ onClose }) => {
   const [liveTranslation, setLiveTranslation] = useState('📷 කැමරාව සක්‍රීය කර සංඥා කරන්න...');
   const [translationHistory, setTranslationHistory] = useState([]);
   const [error, setError] = useState('');
+  const [facingMode, setFacingMode] = useState('environment');
+  const [isFlipping, setIsFlipping] = useState(false);
 
   const cameraFeedRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -36,17 +38,23 @@ const InPersonTranslator = ({ onClose }) => {
     setLiveTranslation('🧠 AI මොඩලය පූරණය වෙමින්...');
 
     try {
-      // 1. Load AI Model
       const modelPath = MODEL_URL + "model.json";
       const metadataPath = MODEL_URL + "metadata.json";
       modelRef.current = await tmImage.load(modelPath, metadataPath);
       maxPredictionsRef.current = modelRef.current.getTotalClasses();
 
-      // 2. Start Camera
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: 640, height: 480 },
+        video: {
+          facingMode: facingMode,
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
         audio: false
       });
+
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
 
       localStreamRef.current = stream;
       if (cameraFeedRef.current) {
@@ -57,7 +65,9 @@ const InPersonTranslator = ({ onClose }) => {
       setModelLoading(false);
       setLiveTranslation('🤟 සජීවී AI ස්කෑන් කිරීම ක්‍රියාත්මකයි! සංඥා කරන්න...');
 
-      // 3. Start prediction loop
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
       animationFrameIdRef.current = requestAnimationFrame(predictLoop);
 
     } catch (err) {
@@ -95,7 +105,55 @@ const InPersonTranslator = ({ onClose }) => {
 
   const addToHistory = (text) => {
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    setTranslationHistory(prev => [`[${timestamp}] ${text}`, ...prev.slice(0, 4)]);
+    setTranslationHistory(prev => [`[${timestamp}] ${text}`, ...prev.slice(0, 9)]);
+  };
+
+  // 🔥 Simple Flip: just toggle the camera, no persistent messages
+  const flipCamera = async () => {
+    if (!isCameraActive || isFlipping) return;
+    setIsFlipping(true);
+
+    try {
+      // Stop current stream
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
+      }
+      if (cameraFeedRef.current) {
+        cameraFeedRef.current.srcObject = null;
+      }
+
+      // Toggle mode
+      const newMode = facingMode === 'environment' ? 'user' : 'environment';
+      setFacingMode(newMode);
+
+      // Restart stream with new mode
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: newMode,
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+        audio: false
+      });
+
+      localStreamRef.current = stream;
+      if (cameraFeedRef.current) {
+        cameraFeedRef.current.srcObject = stream;
+      }
+
+      setIsFlipping(false);
+      // The liveTranslation stays as it was – no forced message
+
+    } catch (err) {
+      console.error('Flip error:', err);
+      setError('කැමරාව හැරවීම අසාර්ථකයි');
+      setIsFlipping(false);
+      // Attempt to restart with current mode
+      setTimeout(() => {
+        if (isCameraActive) startCameraScanner();
+      }, 1000);
+    }
   };
 
   const stopCameraScanner = () => {
@@ -121,17 +179,14 @@ const InPersonTranslator = ({ onClose }) => {
   return (
     <div className="in-person-translator-overlay">
       <div className="translator-window">
-        {/* Header */}
         <div className="translator-header">
           <h3>📸 සජීවී AI සංඥා පරිවර්තකය</h3>
           <button className="exit-btn" onClick={onClose}>✕</button>
         </div>
 
-        {/* Camera View */}
         <div className="camera-viewfinder-zone">
           <video ref={cameraFeedRef} autoPlay playsInline muted className="live-scanner-video" />
 
-          {/* Scanner brackets */}
           <div className="viewfinder-brackets">
             <div className="corner top-left"></div>
             <div className="corner top-right"></div>
@@ -139,7 +194,6 @@ const InPersonTranslator = ({ onClose }) => {
             <div className="corner bottom-right"></div>
           </div>
 
-          {/* Camera prompt (when not active) */}
           {!isCameraActive && (
             <div className="camera-prompt">
               <span className="camera-icon">{modelLoading ? "🧠" : "📷"}</span>
@@ -154,7 +208,6 @@ const InPersonTranslator = ({ onClose }) => {
             </div>
           )}
 
-          {/* Live translation HUD */}
           {isCameraActive && (
             <div className="live-hud-caption">
               <span className="hud-tag">🔴 LIVE TRANSLATION</span>
@@ -163,16 +216,18 @@ const InPersonTranslator = ({ onClose }) => {
           )}
         </div>
 
-        {/* Controls */}
         {isCameraActive && (
           <div className="translator-actions">
+            {/* 🔥 Simple Flip button – no extra messages */}
+            <button className="flip-cam-btn" onClick={flipCamera} disabled={isFlipping}>
+              {isFlipping ? '⏳' : '🔄 හරවන්න'}
+            </button>
             <button className="stop-scan-btn" onClick={stopCameraScanner}>
               🛑 නවත්වන්න
             </button>
           </div>
         )}
 
-        {/* History */}
         <div className="history-log-section">
           <h4>📋 මෑතකදී හඳුනාගත් සංඥා</h4>
           <div className="history-box">
@@ -186,7 +241,6 @@ const InPersonTranslator = ({ onClose }) => {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="user-guide-footer">
           💡 <b>උපදෙස:</b> දෑත් කැමරාවට හොඳින් පෙන්වන්න, ආලෝකය හොඳින් ඇති ස්ථානයක සිටින්න.
         </div>

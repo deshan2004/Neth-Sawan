@@ -280,4 +280,52 @@
     width: 16px;
     height: 16px;
   }
+}/* src/components/InPersonTranslator.css */
+
+/* ... (rest of the styles remain the same) ... */
+
+/* Controls - Updated to include flip button */
+.translator-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stop-scan-btn,
+.flip-cam-btn {
+  padding: 12px 28px;
+  border-radius: 40px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.stop-scan-btn {
+  background: rgba(255, 51, 85, 0.15);
+  border: 1px solid #FF3355;
+  color: #FF3355;
+}
+
+.stop-scan-btn:hover {
+  background: rgba(255, 51, 85, 0.25);
+  transform: translateY(-2px);
+}
+
+.flip-cam-btn {
+  background: rgba(0, 221, 179, 0.15);
+  border: 1px solid #00DDB3;
+  color: #00DDB3;
+}
+
+.flip-cam-btn:hover:not(:disabled) {
+  background: rgba(0, 221, 179, 0.25);
+  transform: translateY(-2px);
+}
+
+.flip-cam-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

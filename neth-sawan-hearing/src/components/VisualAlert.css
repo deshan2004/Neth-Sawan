@@ -240,4 +240,38 @@
 .sound-chip {
   padding: 6px 12px;
   font-size: 0.75rem;
+}/* src/components/VideoCall.css */
+
+/* ... (rest of the styles remain the same) ... */
+
+/* 🔥 Flip button inside local video */
+.flip-cam-btn-video {
+  position: absolute;
+  bottom: 60px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.flip-cam-btn-video:hover:not(:disabled) {
+  background: rgba(0, 221, 179, 0.3);
+  border-color: #00DDB3;
+  transform: scale(1.1);
+}
+
+.flip-cam-btn-video:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

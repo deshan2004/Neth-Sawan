@@ -11,6 +11,9 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  // 🔥 New state for camera facing mode: 'user' (front) or 'environment' (back)
+  const [facingMode, setFacingMode] = useState('user'); // Default to front camera for video calls
+  const [isFlipping, setIsFlipping] = useState(false);
 
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
@@ -76,16 +79,77 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
     return () => unsubscribe();
   }, [roomId, currentUser.uid, callStatus, incomingCall, targetUser.uid]);
 
-  const getLocalStream = async () => {
-    if (localStreamRef.current) return localStreamRef.current;
+  // 🔥 Updated getLocalStream to accept facing mode
+  const getLocalStream = async (mode = facingMode) => {
+    if (localStreamRef.current) {
+      // If we already have a stream, just return it (unless we want to force a change)
+      return localStreamRef.current;
+    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: mode,
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+        audio: true
+      });
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       return stream;
     } catch (err) {
       console.error("Failed to get media devices:", err);
       return null;
+    }
+  };
+
+  // 🔥 Flip Camera Function
+  const flipCamera = async () => {
+    if (isFlipping) return;
+    setIsFlipping(true);
+
+    try {
+      // 1. Determine new mode
+      const newMode = facingMode === 'environment' ? 'user' : 'environment';
+      setFacingMode(newMode);
+
+      // 2. Stop current stream tracks
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
+      }
+
+      // 3. Get new stream with new mode
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: newMode,
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+        audio: true
+      });
+
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      // 4. If call is connected, replace the video track in the peer connection
+      if (callStatus === 'connected' && callRef.current) {
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+          const senders = callRef.current.peerConnection.getSenders();
+          const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+          if (videoSender) {
+            await videoSender.replaceTrack(videoTrack);
+          }
+        }
+      }
+
+      setIsFlipping(false);
+    } catch (err) {
+      console.error('Flip camera error:', err);
+      setIsFlipping(false);
     }
   };
 
@@ -230,6 +294,17 @@ const VideoCall = ({ targetUser, currentUser, onClose }) => {
           <div className="local-video">
             <video ref={localVideoRef} autoPlay playsInline muted />
             <span>You</span>
+            {/* 🔥 Flip button inside local video overlay */}
+            {(callStatus === 'idle' || callStatus === 'connected' || callStatus === 'calling') && (
+              <button 
+                className="flip-cam-btn-video" 
+                onClick={flipCamera} 
+                disabled={isFlipping}
+                title="Flip Camera"
+              >
+                {isFlipping ? '⏳' : '🔄'}
+              </button>
+            )}
           </div>
         </div>
 
