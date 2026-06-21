@@ -8,7 +8,8 @@ const Header = ({
   roadSafetyActive, setRoadSafetyActive,
   emergencyNotificationsEnabled, onToggleEmergencyNotifications,
   onToggleSidebar, sidebarOpen,
-  fallDetectorBlocked, onRequestFallPermission
+  fallDetectorBlocked, onRequestFallPermission,
+  onTestFall  // 👈 New prop
 }) => {
   const { t } = useLanguage();
 
@@ -26,6 +27,15 @@ const Header = ({
       </div>
 
       <div className="header-right">
+        {/* 🔥 NEW: Test Fall Button */}
+        <button 
+          className="test-fall-btn"
+          onClick={onTestFall}
+          title="Simulate a fall for testing emergency alerts"
+        >
+          🧪 Test Fall
+        </button>
+
         {fallDetectorBlocked && (
           <button 
             className="fall-permission-btn"
