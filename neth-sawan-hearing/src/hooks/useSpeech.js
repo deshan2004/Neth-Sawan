@@ -1,3 +1,4 @@
+// src/hooks/useSpeech.js
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const useSpeech = (initialLang = 'si-LK') => {
@@ -5,11 +6,14 @@ export const useSpeech = (initialLang = 'si-LK') => {
   const [isListening, setIsListening] = useState(false);
   const [lang, setLangState] = useState(initialLang);
   const [error, setError] = useState('');
-  const recognitionRef = useRef(null);
-  const listeningRef = useRef(false);
   const [supported, setSupported] = useState(true);
   const [browserInfo, setBrowserInfo] = useState('');
   const [microphonePermission, setMicrophonePermission] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const recognitionRef = useRef(null);
+  const listeningRef = useRef(false);
+  const restartTimeoutRef = useRef(null);
 
   // Choose correct SpeechRecognition constructor
   const SpeechRecognitionAPI = typeof window !== 'undefined'
@@ -44,13 +48,6 @@ export const useSpeech = (initialLang = 'si-LK') => {
       rec.lang = language;
       rec.maxAlternatives = 1;
 
-      // Mobile: sometimes need to disable continuous mode? Keep it but handle restarts.
-      if (/iPhone|iPad|Android/i.test(navigator.userAgent)) {
-        // On some Android versions, continuous mode may stop unexpectedly
-        // We'll keep it but add robust reconnection
-        console.log('Mobile device detected, enabling aggressive reconnection');
-      }
-
       rec.onresult = (event) => {
         let current = '';
         for (let i = 0; i < event.results.length; i++) {
@@ -70,21 +67,21 @@ export const useSpeech = (initialLang = 'si-LK') => {
         console.error('Speech recognition error:', event.error);
         
         let userMessage = '';
-        if (event.error === 'not-allowed') {
-          userMessage = 'Microphone access denied. Please allow microphone in browser settings, then refresh.';
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          userMessage = '🎤 Microphone access denied. Please allow microphone in browser settings, then tap "Retry" below.';
           setMicrophonePermission('denied');
         } else if (event.error === 'audio-capture') {
-          userMessage = 'No microphone found. Please connect a microphone.';
+          userMessage = '🎤 No microphone found. Please connect a microphone.';
         } else if (event.error === 'network') {
-          userMessage = 'Network error. Check your internet connection.';
+          userMessage = '🌐 Network error. Check your internet connection.';
         } else if (event.error === 'aborted') {
-          // usually when stopListening is called, ignore
+          // Usually when stopListening is called, ignore
           return;
         } else if (event.error === 'no-speech') {
-          // ignore, user just not speaking
+          // Ignore, user just not speaking
           return;
         } else {
-          userMessage = `Error: ${event.error}. Try reloading the page.`;
+          userMessage = `⚠️ Error: ${event.error}. Try refreshing the page.`;
         }
         
         if (userMessage) {
@@ -103,7 +100,10 @@ export const useSpeech = (initialLang = 'si-LK') => {
         if (listeningRef.current) {
           // Auto-restart on mobile if we still intend to listen
           console.log('Auto-restarting speech recognition...');
-          setTimeout(() => {
+          if (restartTimeoutRef.current) {
+            clearTimeout(restartTimeoutRef.current);
+          }
+          restartTimeoutRef.current = setTimeout(() => {
             if (listeningRef.current && recognitionRef.current) {
               try {
                 recognitionRef.current.start();
@@ -114,6 +114,7 @@ export const useSpeech = (initialLang = 'si-LK') => {
                 setIsListening(false);
               }
             }
+            restartTimeoutRef.current = null;
           }, 300);
         } else {
           setIsListening(false);
@@ -124,6 +125,7 @@ export const useSpeech = (initialLang = 'si-LK') => {
         console.log('Speech recognition started successfully');
         setError('');
         setIsListening(true);
+        setMicrophonePermission('granted');
       };
 
       return rec;
@@ -141,6 +143,10 @@ export const useSpeech = (initialLang = 'si-LK') => {
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch(e) {}
     }
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
 
     const newRecognition = createRecognition(lang);
     recognitionRef.current = newRecognition;
@@ -150,6 +156,10 @@ export const useSpeech = (initialLang = 'si-LK') => {
     return () => {
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch(e) {}
+      }
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
       }
     };
   }, [lang, createRecognition, SpeechRecognitionAPI]);
@@ -164,16 +174,41 @@ export const useSpeech = (initialLang = 'si-LK') => {
     } catch (err) {
       console.error('Microphone permission error:', err);
       if (err.name === 'NotAllowedError') {
-        setError('Microphone access denied. Please tap the lock icon in your browser and allow microphone, then refresh.');
+        setError('🎤 Microphone access denied. Please tap the lock icon in your browser and allow microphone, then refresh.');
       } else if (err.name === 'NotFoundError') {
-        setError('No microphone found on your device.');
+        setError('🎤 No microphone found on your device.');
       } else {
-        setError('Could not access microphone. Please check your permissions.');
+        setError('🎤 Could not access microphone. Please check your permissions.');
       }
       setMicrophonePermission('denied');
       return false;
     }
   };
+
+  // 🔥 Retry function – resets error state and attempts to start again
+  const retryListening = useCallback(async () => {
+    setError('');
+    setRetryCount(prev => prev + 1);
+    
+    // If permission was denied, request again
+    if (microphonePermission === 'denied') {
+      setMicrophonePermission(null);
+    }
+    
+    // Clean up old recognition
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch(e) {}
+    }
+    listeningRef.current = false;
+    setIsListening(false);
+    
+    // Recreate recognition
+    const newRecognition = createRecognition(lang);
+    recognitionRef.current = newRecognition;
+    
+    // Try starting
+    await startListening();
+  }, [microphonePermission, lang, createRecognition]);
 
   const startListening = useCallback(async () => {
     setError('');
@@ -258,5 +293,7 @@ export const useSpeech = (initialLang = 'si-LK') => {
     supported,
     browserInfo,
     microphonePermission,
+    retryListening,  // 🔥 New: retry function
+    retryCount,     // 🔥 New: retry count
   };
 };

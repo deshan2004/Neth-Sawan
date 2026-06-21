@@ -94,7 +94,21 @@ function AppContent() {
   const [fallDetectorBlocked, setFallDetectorBlocked] = useState(false);
 
   // ===== HOOKS =====
-  const { transcript, isListening, startListening, stopListening, clearTranscript, setLang, lang, error: speechError, browserInfo } = useSpeech();
+  // 🔥 Added retryListening and microphonePermission to destructuring
+  const { 
+    transcript, 
+    isListening, 
+    startListening, 
+    stopListening, 
+    clearTranscript, 
+    setLang, 
+    lang, 
+    error: speechError, 
+    browserInfo,
+    retryListening,        // 👈 New
+    microphonePermission   // 👈 New
+  } = useSpeech();
+  
   const { volume, isLoud, soundType, soundHistory, threshold, setThreshold } = useVolume(0.15);
   const {
     notificationQueue, markAsRead, clearNotifications,
@@ -452,7 +466,7 @@ function AppContent() {
           sidebarOpen={sidebarOpen}
           fallDetectorBlocked={fallDetectorBlocked}
           onRequestFallPermission={handleRequestFallPermission}
-          onTestFall={handleFallEmergency}  // 👈 Passed here
+          onTestFall={handleFallEmergency}
         />
 
         {/* ===== MAIN CONTENT ===== */}
@@ -474,6 +488,8 @@ function AppContent() {
                     browserInfo={browserInfo}
                     setLang={setLang}
                     currentLang={lang}
+                    retryListening={retryListening}        // 👈 New prop
+                    microphonePermission={microphonePermission} // 👈 New prop
                   />
                 </div>
                 <div className="sign-box">
@@ -620,7 +636,7 @@ function AppContent() {
               </div>
               <div className="emergency-instructions-box" style={{ padding: '20px', background: 'rgba(255,0,51,0.05)', borderRadius: '16px', borderLeft: '4px solid #FF0033' }}>
                 <h4 style={{ color: '#FF0033', marginBottom: '12px' }}>⚠️ {t('emergencyInstructions') || 'Emergency Instructions'}</h4>
-                <ul style={{ listStyle: 'none', padding: 0 }}>
+                <ul style={{ listStyle: 'none', padding: 0 }}>                  
                   <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>🔴 {t('redFlashing') || 'Red Flashing Screen = Emergency detected or SOS activated'}</li>
                   <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📳 {t('vibration') || 'Phone Vibration = Alert being sent to your contacts'}</li>
                   <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📱 {t('contactsNotify') || 'Emergency Contacts = Will receive WhatsApp/SMS alerts'}</li>

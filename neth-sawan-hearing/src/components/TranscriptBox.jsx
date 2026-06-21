@@ -1,3 +1,4 @@
+// src/components/TranscriptBox.jsx
 import React, { useRef, useEffect, useState } from 'react';
 import './TranscriptBox.css';
 
@@ -10,7 +11,9 @@ const TranscriptBox = ({
   error,
   browserInfo,
   setLang,
-  currentLang
+  currentLang,
+  retryListening,  // 👈 New prop
+  microphonePermission // 👈 New prop
 }) => {
   const scrollRef = useRef(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -121,10 +124,16 @@ const TranscriptBox = ({
         </div>
       )}
 
+      {/* 🔥 Improved Error Message with Retry Button */}
       {error && (
         <div className="error-message">
           <span className="error-icon">⚠️</span>
-          <span>{error}</span>
+          <span className="error-text">{error}</span>
+          {(error.includes('denied') || error.includes('service-not-allowed') || error.includes('permission') || error.includes('Microphone')) ? (
+            <button className="error-retry-btn" onClick={retryListening}>
+              🔄 Retry
+            </button>
+          ) : null}
         </div>
       )}
 

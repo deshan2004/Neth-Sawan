@@ -22,7 +22,11 @@ const SimpleDashboard = ({
   setThreshold,
   soundHistory,
   emergencyNotificationsEnabled,
-  roadSafetyActive
+  roadSafetyActive,
+  setLang,
+  lang,
+  retryListening,        // 👈 New prop
+  microphonePermission   // 👈 New prop
 }) => {
   return (
     <div className="simple-dashboard">
@@ -44,6 +48,10 @@ const SimpleDashboard = ({
           clearTranscript={clearTranscript} 
           error={speechError}
           browserInfo={browserInfo}
+          setLang={setLang}
+          currentLang={lang}
+          retryListening={retryListening}        // 👈 New
+          microphonePermission={microphonePermission} // 👈 New
         />
       </div>
 
