@@ -1,5 +1,9 @@
 // src/components/TranscriptBox.jsx
 import React, { useRef, useEffect, useState } from 'react';
+import { 
+  FiMic, FiMicOff, FiTrash2, FiMaximize2, FiMinimize2, 
+  FiCopy, FiCheck, FiInfo, FiActivity, FiGlobe 
+} from 'react-icons/fi';
 import './TranscriptBox.css';
 
 const TranscriptBox = ({ 
@@ -12,293 +16,197 @@ const TranscriptBox = ({
   browserInfo,
   setLang,
   currentLang,
-  retryListening,        // 👈 For mobile retry
-  microphonePermission,  // 👈 Shows mic status
-  recognitionStatus,     // 👈 Shows recognition state
-  supported              // 👈 Shows if browser supports speech
+  retryListening,
+  microphonePermission,
+  recognitionStatus,
+  supported,
+  onTranscriptChange
 }) => {
   const scrollRef = useRef(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [fontSize, setFontSize] = useState(20);
   const [showBraille, setShowBraille] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [typedText, setTypedText] = useState('');
 
   const languageOptions = [
     { code: 'si-LK', label: 'සිංහල', flag: '🇱🇰' },
     { code: 'en-US', label: 'English', flag: '🇺🇸' },
-    { code: 'ta-LK', label: 'தமிழ்', flag: '🇱🇰' },
-    { code: 'te-IN', label: 'తెలుగు', flag: '🇮🇳' },
-    { code: 'hi-IN', label: 'हिंदी', flag: '🇮🇳' }
+    { code: 'ta-LK', label: 'தமிழ்', flag: '🇱🇰' }
   ];
 
-  // Auto-scroll to bottom when new transcript arrives
+  // Auto-scroll to bottom on new transcripts
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [transcript]);
+  }, [transcript, typedText]);
 
-  // Copy transcript to clipboard
-  const copyToClipboard = async () => {
-    if (!transcript) return;
+  const handleCopy = async () => {
+    const textToCopy = typedText ? `${transcript}\n\n[Typed]: ${typedText}` : transcript;
+    if (!textToCopy) return;
     try {
-      await navigator.clipboard.writeText(transcript);
+      await navigator.clipboard.writeText(textToCopy);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
-      console.error('Copy failed:', err);
+      console.error('Failed to copy text', err);
     }
   };
 
-  // Simple Braille conversion (English letters only)
-  const toBraille = (text) => {
-    const brailleMap = {
-      'A': '⠁', 'B': '⠃', 'C': '⠉', 'D': '⠙', 'E': '⠑',
-      'F': '⠋', 'G': '⠛', 'H': '⠓', 'I': '⠊', 'J': '⠚',
-      'K': '⠅', 'L': '⠇', 'M': '⠍', 'N': '⠝', 'O': '⠕',
-      'P': '⠏', 'Q': '⠟', 'R': '⠗', 'S': '⠎', 'T': '⠞',
-      'U': '⠥', 'V': '⠧', 'W': '⠺', 'X': '⠭', 'Y': '⠽',
-      'Z': '⠵', 'a': '⠁', 'b': '⠃', 'c': '⠉', 'd': '⠙',
-      'e': '⠑', 'f': '⠋', 'g': '⠛', 'h': '⠓', 'i': '⠊',
-      'j': '⠚', 'k': '⠅', 'l': '⠇', 'm': '⠍', 'n': '⠝',
-      'o': '⠕', 'p': '⠏', 'q': '⠟', 'r': '⠗', 's': '⠎',
-      't': '⠞', 'u': '⠥', 'v': '⠧', 'w': '⠺', 'x': '⠭',
-      'y': '⠽', 'z': '⠵',
-      ' ': ' ', '.': '⠲', ',': '⠂', '?': '⠦', '!': '⠖'
-    };
-    return text.split('').map(char => brailleMap[char] || char).join('');
+  const changeFontSize = (delta) => {
+    setFontSize(prev => Math.max(14, Math.min(36, prev + delta)));
   };
 
-  const brailleText = transcript ? toBraille(transcript.slice(-200)) : '';
-
-  // Get status text for display
-  const getStatusText = () => {
-    if (isListening) return '🎤 සවන් දෙමින්...';
-    if (recognitionStatus === 'starting') return '⏳ ආරම්භ වෙමින්...';
-    if (error) return '⚠️ දෝෂයකි';
-    return '⏹ නවතා ඇත';
+  const convertToBraille = (text) => {
+    if (!text) return '';
+    const brailleMap = {
+      'a': '⠁', 'b': '⠃', 'c': '⠉', 'd': '⠙', 'e': '⠑', 'f': '⠋', 'g': '⠛', 'h': '⠗', 'i': '⠊', 'j': '⠚',
+      'k': '⠅', 'l': '⠇', 'm': '⠍', 'n': '⠝', 'o': '⠕', 'p': '⠏', 'q': '⠟', 'r': '⠗', 's': '⠎', 't': '⠞',
+      'u': '⠥', 'v': '⠪', 'w': '⠺', 'x': '⠭', 'y': '⠽', 'z': '⠵', ' ': ' ', '.': '⠲', ',': '⠂'
+    };
+    return text.toLowerCase().split('').map(char => brailleMap[char] || char).join('');
   };
 
   return (
-    <div className="transcript-card">
-
+    <div className={`transcript-card ${isListening ? 'listening-active' : ''}`}>
+      
       {/* ===== HEADER ===== */}
       <div className="transcript-header">
         <div className="header-left">
-          <span className="header-icon">📝</span>
-          <span className="header-title">සජීවී පිටපත්</span>
-          {isListening && (
-            <div className="live-badge">
-              <span className="live-dot"></span>
-              <span>සජීවී</span>
-            </div>
-          )}
-          {recognitionStatus === 'starting' && (
-            <span className="status-badge">⏳ ආරම්භ...</span>
-          )}
+          <span className="header-icon">🎤</span>
+          <span className="header-title">Live Captioning</span>
+          <div className="live-indicator-wrapper">
+            <span className={`live-dot ${isListening ? 'pulse' : ''}`}></span>
+            <span className="live-text">{isListening ? 'LIVE' : 'OFFLINE'}</span>
+          </div>
         </div>
+
         <div className="header-right">
-          <div className="lang-selector-wrapper">
-            <span className="lang-icon">🌐</span>
-            <select
+          {/* Language Selection Dropdown */}
+          <div className="lang-select-container">
+            <FiGlobe className="globe-icon" />
+            <select 
               className="lang-select"
-              value={currentLang || 'si-LK'}
+              value={currentLang || 'en-US'} 
               onChange={(e) => setLang(e.target.value)}
-              disabled={isListening}
             >
-              {languageOptions.map(lang => (
+              {languageOptions.map((lang) => (
                 <option key={lang.code} value={lang.code}>
                   {lang.flag} {lang.label}
                 </option>
               ))}
             </select>
           </div>
-          <button
-            className={`diag-toggle ${showDiagnostics ? 'active' : ''}`}
-            onClick={() => setShowDiagnostics(!showDiagnostics)}
-            title="රෝග විනිශ්චය"
-          >
-            🔧
+
+          <button className={`diag-toggle ${showDiagnostics ? 'active' : ''}`} onClick={() => setShowDiagnostics(!showDiagnostics)} title="Diagnostics">
+            <FiActivity />
           </button>
-          <button
-            className={`braille-toggle ${showBraille ? 'active' : ''}`}
-            onClick={() => setShowBraille(!showBraille)}
-            title="බ්‍රේල්"
-          >
-            ⠿
+          <button className={`braille-toggle ${showBraille ? 'active' : ''}`} onClick={() => setShowBraille(!showBraille)} title="Braille Mode">
+            ⠃
           </button>
-          <button
-            className={`copy-btn ${copySuccess ? 'success' : ''}`}
-            onClick={copyToClipboard}
-            disabled={!transcript}
-            title="පිටපත් කරන්න"
-          >
-            {copySuccess ? '✓' : '📋'}
+          <div className="font-controls">
+            <button onClick={() => changeFontSize(-2)} title="Decrease Font"><FiMinimize2 /></button>
+            <span className="font-size-display">{fontSize}px</span>
+            <button onClick={() => changeFontSize(2)} title="Increase Font"><FiMaximize2 /></button>
+          </div>
+          <button className="copy-btn" onClick={handleCopy} disabled={!transcript && !typedText} title="Copy All">
+            {copySuccess ? <FiCheck style={{ color: '#00FF88' }} /> : <FiCopy />}
           </button>
-          <button
-            className="clear-btn"
-            onClick={clearTranscript}
-            disabled={!transcript}
-            title="හිස් කරන්න"
-          >
-            ✕
+          <button className="clear-btn" onClick={() => { clearTranscript(); setTypedText(''); }} disabled={!transcript && !typedText} title="Clear">
+            <FiTrash2 />
           </button>
         </div>
       </div>
 
-      {/* ===== DIAGNOSTICS PANEL ===== */}
+      {/* ===== DIAGNOSTICS ===== */}
       {showDiagnostics && (
-        <div className="diagnostic-panel">
-          <h4>🔧 රෝග විනිශ්චය</h4>
-          <div className="diagnostic-grid">
-            <div className="diagnostic-item">
-              <span className="diag-label">බ්‍රවුසරය:</span>
-              <span className="diag-value">{browserInfo || 'නොදනී'}</span>
-            </div>
-            <div className="diagnostic-item">
-              <span className="diag-label">කථන හඳුනාගැනීම:</span>
-              <span className={`diag-value ${supported ? 'success' : 'danger'}`}>
-                {supported ? '✅ සහාය දක්වයි' : '❌ සහාය නැත'}
-              </span>
-            </div>
-            <div className="diagnostic-item">
-              <span className="diag-label">මයික්‍රෆෝනය:</span>
-              <span className={`diag-value ${microphonePermission === 'granted' ? 'success' : 'danger'}`}>
-                {microphonePermission === 'granted' ? '✅ අවසර ලැබී ඇත' :
-                 microphonePermission === 'denied' ? '❌ ප්‍රතික්ෂේප කර ඇත' : '⏳ පරීක්ෂා වෙමින්'}
-              </span>
-            </div>
-            <div className="diagnostic-item">
-              <span className="diag-label">තත්ත්වය:</span>
-              <span className="diag-value highlight">{getStatusText()}</span>
-            </div>
-            <div className="diagnostic-item">
-              <span className="diag-label">HTTPS:</span>
-              <span className={`diag-value ${window.location.protocol === 'https:' ? 'success' : 'danger'}`}>
-                {window.location.protocol === 'https:' ? '✅' : '❌ (අවශ්‍ය)'}
-              </span>
-            </div>
-          </div>
-          <div className="diagnostic-actions">
-            <button className="diag-retry-btn" onClick={retryListening}>
-              🔄 නැවත උත්සාහ කරන්න
-            </button>
-            <button className="diag-close-btn" onClick={() => setShowDiagnostics(false)}>
-              වසන්න
-            </button>
+        <div className="diagnostics-panel">
+          <div className="diag-grid">
+            <div className="diag-item"><span className="diag-label">Status:</span> <span className={`diag-val status-${recognitionStatus}`}>{recognitionStatus}</span></div>
+            <div className="diag-item"><span className="diag-label">Mic Auth:</span> <span className={`diag-val perm-${microphonePermission}`}>{microphonePermission || 'unknown'}</span></div>
+            <div className="diag-item"><span className="diag-label">Engine:</span> <span className="diag-val font-mono">{browserInfo}</span></div>
+            <div className="diag-item"><span className="diag-label">Language:</span> <span className="diag-val font-mono">{currentLang}</span></div>
           </div>
         </div>
       )}
 
-      {/* ===== TRANSCRIPT CONTENT ===== */}
-      <div className="transcript-content" ref={scrollRef}>
-        {showBraille ? (
-          <div className="braille-display">
-            <div className="braille-header">
-              <span>⠿</span>
-              <span>බ්‍රේල් (අවසන් අකුරු 200)</span>
+      {/* ===== ERROR BANNER ===== */}
+      {error && (
+        <div className="error-message">
+          <div className="error-text">
+            <FiInfo className="error-icon" />
+            <span>{error}</span>
+          </div>
+          {microphonePermission === 'denied' && (
+            <button className="error-retry-btn" onClick={retryListening}>Retry Access</button>
+          )}
+        </div>
+      )}
+
+      {/* ===== MAIN CAPTION DISPLAY AREA ===== */}
+      <div className="transcript-body" ref={scrollRef} style={{ fontSize: `${fontSize}px` }}>
+        {!transcript && !typedText ? (
+          <div className="placeholder-container">
+            <div className="placeholder-icon">🎙️</div>
+            <div className="placeholder-text">
+              {currentLang === 'si-LK' 
+                ? 'කථනය ආරම්භ කරන්න. සජීවී අක්ෂර මෙහි දිස්වනු ඇත...' 
+                : 'Click "Start" and speak. Captions will render in real-time...'}
             </div>
-            <div className="braille-text">{brailleText || 'බ්‍රේල් පෙළක් නැත'}</div>
           </div>
         ) : (
-          <div className="transcript-text-wrapper">
-            {transcript ? (
-              <p className="transcript-text" style={{ fontSize: `${fontSize}px` }}>
-                {transcript}
-              </p>
-            ) : (
-              <div className="placeholder-container">
-                <div className="placeholder-icon">🎤</div>
-                <p className="placeholder-text">
-                  {isListening ? 'සවන් දෙමින්... පැහැදිලිව කතා කරන්න' : 'පහත "සවන් දීම ආරම්භ කරන්න" ඔබන්න'}
-                </p>
-                {!supported && (
-                  <p className="placeholder-error">⚠️ මෙම බ්‍රවුසරය කථන හඳුනාගැනීමට සහාය නොදක්වයි.</p>
-                )}
-                {microphonePermission === 'denied' && (
-                  <p className="placeholder-error">🔇 මයික්‍රෆෝන අවසරය ප්‍රතික්ෂේප කර ඇත. "නැවත උත්සාහ කරන්න" ඔබන්න.</p>
-                )}
+          <div className="transcript-text-container">
+            <p className="transcript-text">
+              {showBraille ? convertToBraille(transcript) : transcript}
+            </p>
+            {typedText && (
+              <div className="typed-text-section">
+                <span className="typed-tag">Manual Input:</span>
+                <p className="typed-content">{showBraille ? convertToBraille(typedText) : typedText}</p>
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* ===== FONT CONTROLS ===== */}
-      {transcript && !showBraille && (
-        <div className="font-controls">
-          <span className="font-label">අකුරු ප්‍රමාණය:</span>
-          <button
-            className="font-btn"
-            onClick={() => setFontSize(Math.max(12, fontSize - 2))}
-            disabled={fontSize <= 12}
-          >
-            A-
-          </button>
-          <span className="font-value">{fontSize}px</span>
-          <button
-            className="font-btn"
-            onClick={() => setFontSize(Math.min(32, fontSize + 2))}
-            disabled={fontSize >= 32}
-          >
-            A+
-          </button>
-          <span className="word-count">
-            📊 {transcript.split(/\s+/).filter(w => w.trim()).length} වචන
-          </span>
-          <span className="char-count">
-            🔤 {transcript.length} අකුරු
-          </span>
-        </div>
-      )}
-
-      {/* ===== ERROR MESSAGE ===== */}
-      {error && (
-        <div className="error-message">
-          <span className="error-icon">⚠️</span>
-          <span className="error-text">{error}</span>
-          {(error.includes('denied') || error.includes('service-not-allowed') || 
-            error.includes('permission') || error.includes('Microphone')) && (
-            <button className="error-retry-btn" onClick={retryListening}>
-              🔄 නැවත උත්සාහ කරන්න
-            </button>
+      {/* ===== FOOTER CONTROLS ===== */}
+      <div className="transcript-footer">
+        <button 
+          className={`action-btn-main ${isListening ? 'stop' : 'start'}`}
+          onClick={isListening ? stopListening : startListening}
+          disabled={!supported}
+        >
+          {isListening ? (
+            <>
+              <FiMicOff className="btn-icon" />
+              <span>Stop Captioning</span>
+            </>
+          ) : (
+            <>
+              <FiMic className="btn-icon" />
+              <span>Start Captioning</span>
+            </>
           )}
-        </div>
-      )}
-
-      {/* ===== START/STOP CONTROLS ===== */}
-      <div className="transcript-controls">
-        {!isListening ? (
-          <button
-            className="btn-start"
-            onClick={startListening}
-            disabled={!supported}
-          >
-            <span className="btn-icon">🎤</span>
-            <span className="btn-text">සවන් දීම ආරම්භ කරන්න</span>
-            <span className="btn-hint">මයික්‍රෆෝනය අවශ්‍යයි</span>
-          </button>
-        ) : (
-          <button className="btn-stop" onClick={stopListening}>
-            <span className="btn-icon">⏹️</span>
-            <span className="btn-text">සවන් දීම නවත්වන්න</span>
-            <span className="btn-hint">අවසන් කිරීමට ඔබන්න</span>
-          </button>
-        )}
+        </button>
       </div>
 
-      {/* ===== LISTENING STATUS ===== */}
-      {isListening && (
-        <div className="listening-status">
-          <div className="wave-animation">
-            <span></span><span></span><span></span><span></span><span></span>
-          </div>
-          <div className="status-info">
-            <span className="status-text">මයික්‍රෆෝනය ක්‍රියාකාරීයි</span>
-            <span className="status-subtext">පැහැදිලිව කතා කරන්න</span>
-          </div>
+      {/* ===== SINHALA MANUAL TYPING COMPONENT ===== */}
+      {currentLang === 'si-LK' && (
+        <div className="sinhala-typing-extension">
+          <div className="extension-header">✍️ සිංහල ටයිපින් සහය (Singlish Transliteration)</div>
+          <textarea
+            className="sinhala-input"
+            placeholder="methana singlish valin type කරන්න... (e.g., ammaa -> අම්මා)"
+            value={typedText}
+            onChange={(e) => {
+              setTypedText(e.target.value);
+              if (onTranscriptChange) onTranscriptChange(e.target.value);
+            }}
+          />
         </div>
       )}
+
     </div>
   );
 };

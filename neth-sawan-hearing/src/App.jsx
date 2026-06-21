@@ -94,23 +94,23 @@ function AppContent() {
   const [fallDetectorBlocked, setFallDetectorBlocked] = useState(false);
 
   // ===== HOOKS =====
-  // 🔥 Added retryListening, microphonePermission, recognitionStatus, supported
-  const { 
-    transcript, 
-    isListening, 
-    startListening, 
-    stopListening, 
-    clearTranscript, 
-    setLang, 
-    lang, 
-    error: speechError, 
+  // 🎯 මුලින්ම සිංහලෙන් වැඩ කරන්න 'si-LK' Default ලබා දී ඇත
+  const {
+    transcript,
+    isListening,
+    startListening,
+    stopListening,
+    clearTranscript,
+    setLang,
+    lang,
+    error: speechError,
     browserInfo,
-    retryListening,        // 👈 New
-    microphonePermission,  // 👈 New
-    recognitionStatus,     // 👈 New
-    supported              // 👈 New
-  } = useSpeech();
-  
+    retryListening,
+    microphonePermission,
+    recognitionStatus,
+    supported
+  } = useSpeech('si-LK'); 
+
   const { volume, isLoud, soundType, soundHistory, threshold, setThreshold } = useVolume(0.15);
   const {
     notificationQueue, markAsRead, clearNotifications,
@@ -118,17 +118,31 @@ function AppContent() {
     autoSendStatus
   } = useNotifications();
 
+  // ===== SINHALA TYPING STATE =====
+  const [sinhalaText, setSinhalaText] = useState('');
+
   // ===== GUEST DATA =====
   const [guestRelatives, setGuestRelatives] = useState([]);
   const [guestNotifications, setGuestNotifications] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
 
-  // ===== AUTO LANGUAGE SWITCH =====
+  // ===== AUTO LANGUAGE SWITCH & MANUAL DROPDOWN SWITCH =====
   useEffect(() => {
     if (transcript && transcript.trim().length > 0) {
       updateLanguageFromTranscript(transcript);
     }
   }, [transcript, updateLanguageFromTranscript]);
+
+  // 🎯 Dropdown එකෙන් භාෂාව වෙනස් කරනකොට මුළු App එකේම UI Language එකත් වෙනස් වීමට:
+  useEffect(() => {
+    if (lang === 'si-LK') {
+      updateLanguageFromTranscript('සිංහල');
+    } else if (lang === 'ta-LK') {
+      updateLanguageFromTranscript('தமிழ்');
+    } else {
+      updateLanguageFromTranscript('Hello');
+    }
+  }, [lang, updateLanguageFromTranscript]);
 
   // ===== SAVE EMERGENCY TOGGLE =====
   useEffect(() => {
@@ -271,6 +285,19 @@ function AppContent() {
         showToast('❌ Permission denied. Please allow motion sensors in settings.', 'error');
       }
     }
+  };
+
+  // ===== SINHALA TRANSCRIPT HANDLER =====
+  const handleTranscriptChange = (text) => {
+    setSinhalaText(text);
+  };
+
+  // Determine which text to pass to SignLanguageBox
+  const getSignLanguageText = () => {
+    if (lang === 'si-LK') {
+      return sinhalaText;
+    }
+    return transcript;
   };
 
   // ===== GUEST HANDLERS =====
@@ -490,14 +517,15 @@ function AppContent() {
                     browserInfo={browserInfo}
                     setLang={setLang}
                     currentLang={lang}
-                    retryListening={retryListening}          // 👈 New
-                    microphonePermission={microphonePermission} // 👈 New
-                    recognitionStatus={recognitionStatus}     // 👈 New
-                    supported={supported}                    // 👈 New
+                    retryListening={retryListening}
+                    microphonePermission={microphonePermission}
+                    recognitionStatus={recognitionStatus}
+                    supported={supported}
+                    onTranscriptChange={handleTranscriptChange}  // 👈 Sinhala typing
                   />
                 </div>
                 <div className="sign-box">
-                  <SignLanguageBox transcript={transcript} />
+                  <SignLanguageBox transcript={getSignLanguageText()} />  {/* 👈 Pass correct text */}
                 </div>
               </div>
 
@@ -545,15 +573,8 @@ function AppContent() {
                 <SoundVisualizer volume={volume} isLoud={isLoud} soundType={soundType} />
                 <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
               </div>
-
-              {/* 🔥 Test Fall button has been REMOVED from here – now in Header */}
-
             </>
           )}
-
-          {/* ============================================================ */}
-          {/* ===== OTHER TABS ===== */}
-          {/* ============================================================ */}
 
           {/* AI VISION */}
           {activeTab === 'vision' && <Aivision showToast={showToast} />}
