@@ -27,13 +27,14 @@ const Header = ({
       </div>
 
       <div className="header-right">
-        {/* 🔥 NEW: Test Fall Button */}
+        {/* 🔥 TEST FALL BUTTON – Red Emergency Style */}
         <button 
           className="test-fall-btn"
           onClick={onTestFall}
-          title="Simulate a fall for testing emergency alerts"
+          title="Simulate a fall to test emergency alerts"
         >
-          🧪 Test Fall
+          <span>🧪</span>
+          <span>Test Fall</span>
         </button>
 
         {fallDetectorBlocked && (

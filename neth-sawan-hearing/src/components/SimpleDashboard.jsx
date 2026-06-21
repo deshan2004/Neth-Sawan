@@ -1,3 +1,4 @@
+// src/components/SimpleDashboard.jsx
 import React from 'react';
 import TranscriptBox from './TranscriptBox';
 import SignLanguageBox from './SignLanguageBox';
@@ -25,19 +26,14 @@ const SimpleDashboard = ({
 }) => {
   return (
     <div className="simple-dashboard">
-      {/* Main unified card for live captions + sign language */}
+      {/* ===== Main Unified Card ===== */}
       <div className="primary-card unified-card">
         <div className="card-header-simple">
           <h2>
-            <span className="header-icon">🎤🤟</span>
-            Live Captions & Sign Language
+            <span className="header-icon">🎤</span>
+            Live Captions
+            {isListening && <span className="live-badge">● LIVE</span>}
           </h2>
-          {isListening && (
-            <div className="live-indicator">
-              <span className="live-dot"></span>
-              <span>LISTENING</span>
-            </div>
-          )}
         </div>
         
         <TranscriptBox 
@@ -49,13 +45,21 @@ const SimpleDashboard = ({
           error={speechError}
           browserInfo={browserInfo}
         />
-        
-        <div className="sign-language-section">
-          <SignLanguageBox transcript={transcript} />
-        </div>
       </div>
 
-      {/* Sound monitor row */}
+      {/* ===== Sign Language Translator ===== */}
+      <div className="primary-card sign-card">
+        <div className="card-header-simple">
+          <h2>
+            <span className="header-icon">🤟</span>
+            Sign Language Translator
+            <span className="sign-badge">Live from captions</span>
+          </h2>
+        </div>
+        <SignLanguageBox transcript={transcript} />
+      </div>
+
+      {/* ===== Sound Monitor + Road Safety Row ===== */}
       <div className="sound-row">
         <div className="sound-card">
           <h3 className="card-title-simple">
@@ -80,7 +84,7 @@ const SimpleDashboard = ({
         </div>
       </div>
 
-      {/* Road safety active banner */}
+      {/* ===== Road Safety Banner ===== */}
       {roadSafetyActive && (
         <div className="road-safety-banner">
           <span>🚗</span>

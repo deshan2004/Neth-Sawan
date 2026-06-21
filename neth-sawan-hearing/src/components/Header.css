@@ -312,6 +312,51 @@
   }
 }
 
+/* ===== TEST FALL BUTTON – Red Emergency Style ===== */
+.test-fall-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 40px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s;
+  white-space: nowrap;
+  min-height: 44px;
+  background: linear-gradient(135deg, #FF0033, #CC0022);
+  color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(255, 0, 51, 0.3);
+  border: 1px solid rgba(255, 0, 51, 0.4);
+}
+
+.test-fall-btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 6px 24px rgba(255, 0, 51, 0.5);
+  background: linear-gradient(135deg, #FF2244, #DD0033);
+}
+
+.test-fall-btn:active {
+  transform: scale(0.96);
+}
+
+/* On very small screens, keep icon and shorten text */
+@media (max-width: 480px) {
+  .test-fall-btn {
+    padding: 8px 12px;
+    font-size: 0;
+    min-height: 40px;
+  }
+  .test-fall-btn span:first-child {
+    font-size: 1.4rem;
+  }
+  .test-fall-btn span:last-child {
+    display: none;
+  }
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .app-header {
@@ -360,6 +405,14 @@
     height: 42px;
     font-size: 22px;
   }
+  .test-fall-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    min-height: 38px;
+  }
+  .test-fall-btn span:first-child {
+    font-size: 1rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -386,48 +439,15 @@
     font-size: 0.7rem;
     min-height: 40px;
   }
-}/* src/components/Header.css – add these rules */
-
-/* ===== TEST FALL BUTTON ===== */
-.test-fall-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 40px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.25s;
-  white-space: nowrap;
-  min-height: 44px;
-  background: linear-gradient(135deg, #FF8800, #FF5500);
-  color: #FFFFFF;
-  box-shadow: 0 4px 16px rgba(255, 85, 0, 0.25);
-}
-
-.test-fall-btn:hover {
-  transform: scale(1.04);
-  box-shadow: 0 6px 24px rgba(255, 85, 0, 0.4);
-}
-
-.test-fall-btn:active {
-  transform: scale(0.96);
-}
-
-/* On very small screens, hide text, keep icon */
-@media (max-width: 480px) {
   .test-fall-btn {
-    padding: 8px 12px;
+    padding: 6px 10px;
     font-size: 0;
-    min-height: 40px;
+    min-height: 36px;
   }
-  .test-fall-btn::before {
-    content: "🧪";
-    font-size: 1.4rem;
+  .test-fall-btn span:first-child {
+    font-size: 1.2rem;
   }
-  .test-fall-btn span {
+  .test-fall-btn span:last-child {
     display: none;
   }
 }

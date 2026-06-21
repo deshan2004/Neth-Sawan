@@ -34,7 +34,32 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
 
-// ... (buildFallWhatsAppMessage function remains unchanged)
+// WhatsApp message helper for fall detection
+const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
+  const time = new Date().toLocaleString('en-LK', {
+    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+  let message = `🚨 *URGENT: FALL DETECTED - Neth-Sawan* 🚨\n\n`;
+  message += `Dear ${contactName},\n\n`;
+  message += `⚠️ *An immediate fall/impact was detected by your loved one's device, and they have not responded to the safety countdown.*\n\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `📢 *ALERT TYPE:* 🛑 AUTOMATIC FALL DETECTION\n`;
+  message += `🕒 *TIME:* ${time}\n`;
+  message += `👤 *USER:* ${userEmail || 'Neth-Sawan User'}\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  if (location) {
+    message += `📍 *LAST KNOWN LIVE LOCATION:*\n`;
+    message += `https://maps.google.com/?q=${location.lat},${location.lng}\n\n`;
+  } else {
+    message += `📍 *LOCATION:* Location services were unavailable, please try calling them immediately.\n\n`;
+  }
+  message += `📝 *MESSAGE:* This is an automated emergency alert. Immediate assistance may be required. Please contact or check on your loved one right away!\n\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `⚠️ *PLEASE RESPOND IMMEDIATELY* ⚠️\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  message += `_Sent automatically by Neth-Sawan Accessibility Assistant._`;
+  return message;
+};
 
 // ===== INNER COMPONENT =====
 function AppContent() {
@@ -375,7 +400,7 @@ function AppContent() {
         onFallDetected={handleFallEmergency}
       />
 
-      {/* ===== SVG FILTERS ===== */}
+      {/* ===== SVG FILTERS FOR COLOR BLINDNESS ===== */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
           <filter id="protanopia"><feColorMatrix type="matrix" values="0.567,0.433,0,0,0,0.558,0.442,0,0,0,0,0.242,0.758,0,0,0,0,0,1,0"/></filter>
@@ -402,7 +427,7 @@ function AppContent() {
         onShowInstructions={() => setShowInstructions(true)}
       />
 
-      {/* ===== SIDEBAR BACKDROP ===== */}
+      {/* ===== SIDEBAR BACKDROP (mobile only) ===== */}
       <div
         className={`sidebar-backdrop ${sidebarOpen && isMobile ? 'active' : ''}`}
         onClick={() => setSidebarOpen(false)}
@@ -501,7 +526,7 @@ function AppContent() {
                 <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
               </div>
 
-              {/* 🔥 Test Fall button has been removed from here – now in Header */}
+              {/* 🔥 Test Fall button has been REMOVED from here – now in Header */}
 
             </>
           )}

@@ -1,119 +1,126 @@
 /* src/components/SimpleDashboard.css */
 
-/* Simplified Dashboard Layout */
 .simple-dashboard {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0;
 }
 
-/* Main unified card (Live Captions + Sign Language) */
+/* ===== Primary Cards ===== */
 .primary-card {
-  background: rgba(13, 17, 40, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 221, 179, 0.2);
-  border-radius: 28px;
+  background: rgba(13, 17, 40, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 221, 179, 0.15);
+  border-radius: 24px;
   overflow: hidden;
   margin-bottom: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   transition: all 0.3s ease;
 }
 
 .primary-card:hover {
-  border-color: rgba(0, 221, 179, 0.4);
+  border-color: rgba(0, 221, 179, 0.35);
   transform: translateY(-2px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
 }
 
-/* Card Header */
+/* Sign Card – distinct border color */
+.sign-card {
+  border-color: rgba(245, 200, 66, 0.2);
+}
+
+.sign-card:hover {
+  border-color: rgba(245, 200, 66, 0.4);
+}
+
+/* ===== Card Headers ===== */
 .card-header-simple {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  background: rgba(0, 221, 179, 0.08);
-  border-bottom: 1px solid rgba(0, 221, 179, 0.15);
+  padding: 18px 24px;
+  background: rgba(0, 221, 179, 0.06);
+  border-bottom: 1px solid rgba(0, 221, 179, 0.1);
   flex-wrap: wrap;
   gap: 12px;
 }
 
+.sign-card .card-header-simple {
+  background: rgba(245, 200, 66, 0.06);
+  border-bottom: 1px solid rgba(245, 200, 66, 0.1);
+}
+
 .card-header-simple h2 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   gap: 12px;
   margin: 0;
-  background: linear-gradient(135deg, #00DDB3, #F5C842);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #FFFFFF;
 }
 
 .header-icon {
   font-size: 28px;
   background: none;
-  -webkit-text-fill-color: initial;
 }
 
-/* Live Indicator */
-.live-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(0, 221, 179, 0.15);
-  padding: 6px 14px;
-  border-radius: 40px;
-  font-size: 12px;
-  font-weight: 600;
+/* ===== Badges ===== */
+.live-badge {
+  background: rgba(0, 221, 179, 0.2);
   color: #00DDB3;
-}
-
-.live-dot {
-  width: 10px;
-  height: 10px;
-  background: #00DDB3;
-  border-radius: 50%;
-  animation: livePulse 1s infinite;
+  padding: 4px 14px;
+  border-radius: 40px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  animation: livePulse 1.5s infinite;
+  letter-spacing: 1px;
 }
 
 @keyframes livePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
-/* Sign Language Section (inside the card) */
-.sign-language-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  margin-top: 8px;
+.sign-badge {
+  background: rgba(245, 200, 66, 0.15);
+  color: #F5C842;
+  padding: 4px 14px;
+  border-radius: 40px;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
-/* Sound Row - Two column layout */
+/* ===== Sound Row ===== */
 .sound-row {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: 24px;
   margin-bottom: 24px;
 }
 
 @media (min-width: 768px) {
   .sound-row {
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
   }
 }
 
-/* Sound Cards */
+/* ===== Sound Cards ===== */
 .sound-card {
-  background: rgba(13, 17, 40, 0.85);
+  background: rgba(13, 17, 40, 0.7);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 221, 179, 0.2);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 221, 179, 0.15);
   border-radius: 24px;
   padding: 20px;
   transition: all 0.3s ease;
 }
 
 .sound-card:hover {
-  border-color: rgba(0, 221, 179, 0.4);
+  border-color: rgba(0, 221, 179, 0.35);
   transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .card-title-simple {
@@ -130,16 +137,22 @@
   font-size: 24px;
 }
 
-/* Road Safety Banner */
+/* ===== Road Safety Banner ===== */
 .road-safety-banner {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: linear-gradient(135deg, rgba(0, 221, 179, 0.15), rgba(0, 221, 179, 0.05));
-  border: 1px solid #00DDB3;
+  background: linear-gradient(135deg, rgba(0, 221, 179, 0.12), rgba(0, 221, 179, 0.04));
+  border: 1px solid rgba(0, 221, 179, 0.3);
   border-radius: 20px;
-  padding: 14px 24px;
+  padding: 16px 24px;
   margin-top: 8px;
+  animation: fadeSlide 0.4s ease;
+}
+
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .road-safety-banner span:first-child {
@@ -157,7 +170,7 @@
   color: #8899CC;
 }
 
-/* Mobile Responsive */
+/* ===== Responsive ===== */
 @media (max-width: 1024px) {
   .card-header-simple {
     flex-direction: column;
@@ -167,13 +180,13 @@
     border-radius: 20px;
   }
   .card-header-simple h2 {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
   }
 }
 
 @media (max-width: 768px) {
   .card-header-simple {
-    padding: 16px;
+    padding: 14px 16px;
   }
   .sound-card {
     padding: 16px;
@@ -181,5 +194,21 @@
   .road-safety-banner {
     flex-direction: column;
     text-align: center;
+    padding: 14px 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-header-simple h2 {
+    font-size: 1rem;
+    flex-wrap: wrap;
+  }
+  .header-icon {
+    font-size: 22px;
+  }
+  .live-badge,
+  .sign-badge {
+    font-size: 0.6rem;
+    padding: 2px 10px;
   }
 }
