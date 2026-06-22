@@ -89,7 +89,11 @@ const TranscriptBox = ({
             <select 
               className="lang-select"
               value={currentLang || 'en-US'} 
-              onChange={(e) => setLang(e.target.value)}
+              onChange={(e) => {
+                setLang(e.target.value);
+                // Show a toast-like message in the error area
+                // We'll rely on the hook to show error
+              }}
             >
               {languageOptions.map((lang) => (
                 <option key={lang.code} value={lang.code}>
@@ -140,6 +144,9 @@ const TranscriptBox = ({
           </div>
           {microphonePermission === 'denied' && (
             <button className="error-retry-btn" onClick={retryListening}>Retry Access</button>
+          )}
+          {error.includes('Language changed') && (
+            <button className="error-retry-btn" onClick={startListening}>Start Now</button>
           )}
         </div>
       )}

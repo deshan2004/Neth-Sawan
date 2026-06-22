@@ -90,12 +90,15 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
   const [recentSigns, setRecentSigns] = useState([]);
   const [isFingerspelling, setIsFingerspelling] = useState(false);
   const [lettersArray, setLettersArray] = useState([]);
-  const [currentLetterIdx, setCurrentLetterIdx] = useState(0);
   const [activeWord, setActiveWord] = useState('');
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [maxScroll, setMaxScroll] = useState(0);
 
   const lastSignRef = useRef(null);
   const speechRef = useRef(null);
   const historyEndRef = useRef(null);
+  const infoScrollRef = useRef(null);
+  const rowRef = useRef(null);
 
   // ===== DETERMINE INPUT SOURCE =====
   const inputText = currentWord || transcript || '';
@@ -177,7 +180,6 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
     if (letters.length > 0) {
       setActiveWord(cleanInput);
       setLettersArray(letters);
-      setCurrentLetterIdx(0);
       setIsFingerspelling(true);
       setCurrentSign({
         word: cleanInput,
@@ -185,22 +187,37 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
         description: 'Fingerspelling – signing each letter individually',
         asl: '🔤'
       });
+      // Reset scroll position when new word appears
+      setScrollLeft(0);
+      if (rowRef.current) {
+        rowRef.current.scrollLeft = 0;
+      }
     } else {
       setCurrentSign(null);
       setIsFingerspelling(false);
     }
   }, [inputText]);
 
-  // ===== FINGERSPELLING LETTER TIMER =====
+  // ===== UPDATE MAX SCROLL =====
   useEffect(() => {
-    if (!isFingerspelling || lettersArray.length === 0) return;
+    if (rowRef.current && isFingerspelling) {
+      const { scrollWidth, clientWidth } = rowRef.current;
+      setMaxScroll(Math.max(0, scrollWidth - clientWidth));
+    }
+  }, [lettersArray, isFingerspelling]);
 
-    const interval = setInterval(() => {
-      setCurrentLetterIdx(prev => (prev + 1) % lettersArray.length);
-    }, 1200);
-
-    return () => clearInterval(interval);
-  }, [isFingerspelling, lettersArray]);
+  // ===== SCROLL FUNCTIONS =====
+  const scrollRow = (direction) => {
+    if (rowRef.current) {
+      const scrollAmount = 200;
+      const newScrollLeft = rowRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+      rowRef.current.scrollTo({
+        left: Math.max(0, Math.min(newScrollLeft, maxScroll)),
+        behavior: 'smooth'
+      });
+      setScrollLeft(Math.max(0, Math.min(newScrollLeft, maxScroll)));
+    }
+  };
 
   // ===== AUTO-SCROLL HISTORY =====
   useEffect(() => {
@@ -276,25 +293,54 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
     }, 4000);
   };
 
-  // ===== RENDER FINGERSPELLING LETTER WITH IMAGE =====
-  const renderFingerspellingLetter = () => {
-    const letterChar = lettersArray[currentLetterIdx];
-    const letterUpper = letterChar?.toUpperCase() || '?';
-    
+  // ===== RENDER FINGERSPELLING =====
+  const renderFingerspelling = () => {
+    const isLong = lettersArray.length > 8;
+
     return (
       <div className="fingerspell-container">
-        <div className="fingerspell-letter">{letterUpper}</div>
-        <img
-          src={`/assets/signs/${letterChar}.png`}
-          alt={`Sign for ${letterChar}`}
-          className="sign-avatar-img"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23F5C842' stroke-width='2'><path d='M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h11z'/><path d='M19 15l4-3-4-3v6z'/></svg>";
-          }}
-        />
+        <div className={`fingerspell-row ${isLong ? 'long' : ''}`} ref={rowRef}>
+          {lettersArray.map((char, idx) => {
+            const letterChar = char.toLowerCase();
+            return (
+              <div key={idx} className="fingerspell-item">
+                <img
+                  src={`/assets/signs/${letterChar}.png`}
+                  alt={`Sign for ${letterChar}`}
+                  className="fingerspell-img"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23F5C842' stroke-width='2'><path d='M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h11z'/><path d='M19 15l4-3-4-3v6z'/></svg>";
+                  }}
+                />
+                <span className="fingerspell-label">{char.toUpperCase()}</span>
+              </div>
+            );
+          })}
+        </div>
+        {/* Scroll Buttons - only show if long */}
+        {isLong && (
+          <div className="fingerspell-scroll-buttons">
+            <button 
+              className="scroll-btn scroll-left" 
+              onClick={() => scrollRow('left')}
+              disabled={scrollLeft <= 0}
+              aria-label="Scroll left"
+            >
+              ‹
+            </button>
+            <button 
+              className="scroll-btn scroll-right" 
+              onClick={() => scrollRow('right')}
+              disabled={scrollLeft >= maxScroll}
+              aria-label="Scroll right"
+            >
+              ›
+            </button>
+          </div>
+        )}
         <div className="fingerspell-hint">
-          <span>🔤 {currentLetterIdx + 1}/{lettersArray.length}</span>
+          <span>🔤 {lettersArray.length} letters</span>
         </div>
       </div>
     );
@@ -316,39 +362,17 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
         {!isFingerspelling && currentSign && <span className="sign-badge live">✅ Word</span>}
       </div>
 
-      {/* ===== MAIN DISPLAY ===== */}
+      {/* ===== MAIN DISPLAY – SIGN ONLY ===== */}
       <div className="sign-display-panel">
         {currentSign ? (
           <div className="sign-active-content">
             <div className="sign-graphic-wrapper">
-              {isFingerspelling ? renderFingerspellingLetter() : (
+              {isFingerspelling ? renderFingerspelling() : (
                 <div className="sign-avatar-animation">
                   <span className="sign-icon-large">{currentSign.asl}</span>
                   <div className="sign-icon-pulse"></div>
                 </div>
               )}
-            </div>
-
-            <div className="sign-info-text">
-              <div className="sign-word-group">
-                <h4 className="sign-word">{displayWord}</h4>
-                <span className="sign-sinhala">{currentSign.sinhala}</span>
-              </div>
-              <p className="sign-description">
-                <strong>How to sign:</strong> {currentSign.description}
-              </p>
-              <button
-                className={`sign-speak-btn ${isSpeaking ? 'active' : ''}`}
-                onClick={() => {
-                  if (isSpeaking) {
-                    stopSpeaking();
-                  } else {
-                    speakSign(displayWord);
-                  }
-                }}
-              >
-                {isSpeaking ? '🔊 Speaking...' : '🔊 Listen'}
-              </button>
             </div>
           </div>
         ) : (
@@ -363,6 +387,33 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
           </div>
         )}
       </div>
+
+      {/* ===== INFO FOOTER – SCROLLABLE ===== */}
+      {currentSign && (
+        <div className="sign-info-footer" ref={infoScrollRef}>
+          <div className="sign-info-scroll">
+            <div className="sign-word-group">
+              <span className="sign-word">{displayWord}</span>
+              <span className="sign-sinhala">{currentSign.sinhala}</span>
+            </div>
+            <p className="sign-description">
+              <strong>How to sign:</strong> {currentSign.description}
+            </p>
+            <button
+              className={`sign-speak-btn ${isSpeaking ? 'active' : ''}`}
+              onClick={() => {
+                if (isSpeaking) {
+                  stopSpeaking();
+                } else {
+                  speakSign(displayWord);
+                }
+              }}
+            >
+              {isSpeaking ? '🔊 Speaking...' : '🔊 Listen'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ===== QUICK SIGNS ===== */}
       <div className="sign-quick-actions">
@@ -429,454 +480,10 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
         <p className="guide-text">
           <strong>Two ways to use:</strong> Speak naturally (captions) or type a word directly.
           Click <strong>🔊 Listen</strong> to hear the word spoken aloud.
-          {isFingerspelling && ' 🔤 Words not in dictionary are fingerspelled letter by letter.'}
+          {isFingerspelling && ' 🔤 Words not in dictionary are shown letter by letter.'}
         </p>
       </div>
 
-      {/* ===== STYLES ===== */}
-      <style>{`
-        .sign-language-card {
-          background: rgba(13, 17, 40, 0.6);
-          backdrop-filter: blur(12px);
-          border-radius: 24px;
-          padding: 20px;
-          border: 1px solid rgba(245, 200, 66, 0.15);
-          transition: all 0.3s;
-        }
-        .sign-language-card:hover {
-          border-color: rgba(245, 200, 66, 0.3);
-        }
-
-        .sign-card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-        .sign-header-title-group {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        .sign-header-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #00DDB3;
-          display: inline-block;
-        }
-        .sign-header-dot.animated {
-          animation: livePulse 1.2s infinite;
-        }
-        .sign-title {
-          font-size: 1.1rem;
-          font-weight: 700;
-          color: #FFFFFF;
-          margin: 0;
-        }
-
-        .sign-badge {
-          padding: 4px 12px;
-          border-radius: 40px;
-          font-size: 0.65rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-        .sign-badge.live {
-          background: rgba(0, 221, 179, 0.15);
-          color: #00DDB3;
-          border: 1px solid rgba(0, 221, 179, 0.3);
-        }
-        .sign-badge.fingerspell {
-          background: rgba(245, 200, 66, 0.15);
-          color: #F5C842;
-          border: 1px solid rgba(245, 200, 66, 0.3);
-        }
-
-        .sign-display-panel {
-          min-height: 160px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 12px 0;
-        }
-
-        .sign-active-content {
-          display: flex;
-          align-items: center;
-          gap: 30px;
-          width: 100%;
-          animation: signFadeIn 0.4s ease;
-        }
-        @keyframes signFadeIn {
-          from { opacity: 0; transform: scale(0.95) translateY(10px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        .sign-graphic-wrapper {
-          flex-shrink: 0;
-        }
-
-        .sign-icon-large {
-          font-size: 80px;
-          display: block;
-          animation: signFloat 2s ease-in-out infinite;
-        }
-        .sign-icon-large.passive {
-          animation: none;
-          opacity: 0.5;
-        }
-        @keyframes signFloat {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
-        }
-
-        .sign-icon-pulse {
-          position: absolute;
-          inset: -10px;
-          border-radius: 50%;
-          border: 2px solid rgba(0, 221, 179, 0.2);
-          animation: signPulse 2s ease-in-out infinite;
-        }
-        @keyframes signPulse {
-          0%, 100% { transform: scale(1); opacity: 0.5; }
-          50% { transform: scale(1.2); opacity: 0; }
-        }
-
-        .sign-avatar-animation {
-          position: relative;
-        }
-
-        .sign-info-text {
-          flex: 1;
-        }
-        .sign-word-group {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
-          margin-bottom: 6px;
-        }
-        .sign-word {
-          font-size: 28px;
-          font-weight: 800;
-          color: #00DDB3;
-          margin: 0;
-        }
-        .sign-sinhala {
-          font-size: 16px;
-          color: #F5C842;
-          font-weight: 500;
-          background: rgba(245, 200, 66, 0.1);
-          padding: 2px 14px;
-          border-radius: 40px;
-        }
-        .sign-description {
-          font-size: 14px;
-          color: #A0A8D0;
-          margin: 6px 0 12px 0;
-        }
-
-        .sign-speak-btn {
-          background: rgba(0, 221, 179, 0.1);
-          border: 1px solid rgba(0, 221, 179, 0.3);
-          border-radius: 40px;
-          padding: 6px 18px;
-          color: #00DDB3;
-          font-weight: 600;
-          font-size: 13px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .sign-speak-btn:hover {
-          background: rgba(0, 221, 179, 0.2);
-          transform: translateY(-1px);
-        }
-        .sign-speak-btn.active {
-          background: rgba(255, 51, 85, 0.15);
-          border-color: #FF3355;
-          color: #FF3355;
-          animation: pulseBtn 1s infinite;
-        }
-        @keyframes pulseBtn {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.6; }
-        }
-
-        /* Fingerspelling */
-        .fingerspell-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-        }
-        .fingerspell-letter {
-          font-size: 3rem;
-          font-weight: 800;
-          color: #F5C842;
-          text-shadow: 0 0 20px rgba(245, 200, 66, 0.3);
-          min-width: 80px;
-          text-align: center;
-        }
-        .sign-avatar-img {
-          width: 100px;
-          height: 100px;
-          object-fit: contain;
-          border-radius: 12px;
-          background: rgba(255, 255, 255, 0.05);
-          padding: 4px;
-        }
-        .fingerspell-hint {
-          font-size: 0.7rem;
-          color: #8899CC;
-          margin-top: 4px;
-        }
-
-        /* Waiting State */
-        .sign-waiting-state {
-          text-align: center;
-          padding: 10px 0;
-        }
-        .sign-waiting-pulse {
-          animation: signWaitPulse 2s ease-in-out infinite;
-          display: inline-block;
-        }
-        @keyframes signWaitPulse {
-          0%, 100% { transform: scale(1); opacity: 0.7; }
-          50% { transform: scale(1.05); opacity: 1; }
-        }
-        .sign-waiting-text {
-          font-size: 16px;
-          color: #D0D8FF;
-          margin: 8px 0 4px 0;
-        }
-        .sign-waiting-text strong { color: #F5C842; }
-        .sign-waiting-sub {
-          font-size: 13px;
-          color: #8899CC;
-          margin: 0;
-        }
-
-        /* Quick Actions */
-        .sign-quick-actions {
-          margin-top: 16px;
-          padding: 14px 16px;
-          background: rgba(0, 0, 0, 0.2);
-          border-radius: 16px;
-        }
-        .quick-label {
-          display: block;
-          font-size: 12px;
-          font-weight: 600;
-          color: #8899CC;
-          margin-bottom: 10px;
-        }
-        .quick-grid {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-        .quick-sign-btn {
-          padding: 4px 14px;
-          border-radius: 40px;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          color: #D0D8FF;
-          font-size: 0.75rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-family: inherit;
-        }
-        .quick-sign-btn:hover {
-          background: rgba(0, 221, 179, 0.1);
-          color: #00DDB3;
-          border-color: rgba(0, 221, 179, 0.2);
-          transform: translateY(-2px);
-        }
-        .quick-sign-btn.active {
-          background: rgba(0, 221, 179, 0.15);
-          color: #00DDB3;
-          border-color: #00DDB3;
-        }
-
-        /* Recent Signs */
-        .sign-history-section {
-          margin-top: 16px;
-          padding-top: 14px;
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .sign-history-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 10px;
-        }
-        .history-icon { font-size: 16px; }
-        .history-title {
-          font-size: 13px;
-          font-weight: 600;
-          color: #8899CC;
-        }
-        .sign-history-list {
-          display: flex;
-          gap: 8px;
-          overflow-x: auto;
-          padding: 4px 0 8px 0;
-        }
-        .sign-history-list::-webkit-scrollbar {
-          height: 3px;
-        }
-        .sign-history-list::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .sign-history-list::-webkit-scrollbar-thumb {
-          background: #00DDB3;
-          border-radius: 4px;
-        }
-        .sign-history-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 6px 14px 6px 10px;
-          background: rgba(255, 255, 255, 0.04);
-          border-radius: 40px;
-          cursor: pointer;
-          transition: all 0.2s;
-          flex-shrink: 0;
-          border: 1px solid transparent;
-        }
-        .sign-history-item:hover {
-          background: rgba(0, 221, 179, 0.1);
-          transform: translateY(-2px);
-        }
-        .sign-history-item.active {
-          background: rgba(0, 221, 179, 0.15);
-          border-color: rgba(0, 221, 179, 0.3);
-        }
-        .history-sign { font-size: 22px; }
-        .history-word {
-          font-size: 13px;
-          font-weight: 600;
-          color: #D0D8FF;
-        }
-        .history-meaning {
-          font-size: 11px;
-          color: #8899CC;
-        }
-
-        /* Session History */
-        .sign-history-footer {
-          margin-top: 14px;
-          padding-top: 14px;
-          border-top: 1px solid rgba(255, 255, 255, 0.04);
-        }
-        .sign-history-footer .history-title {
-          font-size: 12px;
-          color: #8899CC;
-          margin-bottom: 8px;
-        }
-        .sign-history-scroll {
-          max-height: 80px;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .sign-history-scroll::-webkit-scrollbar {
-          width: 3px;
-        }
-        .sign-history-scroll::-webkit-scrollbar-thumb {
-          background: #00DDB3;
-          border-radius: 4px;
-        }
-        .sign-history-item.session-item {
-          padding: 4px 10px;
-          background: rgba(255, 255, 255, 0.02);
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          cursor: default;
-        }
-        .history-indicator {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: #00DDB3;
-          flex-shrink: 0;
-        }
-        .history-time {
-          font-size: 0.6rem;
-          color: #5C628A;
-          font-family: monospace;
-          margin-left: auto;
-        }
-        .history-empty {
-          font-size: 0.75rem;
-          color: #5C628A;
-          text-align: center;
-          padding: 10px 0;
-        }
-
-        /* Guide */
-        .sign-guide {
-          margin-top: 14px;
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-          padding: 12px 16px;
-          background: rgba(68, 136, 255, 0.06);
-          border-radius: 12px;
-          border-left: 3px solid #4488FF;
-        }
-        .guide-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-        .guide-text {
-          font-size: 12px;
-          color: #A0A8D0;
-          margin: 0;
-          line-height: 1.5;
-        }
-        .guide-text strong { color: #00DDB3; }
-
-        /* Animations */
-        @keyframes livePulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(0.8); }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-          .sign-language-card { padding: 16px; }
-          .sign-active-content {
-            flex-direction: column;
-            text-align: center;
-            gap: 16px;
-          }
-          .sign-icon-large { font-size: 64px; }
-          .sign-word { font-size: 22px; }
-          .sign-word-group { justify-content: center; }
-          .sign-description { text-align: center; }
-          .sign-waiting-text { font-size: 14px; }
-          .quick-grid { justify-content: center; }
-          .fingerspell-letter { font-size: 2.8rem; }
-          .history-meaning { display: none; }
-          .sign-history-item { padding: 4px 12px 4px 8px; }
-        }
-
-        @media (max-width: 480px) {
-          .sign-language-card { padding: 12px; }
-          .sign-icon-large { font-size: 52px; }
-          .sign-word { font-size: 18px; }
-          .sign-sinhala { font-size: 13px; }
-          .quick-sign-btn { font-size: 0.65rem; padding: 3px 10px; }
-          .fingerspell-letter { font-size: 2.2rem; }
-          .sign-title { font-size: 0.95rem; }
-        }
-      `}</style>
     </div>
   );
 };
