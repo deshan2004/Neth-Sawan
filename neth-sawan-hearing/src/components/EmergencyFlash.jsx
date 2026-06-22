@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import './EmergencyFlash.css';
 
-const EmergencyFlash = ({ isVisible, emergencyData }) => {
+const EmergencyFlash = ({ isVisible, emergencyData, message, onClose }) => {
   const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
     if (isVisible) {
-      setCountdown(5);
+      setCountdown(8);
       const interval = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
             clearInterval(interval);
+            if (onClose) onClose();
             return 0;
           }
           return prev - 1;
@@ -18,7 +19,7 @@ const EmergencyFlash = ({ isVisible, emergencyData }) => {
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [isVisible]);
+  }, [isVisible, onClose]);
 
   if (!isVisible) return null;
 
@@ -31,21 +32,50 @@ const EmergencyFlash = ({ isVisible, emergencyData }) => {
           <div className="siren-ring"></div>
           <span className="siren-icon">🚨</span>
         </div>
-        <h1>EMERGENCY ALERT</h1>
+        <h1>{message || '🚨 EMERGENCY ALERT'}</h1>
         <div className="emergency-details">
-          <p><strong>Detected:</strong> {emergencyData?.soundType || 'SOS button pressed'}</p>
+          <p><strong>Type:</strong> {emergencyData?.soundType || 'SOS Emergency'}</p>
           <p><strong>Time:</strong> {new Date(emergencyData?.timestamp).toLocaleTimeString()}</p>
-          {emergencyData?.volume && <p><strong>Volume:</strong> {Math.round(emergencyData.volume * 100)}%</p>}
+          {emergencyData?.location && (
+            <p>
+              <strong>📍 Location:</strong>
+              <a 
+                href={`https://www.google.com/maps?q=${emergencyData.location.lat},${emergencyData.location.lng}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: '#FFD700', marginLeft: '8px' }}
+              >
+                View on Map →
+              </a>
+            </p>
+          )}
         </div>
         <div className="visual-cues">
           <div className="visual-bar red"></div>
           <div className="visual-bar orange"></div>
           <div className="visual-bar yellow"></div>
         </div>
-        <p className="warning-text">⚠️ CHECK YOUR SURROUNDINGS ⚠️</p>
+        <p className="warning-text">📤 EMERGENCY ALERT SENT TO YOUR CONTACTS!</p>
         <div className="countdown">
-          Alert ends in <strong>{countdown}</strong> seconds
+          Flash ends in <strong>{countdown}</strong> seconds
         </div>
+        <button 
+          className="dismiss-flash-btn"
+          onClick={onClose}
+          style={{
+            marginTop: '20px',
+            padding: '12px 32px',
+            borderRadius: '40px',
+            background: 'rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            color: 'white',
+            fontWeight: '700',
+            fontSize: '16px',
+            cursor: 'pointer'
+          }}
+        >
+          ✕ Dismiss
+        </button>
       </div>
     </div>
   );

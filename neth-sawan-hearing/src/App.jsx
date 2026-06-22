@@ -35,7 +35,39 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
 
-// WhatsApp message helper for fall detection
+// ===== BUILD EMERGENCY MESSAGE =====
+const buildEmergencyMessage = (contactName, location, userEmail, alertType) => {
+  const time = new Date().toLocaleString('en-LK', {
+    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+
+  let message = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
+  message += `Dear ${contactName},\n\n`;
+  message += `⚠️ *This is an automated emergency alert from your loved one's device.*\n\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `📢 *ALERT TYPE:* 🆘 ${alertType || 'SOS EMERGENCY'}\n`;
+  message += `🕒 *TIME:* ${time}\n`;
+  message += `👤 *USER:* ${userEmail || 'Neth-Sawan User'}\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+  if (location) {
+    message += `📍 *LIVE LOCATION:*\n`;
+    message += `https://maps.google.com/?q=${location.lat},${location.lng}\n\n`;
+  } else {
+    message += `📍 *LOCATION:* Location services unavailable. Please call immediately.\n\n`;
+  }
+
+  message += `📝 *MESSAGE:* ${alertType || 'SOS'} button was pressed. Immediate assistance may be required. Please check on your loved one as soon as possible.\n\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `⚠️ *PLEASE RESPOND PROMPTLY* ⚠️\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  message += `_This is an automated message from Neth-Sawan Hearing Assistant._\n`;
+  message += `_For more info, visit neth-sawan.app_`;
+
+  return message;
+};
+
+// ===== WHATSAPP FALL MESSAGE HELPER =====
 const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
   const time = new Date().toLocaleString('en-LK', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -143,9 +175,6 @@ function AppContent() {
       updateLanguageFromTranscript('Hello');
     }
   }, [lang, updateLanguageFromTranscript]);
-
-  // ===== REMOVED: Auto‑detection of language from transcript =====
-  // (Removed to prevent UI language changing automatically)
 
   // ===== REAL-TIME SIGN LANGUAGE TRANSLATION =====
   useEffect(() => {
@@ -453,54 +482,86 @@ function AppContent() {
       });
     } catch (error) { console.error("Firebase error:", error); }
 
-    // 🔥 VIBRATION: Always vibrate on fall detection (even if notifications are off)
+    // Always vibrate on fall detection
     if (navigator.vibrate) {
       navigator.vibrate([500, 200, 500, 200, 500]);
     }
 
     if (emergencyNotificationsEnabled) {
       setFlashEmergency(true);
-      setEmergencyData({ soundType: '🛑 FALL DETECTED', message: 'An automatic fall was detected!', timestamp: new Date(), volume: 1.0 });
+      setEmergencyData({ soundType: '🛑 FALL DETECTED', message: 'An automatic fall was detected!', timestamp: new Date(), volume: 1.0, location: currentLocation });
       setEmergencyMessage('🚨 FALL DETECTED!');
       showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
       setTimeout(() => setFlashEmergency(false), 8000);
     }
 
     if (currentRelatives && currentRelatives.length > 0) {
-      const userConfirmed = window.confirm("🚨 Fall Detected! Click OK to send emergency WhatsApp alerts to your relatives.");
-      if (userConfirmed) {
-        currentRelatives.forEach(contact => {
-          if (contact.notifyByWhatsApp && contact.phone) {
-            const message = buildFallWhatsAppMessage(contact.name, currentLocation, user?.email || 'Guest User');
-            let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
-            if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
-            else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
-            else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
-            window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
-          }
-        });
-      }
+      // Auto-send fall alerts without confirmation
+      currentRelatives.forEach(contact => {
+        if (contact.notifyByWhatsApp && contact.phone) {
+          const message = buildFallWhatsAppMessage(contact.name, currentLocation, user?.email || 'Guest User');
+          let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
+          if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
+          else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
+          else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
+          window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+        }
+        if (contact.notifyBySMS && contact.phone) {
+          const smsMessage = `🚨 FALL DETECTED! ${currentLocation ? `Location: https://maps.google.com/?q=${currentLocation.lat},${currentLocation.lng}` : ''}`;
+          window.open(`sms:${contact.phone}?body=${encodeURIComponent(smsMessage)}`, '_blank');
+        }
+        if (contact.notifyByDesktop && Notification.permission === 'granted') {
+          new Notification(`🚨 FALL DETECTED - ${contact.name}`, {
+            body: `Fall detected! Immediate attention needed.`,
+            icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670051.png',
+            requireInteraction: true,
+            vibrate: [200, 100, 200]
+          });
+        }
+      });
     }
   };
 
-  // ===== TRIGGER EMERGENCY (SOS) =====
+  // ===== TRIGGER EMERGENCY (SOS) — AUTO‑SEND TO ALL CONTACTS =====
   const triggerEmergency = async (msg) => {
-    setEmergencyMessage(msg || 'SOS Button Pressed');
+    console.log("🆘 SOS triggered:", msg);
+
+    // Get current location
+    let currentLocation = null;
+    try {
+      const pos = await new Promise((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, enableHighAccuracy: true })
+      );
+      currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch (e) {
+      console.warn("Location error:", e.message);
+    }
+
+    // Show emergency flash
+    setEmergencyMessage(msg || '🚨 SOS Activated!');
     setFlashEmergency(true);
     setEmergencyData({
-      soundType: 'SOS',
+      soundType: '🆘 SOS',
       message: msg || 'Manual SOS Triggered!',
       timestamp: new Date(),
-      volume: 1.0
+      volume: 1.0,
+      location: currentLocation
     });
-    showToast(`🚨 EMERGENCY: ${msg || 'SOS'}`, 'danger');
+    showToast(`🚨 EMERGENCY: ${msg || 'SOS Activated!'}`, 'error');
 
+    // Always vibrate
+    if (navigator.vibrate) {
+      navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+    }
+
+    // Save to Firestore if logged in
     if (user && !isGuest) {
       try {
         await addDoc(collection(db, 'emergencies'), {
           userId: user.uid,
           message: msg || 'SOS',
-          timestamp: serverTimestamp()
+          timestamp: serverTimestamp(),
+          location: currentLocation
         });
       } catch (e) {
         console.error("Error saving emergency:", e);
@@ -511,10 +572,59 @@ function AppContent() {
         type: 'EMERGENCY',
         message: msg || 'SOS',
         timestamp: new Date().toISOString(),
-        read: false
+        read: false,
+        location: currentLocation
       });
     }
 
+    // ===== AUTO SEND TO ALL EMERGENCY CONTACTS =====
+    const contacts = currentRelatives || [];
+    console.log(`📤 Sending emergency alerts to ${contacts.length} contacts...`);
+
+    for (const contact of contacts) {
+      // Skip if no phone number for messaging
+      if (!contact.phone) continue;
+
+      // Build the emergency message
+      const message = buildEmergencyMessage(
+        contact.name,
+        currentLocation,
+        user?.email || 'Guest User',
+        msg || 'SOS'
+      );
+
+      // Send via WhatsApp if enabled
+      if (contact.notifyByWhatsApp) {
+        let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
+        if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
+        else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
+        else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
+        const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+        console.log(`✅ WhatsApp sent to ${contact.name}`);
+      }
+
+      // Send via SMS if enabled
+      if (contact.notifyBySMS) {
+        const smsMessage = `🚨 EMERGENCY: ${msg || 'SOS'} - ${currentLocation ? `Location: https://maps.google.com/?q=${currentLocation.lat},${currentLocation.lng}` : ''}`;
+        const smsUrl = `sms:${contact.phone}?body=${encodeURIComponent(smsMessage)}`;
+        window.open(smsUrl, '_blank');
+        console.log(`✅ SMS sent to ${contact.name}`);
+      }
+
+      // Desktop notification
+      if (contact.notifyByDesktop && Notification.permission === 'granted') {
+        new Notification(`🆘 EMERGENCY ALERT - ${contact.name}`, {
+          body: `${msg || 'SOS'} - Immediate attention needed!`,
+          icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670051.png',
+          requireInteraction: true,
+          vibrate: [200, 100, 200]
+        });
+        console.log(`✅ Desktop notification sent to ${contact.name}`);
+      }
+    }
+
+    // Auto-hide flash after 8 seconds
     setTimeout(() => setFlashEmergency(false), 8000);
   };
 

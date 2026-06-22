@@ -33,8 +33,8 @@ const Header = ({
           onClick={onTestFall}
           title="Simulate a fall to test emergency alerts"
         >
-          <span>🧪</span>
-          <span>Test Fall</span>
+          
+          <span>SOS</span>
         </button>
 
         {fallDetectorBlocked && (

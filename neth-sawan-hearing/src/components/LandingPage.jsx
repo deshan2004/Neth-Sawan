@@ -13,7 +13,8 @@ const LandingPage = ({ onGuestMode, onShowInstructions }) => {
 
   return (
     <div className="landing-page">
-      <BackgroundVideo videoSrc={videoSrc} opacity={1.0} />
+      {/* Opacity reduced from 1.0 to 0.2 to brighten the video */}
+      <BackgroundVideo videoSrc={videoSrc} opacity={0.2} />
       
       <div className="landing-hero">
         <div className="landing-content">
