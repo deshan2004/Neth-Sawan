@@ -35,39 +35,27 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
 
-// ===== BUILD EMERGENCY MESSAGE =====
-const buildEmergencyMessage = (contactName, location, userEmail, alertType) => {
+// ===== BUILD SMS EMERGENCY MESSAGE (short, plain text) =====
+const buildSmsMessage = (contactName, location, userEmail, alertType) => {
   const time = new Date().toLocaleString('en-LK', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
-  let message = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
-  message += `Dear ${contactName},\n\n`;
-  message += `⚠️ *This is an automated emergency alert from your loved one's device.*\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `📢 *ALERT TYPE:* 🆘 ${alertType || 'SOS EMERGENCY'}\n`;
-  message += `🕒 *TIME:* ${time}\n`;
-  message += `👤 *USER:* ${userEmail || 'Neth-Sawan User'}\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-
+  let message = `🚨 EMERGENCY ALERT - Neth-Sawan\n`;
+  message += `To: ${contactName}\n`;
+  message += `Type: ${alertType || 'SOS'}\n`;
+  message += `Time: ${time}\n`;
+  message += `User: ${userEmail || 'Neth-Sawan User'}\n`;
   if (location) {
-    message += `📍 *LIVE LOCATION:*\n`;
-    message += `https://maps.google.com/?q=${location.lat},${location.lng}\n\n`;
+    message += `Location: https://maps.google.com/?q=${location.lat},${location.lng}\n`;
   } else {
-    message += `📍 *LOCATION:* Location services unavailable. Please call immediately.\n\n`;
+    message += `Location: Not available - please call immediately.\n`;
   }
-
-  message += `📝 *MESSAGE:* ${alertType || 'SOS'} button was pressed. Immediate assistance may be required. Please check on your loved one as soon as possible.\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `⚠️ *PLEASE RESPOND PROMPTLY* ⚠️\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  message += `_This is an automated message from Neth-Sawan Hearing Assistant._\n`;
-  message += `_For more info, visit neth-sawan.app_`;
-
+  message += `Message: ${alertType || 'SOS'} button pressed. Immediate assistance required.`;
   return message;
 };
 
-// ===== WHATSAPP FALL MESSAGE HELPER =====
+// ===== WHATSAPP FALL MESSAGE (kept for fall detection only) =====
 const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
   const time = new Date().toLocaleString('en-LK', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -482,7 +470,6 @@ function AppContent() {
       });
     } catch (error) { console.error("Firebase error:", error); }
 
-    // Always vibrate on fall detection
     if (navigator.vibrate) {
       navigator.vibrate([500, 200, 500, 200, 500]);
     }
@@ -496,16 +483,8 @@ function AppContent() {
     }
 
     if (currentRelatives && currentRelatives.length > 0) {
-      // Auto-send fall alerts without confirmation
       currentRelatives.forEach(contact => {
-        if (contact.notifyByWhatsApp && contact.phone) {
-          const message = buildFallWhatsAppMessage(contact.name, currentLocation, user?.email || 'Guest User');
-          let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
-          if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
-          else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
-          else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
-          window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
-        }
+        // Send SMS for fall (not WhatsApp)
         if (contact.notifyBySMS && contact.phone) {
           const smsMessage = `🚨 FALL DETECTED! ${currentLocation ? `Location: https://maps.google.com/?q=${currentLocation.lat},${currentLocation.lng}` : ''}`;
           window.open(`sms:${contact.phone}?body=${encodeURIComponent(smsMessage)}`, '_blank');
@@ -522,11 +501,10 @@ function AppContent() {
     }
   };
 
-  // ===== TRIGGER EMERGENCY (SOS) — AUTO‑SEND TO ALL CONTACTS =====
+  // ===== TRIGGER EMERGENCY (SOS) — SMS ONLY =====
   const triggerEmergency = async (msg) => {
     console.log("🆘 SOS triggered:", msg);
 
-    // Get current location
     let currentLocation = null;
     try {
       const pos = await new Promise((resolve, reject) =>
@@ -537,7 +515,6 @@ function AppContent() {
       console.warn("Location error:", e.message);
     }
 
-    // Show emergency flash
     setEmergencyMessage(msg || '🚨 SOS Activated!');
     setFlashEmergency(true);
     setEmergencyData({
@@ -549,12 +526,10 @@ function AppContent() {
     });
     showToast(`🚨 EMERGENCY: ${msg || 'SOS Activated!'}`, 'error');
 
-    // Always vibrate
     if (navigator.vibrate) {
       navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
     }
 
-    // Save to Firestore if logged in
     if (user && !isGuest) {
       try {
         await addDoc(collection(db, 'emergencies'), {
@@ -577,36 +552,22 @@ function AppContent() {
       });
     }
 
-    // ===== AUTO SEND TO ALL EMERGENCY CONTACTS =====
+    // ===== SEND SMS TO ALL EMERGENCY CONTACTS =====
     const contacts = currentRelatives || [];
-    console.log(`📤 Sending emergency alerts to ${contacts.length} contacts...`);
+    console.log(`📤 Sending SMS emergency alerts to ${contacts.length} contacts...`);
 
     for (const contact of contacts) {
-      // Skip if no phone number for messaging
       if (!contact.phone) continue;
 
-      // Build the emergency message
-      const message = buildEmergencyMessage(
+      const smsMessage = buildSmsMessage(
         contact.name,
         currentLocation,
         user?.email || 'Guest User',
         msg || 'SOS'
       );
 
-      // Send via WhatsApp if enabled
-      if (contact.notifyByWhatsApp) {
-        let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
-        if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
-        else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
-        else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
-        const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-        window.open(url, '_blank', 'noopener,noreferrer');
-        console.log(`✅ WhatsApp sent to ${contact.name}`);
-      }
-
-      // Send via SMS if enabled
+      // Send SMS if enabled
       if (contact.notifyBySMS) {
-        const smsMessage = `🚨 EMERGENCY: ${msg || 'SOS'} - ${currentLocation ? `Location: https://maps.google.com/?q=${currentLocation.lat},${currentLocation.lng}` : ''}`;
         const smsUrl = `sms:${contact.phone}?body=${encodeURIComponent(smsMessage)}`;
         window.open(smsUrl, '_blank');
         console.log(`✅ SMS sent to ${contact.name}`);
@@ -624,7 +585,6 @@ function AppContent() {
       }
     }
 
-    // Auto-hide flash after 8 seconds
     setTimeout(() => setFlashEmergency(false), 8000);
   };
 
@@ -656,7 +616,6 @@ function AppContent() {
     <div className={`app-wrapper ${currentTheme}`} style={{ fontSize: `${currentFontSize}px` }}>
       <BackgroundVideo opacity={0.85} />
 
-      {/* ===== FALL DETECTOR ===== */}
       <FallDetector
         ref={fallDetectorRef}
         user={user}
@@ -665,7 +624,6 @@ function AppContent() {
         onFallDetected={handleFallEmergency}
       />
 
-      {/* ===== SVG FILTERS FOR COLOR BLINDNESS ===== */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
           <filter id="protanopia"><feColorMatrix type="matrix" values="0.567,0.433,0,0,0,0.558,0.442,0,0,0,0,0.242,0.758,0,0,0,0,0,1,0"/></filter>
@@ -674,7 +632,6 @@ function AppContent() {
         </defs>
       </svg>
 
-      {/* ===== EMERGENCY FLASH ===== */}
       <EmergencyFlash
         isVisible={flashEmergency && emergencyNotificationsEnabled}
         emergencyData={emergencyData}
@@ -682,7 +639,6 @@ function AppContent() {
         onClose={() => setFlashEmergency(false)}
       />
 
-      {/* ===== SIDEBAR ===== */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -695,16 +651,13 @@ function AppContent() {
         onShowInstructions={() => setShowInstructions(true)}
       />
 
-      {/* ===== SIDEBAR BACKDROP (mobile only) ===== */}
       <div
         className={`sidebar-backdrop ${sidebarOpen && isMobile ? 'active' : ''}`}
         onClick={() => setSidebarOpen(false)}
       />
 
-      {/* ===== CONTENT AREA ===== */}
       <div className={`content-area ${sidebarOpen ? 'sidebar-open' : ''}`}>
 
-        {/* ===== HEADER ===== */}
         <Header
           isListening={isListening}
           lang={lang}
@@ -725,10 +678,8 @@ function AppContent() {
           onTriggerEmergency={triggerEmergency}
         />
 
-        {/* ===== MAIN CONTENT ===== */}
         <main className="main-content">
 
-          {/* ===== DASHBOARD TAB ===== */}
           {activeTab === 'dashboard' && (
             <>
               <div className="dashboard-grid">
@@ -813,21 +764,13 @@ function AppContent() {
             </>
           )}
 
-          {/* ===== AI VISION ===== */}
           {activeTab === 'vision' && <Aivision showToast={showToast} />}
-
-          {/* ===== SIGN LANGUAGE TUTOR ===== */}
           {activeTab === 'learn' && <SignLanguageTutor />}
-
-          {/* ===== IN-PERSON TRANSLATOR ===== */}
           {activeTab === 'inperson' && (
             <InPersonTranslator onClose={() => setActiveTab('dashboard')} />
           )}
-
-          {/* ===== COMMUNITY ===== */}
           {activeTab === 'community' && <OnlineUsers user={user} isGuest={isGuest} guestName={guestName} />}
 
-          {/* ===== NOTIFICATIONS ===== */}
           {activeTab === 'alerts' && (
             <NotificationCenter
               queue={currentNotifications}
@@ -842,7 +785,6 @@ function AppContent() {
             />
           )}
 
-          {/* ===== EMERGENCY CONTACTS ===== */}
           {activeTab === 'contacts' && (
             <RelativesManager
               user={user}
@@ -857,7 +799,6 @@ function AppContent() {
             />
           )}
 
-          {/* ===== SOS EMERGENCY ===== */}
           {activeTab === 'emergency' && (
             <div className="emergency-sos-card card">
               <div className="sos-header card-head">
@@ -897,14 +838,13 @@ function AppContent() {
                 <ul style={{ listStyle: 'none', padding: 0 }}>
                   <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>🔴 {t('redFlashing') || 'Red Flashing Screen = Emergency detected or SOS activated'}</li>
                   <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📳 {t('vibration') || 'Phone Vibration = Alert being sent to your contacts'}</li>
-                  <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📱 {t('contactsNotify') || 'Emergency Contacts = Will receive WhatsApp/SMS alerts'}</li>
+                  <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📱 {t('contactsNotify') || 'Emergency Contacts = Will receive SMS alerts'}</li>
                   <li style={{ padding: '8px 0' }}>📍 {t('liveLocation') || 'Live Location = Automatically shared with emergency contacts'}</li>
                 </ul>
               </div>
             </div>
           )}
 
-          {/* ===== ROAD MONITOR ===== */}
           {activeTab === 'roadmonitor' && (
             <div style={{ maxWidth: '900px', margin: '0 auto' }}>
               <div style={{ marginBottom: '20px', textAlign: 'center' }}>
@@ -944,7 +884,6 @@ function AppContent() {
             </div>
           )}
 
-          {/* ===== ACCESSIBILITY SETTINGS ===== */}
           {activeTab === 'settings' && (
             <AccessibilitySettings
               onThemeChange={handleThemeChange}
@@ -957,7 +896,6 @@ function AppContent() {
         </main>
       </div>
 
-      {/* ===== TOAST ===== */}
       {toastMessage.show && <div className={`toast-message ${toastMessage.type}`}>{toastMessage.message}</div>}
     </div>
   );
