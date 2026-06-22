@@ -18,25 +18,17 @@ const translations = {
     signOut: 'Sign Out',
     howItWorks: 'How It Works',
 
-    // Sidebar navigation (Sinhala is primary, English is secondary in the UI)
-    home: 'මුල් පිටුව',
-    homeEn: 'Home',
-    aiVision: 'AI දෘෂ්ටිය',
-    aiVisionEn: 'AI Vision',
-    learnSigns: 'සංඥා ඉගෙන ගන්න',
-    learnSignsEn: 'Learn Signs',
-    community: 'ප්‍රජාව',
-    communityEn: 'Community',
-    alerts: 'ඇඟවීම්',
-    alertsEn: 'Alerts',
-    contacts: 'සම්බන්ධතා',
-    contactsEn: 'Contacts',
-    sosSide: 'හදිසි අවස්ථා',
-    sosSideEn: 'SOS',
-    roadMonitor: 'මාර්ග ආරක්ෂාව',
-    roadMonitorEn: 'Road Monitor',
-    accessibility: 'ප්‍රවේශ්‍යතාව',
-    accessibilityEn: 'Accessibility',
+    // Sidebar navigation (now only one language per item)
+    home: 'Home',
+    vision: 'AI Vision',
+    learn: 'Learn Signs',
+    inperson: 'Live Translator',      // 👈 new
+    community: 'Community',
+    alerts: 'Alerts',
+    contacts: 'Contacts',
+    emergency: 'SOS',
+    roadmonitor: 'Road Monitor',
+    settings: 'Accessibility',
 
     // SOS / Emergency
     sosCenter: 'SOS Emergency Center',
@@ -57,7 +49,7 @@ const translations = {
     switchedToSinhala: 'Switched to Sinhala',
     switchedToEnglish: 'Switched to English',
 
-    // Accessibility settings (if needed)
+    // Accessibility settings
     accessibilitySettings: 'Accessibility Settings',
     fontSize: 'Font Size',
     colorAccessibility: 'Color Accessibility',
@@ -133,24 +125,17 @@ const translations = {
     signOut: 'පිටවන්න',
     howItWorks: 'මෙය ක්‍රියා කරන ආකාරය',
 
+    // Sidebar navigation (Sinhala)
     home: 'මුල් පිටුව',
-    homeEn: 'Home',
-    aiVision: 'AI දෘෂ්ටිය',
-    aiVisionEn: 'AI Vision',
-    learnSigns: 'සංඥා ඉගෙන ගන්න',
-    learnSignsEn: 'Learn Signs',
+    vision: 'AI දෘෂ්ටිය',
+    learn: 'සංඥා ඉගෙන ගන්න',
+    inperson: 'සජීවී පරිවර්තකය',      // 👈 new
     community: 'ප්‍රජාව',
-    communityEn: 'Community',
     alerts: 'ඇඟවීම්',
-    alertsEn: 'Alerts',
     contacts: 'සම්බන්ධතා',
-    contactsEn: 'Contacts',
-    sosSide: 'හදිසි අවස්ථා',
-    sosSideEn: 'SOS',
-    roadMonitor: 'මාර්ග ආරක්ෂාව',
-    roadMonitorEn: 'Road Monitor',
-    accessibility: 'ප්‍රවේශ්‍යතාව',
-    accessibilityEn: 'Accessibility',
+    emergency: 'හදිසි අවස්ථා',
+    roadmonitor: 'මාර්ග ආරක්ෂාව',
+    settings: 'ප්‍රවේශ්‍යතාව',
 
     sosCenter: 'හදිසි SOS මධ්‍යස්ථානය',
     sos: 'SOS',

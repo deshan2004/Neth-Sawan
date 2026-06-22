@@ -16,7 +16,7 @@ const Sidebar = ({
   onLogout,
   onShowInstructions 
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage(); // also get language to conditionally show
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileData, setProfileData] = useState({
     displayName: isGuest ? t('guest') : (user?.displayName || user?.email?.split('@')[0] || t('user')),
@@ -57,18 +57,18 @@ const Sidebar = ({
     setProfileData(prev => ({ ...prev, ...updatedData }));
   };
 
-  // 👇 Added "inperson" tab here
+  // 👇 Updated menu items – only id and icon; labels come from translations
   const menuItems = [
-    { id: 'dashboard', icon: '🏠', label: t('home'), en: t('homeEn') },
-    { id: 'vision', icon: '👁️', label: t('aiVision'), en: t('aiVisionEn') },
-    { id: 'learn', icon: '🤟', label: t('learnSigns'), en: t('learnSignsEn') },
-    { id: 'inperson', icon: '📸', label: 'සජීවී පරිවර්තකය', en: 'Live Translator' },
-    { id: 'community', icon: '👥', label: t('community'), en: t('communityEn') },
-    { id: 'alerts', icon: '🔔', label: t('alerts'), en: t('alertsEn') },
-    { id: 'contacts', icon: '📇', label: t('contacts'), en: t('contactsEn') },
-    { id: 'emergency', icon: '🆘', label: t('sosSide'), en: t('sosSideEn') },
-    { id: 'roadmonitor', icon: '🛣️', label: t('roadMonitor'), en: t('roadMonitorEn') },
-    { id: 'settings', icon: '♿', label: t('accessibility'), en: t('accessibilityEn') }
+    { id: 'dashboard', icon: '🏠' },
+    { id: 'vision', icon: '👁️' },
+    { id: 'learn', icon: '🤟' },
+    { id: 'inperson', icon: '📸' },
+    { id: 'community', icon: '👥' },
+    { id: 'alerts', icon: '🔔' },
+    { id: 'contacts', icon: '📇' },
+    { id: 'emergency', icon: '🆘' },
+    { id: 'roadmonitor', icon: '🛣️' },
+    { id: 'settings', icon: '♿' }
   ];
 
   const statusText = isGuest ? t('localData') : t('online');
@@ -127,8 +127,8 @@ const Sidebar = ({
               }}
             >
               <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-              <span className="nav-label-en">{item.en}</span>
+              {/* Only one label – translated via t() */}
+              <span className="nav-label">{t(item.id)}</span>
             </button>
           ))}
         </nav>
