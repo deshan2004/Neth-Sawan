@@ -82,6 +82,26 @@ const SIGN_DICTIONARY = {
 // Quick sign list for easy access
 const QUICK_SIGNS = ['HELP', 'WATER', 'THANK YOU', 'YES', 'NO', 'EMERGENCY', 'POLICE', 'DOCTOR', 'STOP', 'LOVE'];
 
+// ===== SCRIPT DETECTION =====
+const isSinhala = (char) => {
+  const code = char.charCodeAt(0);
+  return code >= 0x0D80 && code <= 0x0DFF;
+};
+
+const isLatin = (char) => {
+  return /[A-Za-z]/.test(char);
+};
+
+const detectScript = (text) => {
+  if (!text) return 'unknown';
+  const chars = text.replace(/\s/g, '').split('');
+  const sinhalaCount = chars.filter(c => isSinhala(c)).length;
+  const latinCount = chars.filter(c => isLatin(c)).length;
+  if (sinhalaCount > latinCount) return 'sinhala';
+  if (latinCount > sinhalaCount) return 'latin';
+  return 'unknown';
+};
+
 const SignLanguageBox = ({ transcript, currentWord }) => {
   // ===== STATE =====
   const [currentSign, setCurrentSign] = useState(null);
@@ -93,6 +113,7 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
   const [activeWord, setActiveWord] = useState('');
   const [scrollLeft, setScrollLeft] = useState(0);
   const [maxScroll, setMaxScroll] = useState(0);
+  const [displayMode, setDisplayMode] = useState('sign');
 
   const lastSignRef = useRef(null);
   const speechRef = useRef(null);
@@ -117,6 +138,7 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
     if (!inputText || !inputText.trim()) {
       setCurrentSign(null);
       setIsFingerspelling(false);
+      setDisplayMode('sign');
       return;
     }
 
@@ -150,6 +172,7 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
       setActiveWord(found.key);
       setCurrentSign({ word: found.key, ...found.data });
       setIsFingerspelling(false);
+      setDisplayMode('sign');
 
       if (lastSignRef.current !== found.key) {
         setRecentSigns(prev => {
@@ -175,19 +198,36 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
       return () => clearTimeout(timer);
     }
 
-    // ===== FINGERSPELLING MODE =====
+    // ===== NO DICTIONARY MATCH – DECIDE MODE =====
+    const script = detectScript(cleanInput);
     const letters = getBaseLetters(inputText);
+
+    // If script is not Latin or Sinhala, just show as text (no fingerspelling)
+    if (script === 'unknown' && letters.length > 0) {
+      setActiveWord(cleanInput);
+      setIsFingerspelling(false);
+      setDisplayMode('text');
+      setCurrentSign({
+        word: cleanInput,
+        sinhala: 'Unsupported script',
+        description: 'Sign not available for this text',
+        asl: '🧩'
+      });
+      return;
+    }
+
+    // If it's Sinhala or Latin, try fingerspelling
     if (letters.length > 0) {
       setActiveWord(cleanInput);
       setLettersArray(letters);
       setIsFingerspelling(true);
+      setDisplayMode('fingerspell');
       setCurrentSign({
         word: cleanInput,
         sinhala: 'අකුරු සංඥා කිරීම',
         description: 'Fingerspelling – signing each letter individually',
         asl: '🔤'
       });
-      // Reset scroll position when new word appears
       setScrollLeft(0);
       if (rowRef.current) {
         rowRef.current.scrollLeft = 0;
@@ -195,6 +235,7 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
     } else {
       setCurrentSign(null);
       setIsFingerspelling(false);
+      setDisplayMode('sign');
     }
   }, [inputText]);
 
@@ -203,20 +244,34 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
     if (rowRef.current && isFingerspelling) {
       const { scrollWidth, clientWidth } = rowRef.current;
       setMaxScroll(Math.max(0, scrollWidth - clientWidth));
+      setScrollLeft(rowRef.current.scrollLeft);
     }
   }, [lettersArray, isFingerspelling]);
 
-  // ===== SCROLL FUNCTIONS =====
-  const scrollRow = (direction) => {
-    if (rowRef.current) {
-      const scrollAmount = 200;
-      const newScrollLeft = rowRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
-      rowRef.current.scrollTo({
-        left: Math.max(0, Math.min(newScrollLeft, maxScroll)),
-        behavior: 'smooth'
-      });
-      setScrollLeft(Math.max(0, Math.min(newScrollLeft, maxScroll)));
+  // ===== SCROLL EVENT LISTENER =====
+  useEffect(() => {
+    if (rowRef.current && isFingerspelling) {
+      const handleScroll = () => {
+        setScrollLeft(rowRef.current.scrollLeft);
+      };
+      const row = rowRef.current;
+      row.addEventListener('scroll', handleScroll);
+      return () => row.removeEventListener('scroll', handleScroll);
     }
+  }, [isFingerspelling]);
+
+  // ===== SCROLL FUNCTION =====
+  const scrollRow = (direction) => {
+    if (!rowRef.current) return;
+    const container = rowRef.current;
+    const firstItem = container.querySelector('.fingerspell-item');
+    const itemWidth = firstItem ? firstItem.offsetWidth + 12 : 150;
+    const scrollAmount = Math.max(itemWidth * 2, 150);
+    const newScrollLeft = container.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+    container.scrollTo({
+      left: Math.max(0, Math.min(newScrollLeft, maxScroll)),
+      behavior: 'smooth'
+    });
   };
 
   // ===== AUTO-SCROLL HISTORY =====
@@ -263,6 +318,7 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
       const item = { key, data };
       setCurrentSign({ word: key, ...data });
       setIsFingerspelling(false);
+      setDisplayMode('sign');
       speakSign(key);
       setRecentSigns(prev => {
         const filtered = prev.filter(i => i.key !== key);
@@ -287,6 +343,7 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
   const handleHistoryClick = (item) => {
     setCurrentSign({ word: item.word, ...item });
     setIsFingerspelling(false);
+    setDisplayMode('sign');
     speakSign(item.word);
     setTimeout(() => {
       setCurrentSign(prev => prev?.word === item.word ? null : prev);
@@ -318,7 +375,7 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
             );
           })}
         </div>
-        {/* Scroll Buttons - only show if long */}
+        {/* Scroll Buttons */}
         {isLong && (
           <div className="fingerspell-scroll-buttons">
             <button 
@@ -332,7 +389,7 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
             <button 
               className="scroll-btn scroll-right" 
               onClick={() => scrollRow('right')}
-              disabled={scrollLeft >= maxScroll}
+              disabled={scrollLeft >= maxScroll - 1}
               aria-label="Scroll right"
             >
               ›
@@ -342,6 +399,17 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
         <div className="fingerspell-hint">
           <span>🔤 {lettersArray.length} letters</span>
         </div>
+      </div>
+    );
+  };
+
+  // ===== RENDER TEXT MODE (for unsupported scripts) =====
+  const renderTextMode = () => {
+    return (
+      <div className="text-mode-container">
+        <div className="text-mode-icon">🧩</div>
+        <div className="text-mode-word">{activeWord}</div>
+        <div className="text-mode-hint">Sign not available for this script</div>
       </div>
     );
   };
@@ -358,16 +426,19 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
           <span className="sign-header-dot animated"></span>
           <h3 className="sign-title">🤟 Sign Language Translator</h3>
         </div>
-        {isFingerspelling && <span className="sign-badge fingerspell">🔤 Fingerspelling</span>}
-        {!isFingerspelling && currentSign && <span className="sign-badge live">✅ Word</span>}
+        {displayMode === 'fingerspell' && <span className="sign-badge fingerspell">🔤 Fingerspelling</span>}
+        {displayMode === 'sign' && currentSign && <span className="sign-badge live">✅ Word</span>}
+        {displayMode === 'text' && <span className="sign-badge" style={{ background: 'rgba(255,136,0,0.15)', color: '#FF8800' }}>📝 Text</span>}
       </div>
 
-      {/* ===== MAIN DISPLAY – SIGN ONLY ===== */}
+      {/* ===== MAIN DISPLAY ===== */}
       <div className="sign-display-panel">
         {currentSign ? (
           <div className="sign-active-content">
             <div className="sign-graphic-wrapper">
-              {isFingerspelling ? renderFingerspelling() : (
+              {displayMode === 'fingerspell' ? renderFingerspelling() : 
+               displayMode === 'text' ? renderTextMode() :
+               (
                 <div className="sign-avatar-animation">
                   <span className="sign-icon-large">{currentSign.asl}</span>
                   <div className="sign-icon-pulse"></div>
@@ -388,7 +459,7 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
         )}
       </div>
 
-      {/* ===== INFO FOOTER – SCROLLABLE ===== */}
+      {/* ===== INFO FOOTER ===== */}
       {currentSign && (
         <div className="sign-info-footer" ref={infoScrollRef}>
           <div className="sign-info-scroll">
@@ -399,18 +470,20 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
             <p className="sign-description">
               <strong>How to sign:</strong> {currentSign.description}
             </p>
-            <button
-              className={`sign-speak-btn ${isSpeaking ? 'active' : ''}`}
-              onClick={() => {
-                if (isSpeaking) {
-                  stopSpeaking();
-                } else {
-                  speakSign(displayWord);
-                }
-              }}
-            >
-              {isSpeaking ? '🔊 Speaking...' : '🔊 Listen'}
-            </button>
+            {displayMode !== 'text' && (
+              <button
+                className={`sign-speak-btn ${isSpeaking ? 'active' : ''}`}
+                onClick={() => {
+                  if (isSpeaking) {
+                    stopSpeaking();
+                  } else {
+                    speakSign(displayWord);
+                  }
+                }}
+              >
+                {isSpeaking ? '🔊 Speaking...' : '🔊 Listen'}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -431,7 +504,7 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
         </div>
       </div>
 
-      {/* ===== RECENT SIGNS HISTORY ===== */}
+      {/* ===== RECENT SIGNS ===== */}
       {recentSigns.length > 0 && (
         <div className="sign-history-section">
           <div className="sign-history-header">
@@ -480,7 +553,8 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
         <p className="guide-text">
           <strong>Two ways to use:</strong> Speak naturally (captions) or type a word directly.
           Click <strong>🔊 Listen</strong> to hear the word spoken aloud.
-          {isFingerspelling && ' 🔤 Words not in dictionary are shown letter by letter.'}
+          {displayMode === 'fingerspell' && ' 🔤 Words not in dictionary are shown letter by letter.'}
+          {displayMode === 'text' && ' 📝 This script is not supported for fingerspelling yet.'}
         </p>
       </div>
 
