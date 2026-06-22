@@ -310,4 +310,24 @@ body {
     margin-left: 0 !important;
     width: 100% !important;
   }
+}/* In App.css – these already exist, but make sure they're applied */
+:root {
+  --dynamic-bg: #0A0C1A;
+  --dynamic-text: #FFFFFF;
+  --dynamic-primary: #00DDB3;
+  --dynamic-font-size: 16px;
+  --dynamic-font-size-large: 20px;
+  --dynamic-font-size-small: 14px;
+}
+
+/* Apply them to the app wrapper */
+.app-wrapper {
+  background: var(--dynamic-bg, #0A0C1A);
+  color: var(--dynamic-text, #FFFFFF);
+}
+
+/* Apply dynamic font size to main content */
+.main-content,
+.app-wrapper {
+  font-size: var(--dynamic-font-size, 16px);
 }

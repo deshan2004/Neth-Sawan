@@ -930,4 +930,52 @@
     outline: 3px solid #FFFF00;
     outline-offset: 2px;
   }
+}/* ============================================================
+   HIGH CONTRAST & BETTER VISIBILITY EXTENSION (ADD TO BOTTOM)
+   ============================================================ */
+
+/* ප්‍රධාන Transcript පෙළ හොඳින් මහතට සහ සුදුවට පෙනීමට */
+.transcript-text {
+  color: #FFFFFF !important; 
+  font-weight: 700 !important; 
+  line-height: 1.8 !important;
+  font-family: 'Inter', 'Noto Sans Sinhala', 'Iskoola Pota', sans-serif;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6) !important; 
+}
+
+/* සිංහල ටයිප් කරන කොටස සම්පූර්ණ සුදු පසුබිමක තද කළු අකුරෙන් පෙනීමට */
+.sinhala-input {
+  background: #FFFFFF !important; 
+  color: #0A0C1A !important; 
+  border: 2px solid rgba(0, 221, 179, 0.5) !important;
+  font-size: 1.15rem !important;
+  font-weight: 700 !important; 
+}
+
+.sinhala-input::placeholder {
+  color: #7A869A !important; 
+}
+
+/* Singlish Preview Box එක සම්පූර්ණයෙන්ම අඳුරු (Black) කිරීම */
+.transliteration-preview {
+  background: rgba(0, 0, 0, 0.7) !important; /* හොඳට කළු/අඳුරු පසුබිමක් දීම */
+  border-left: 3px solid #F5C842 !important;  /* වටේ බෝඩර් එක රන්වන් පාටින්ම තැබීම */
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.6) !important;
+}
+.preview-label {
+  color: #6B7280 !important; 
+  font-weight: 700;
+}
+
+.preview-text {
+  font-size: 1.2rem !important; 
+  color: #B45309 !important; 
+  font-weight: 800 !important; 
+}
+
+/* Light Theme එකක් සක්‍රීය වුවහොත් අකුරු කළු පැහැයෙන් පෙනීමට */
+:global([data-theme='light']) .transcript-text,
+body.light-theme .transcript-text {
+  color: #0A0C1A !important; 
+  text-shadow: none !important;
 }
