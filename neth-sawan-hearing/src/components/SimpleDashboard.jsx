@@ -25,71 +25,150 @@ const SimpleDashboard = ({
   roadSafetyActive,
   setLang,
   lang,
-  retryListening,        // 👈 New prop
-  microphonePermission   // 👈 New prop
+  retryListening,
+  microphonePermission,
+  recognitionStatus,
+  supported,
+  onTranscriptChange
 }) => {
   return (
     <div className="simple-dashboard">
-      {/* ===== Main Unified Card ===== */}
-      <div className="primary-card unified-card">
-        <div className="card-header-simple">
-          <h2>
-            <span className="header-icon">🎤</span>
-            Live Captions
-            {isListening && <span className="live-badge">● LIVE</span>}
-          </h2>
+      {/* ===== SPLIT LAYOUT: Captions | Sound Wave | Sign Language ===== */}
+      <div className="dashboard-split">
+
+        {/* LEFT: Live Captions */}
+        <div className="dashboard-left">
+          <div className="captions-box">
+            <TranscriptBox
+              transcript={transcript}
+              isListening={isListening}
+              startListening={startListening}
+              stopListening={stopListening}
+              clearTranscript={clearTranscript}
+              error={speechError}
+              browserInfo={browserInfo}
+              setLang={setLang}
+              currentLang={lang}
+              retryListening={retryListening}
+              microphonePermission={microphonePermission}
+              recognitionStatus={recognitionStatus}
+              supported={supported}
+              onTranscriptChange={onTranscriptChange}
+            />
+          </div>
         </div>
-        
-        <TranscriptBox 
-          transcript={transcript} 
-          isListening={isListening} 
-          startListening={startListening}
-          stopListening={stopListening} 
-          clearTranscript={clearTranscript} 
-          error={speechError}
-          browserInfo={browserInfo}
-          setLang={setLang}
-          currentLang={lang}
-          retryListening={retryListening}        // 👈 New
-          microphonePermission={microphonePermission} // 👈 New
-        />
+
+        {/* CENTER: Sound Wave Visualizer + Status */}
+        <div className="dashboard-center">
+          <div className="sound-wave-center">
+            <div className="wave-container">
+              <div className="wave-ring">
+                <div className="wave-ring-inner">
+                  {/* Animated sound wave bars */}
+                  {[...Array(24)].map((_, i) => {
+                    const height = Math.max(4, Math.sin((i / 24) * Math.PI * 2) * volume * 60 + 30);
+                    const delay = (i / 24) * 0.8;
+                    const isActive = isLoud || isListening;
+                    return (
+                      <div
+                        key={i}
+                        className={`wave-bar ${isActive ? 'active' : ''}`}
+                        style={{
+                          height: `${isActive ? height : 6}px`,
+                          animationDelay: `${delay}s`,
+                          animationDuration: `${0.6 + volume * 0.8}s`,
+                          background: isLoud
+                            ? 'linear-gradient(180deg, #FF3355, #FF8866)'
+                            : isListening
+                            ? 'linear-gradient(180deg, #00DDB3, #66FFCC)'
+                            : 'rgba(255,255,255,0.15)'
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="wave-status">
+                {isListening ? (
+                  <span className="status-live">
+                    <span className="pulse-dot"></span>
+                    LIVE
+                  </span>
+                ) : (
+                  <span className="status-idle">⏸ PAUSED</span>
+                )}
+                {soundType && (
+                  <span className="wave-sound-type">
+                    {isLoud ? '🔊' : '🔈'} {soundType}
+                  </span>
+                )}
+                <span className="wave-volume">
+                  {Math.round(volume * 100)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: Sign Language */}
+        <div className="dashboard-right">
+          <div className="sign-box">
+            <SignLanguageBox transcript={transcript} />
+          </div>
+          <VisualAlert
+            isLoud={isLoud && emergencyNotificationsEnabled}
+            soundType={soundType}
+            volume={volume}
+            threshold={threshold}
+            onThresholdChange={setThreshold}
+            soundHistory={soundHistory}
+          />
+        </div>
+
       </div>
 
-      {/* ===== Sign Language Translator ===== */}
-      <div className="primary-card sign-card">
-        <div className="card-header-simple">
-          <h2>
-            <span className="header-icon">🤟</span>
-            Sign Language Translator
-            <span className="sign-badge">Live from captions</span>
-          </h2>
-        </div>
-        <SignLanguageBox transcript={transcript} />
-      </div>
-
-      {/* ===== Sound Monitor + Road Safety Row ===== */}
-      <div className="sound-row">
+      {/* ===== BOTTOM ROW: Sound Monitor + Road Safety ===== */}
+      <div className="dashboard-primary">
         <div className="sound-card">
           <h3 className="card-title-simple">
             <span>🔊</span> Sound Monitor
           </h3>
-          <VisualAlert 
-            isLoud={isLoud && emergencyNotificationsEnabled} 
-            soundType={soundType} 
-            volume={volume}
-            threshold={threshold} 
-            onThresholdChange={setThreshold} 
-            soundHistory={soundHistory}
-          />
-        </div>
-        
-        <div className="sound-card">
-          <h3 className="card-title-simple">
-            <span>📊</span> Sound Wave & History
-          </h3>
           <SoundVisualizer volume={volume} isLoud={isLoud} soundType={soundType} />
-          <SoundHistory soundHistory={soundHistory.slice(0, 5)} />
         </div>
+
+        <RoadSafetyMonitor
+          isActive={roadSafetyActive}
+          onAlert={(alert) => {
+            if (emergencyNotificationsEnabled) {
+              showToast(alert.description, 'error');
+              setFlashEmergency(true);
+              setEmergencyData({
+                soundType: alert.name,
+                message: alert.description,
+                timestamp: new Date(),
+                volume: alert.volume
+              });
+              setEmergencyMessage(`🚗 ${alert.name}`);
+              setTimeout(() => setFlashEmergency(false), 5000);
+              if (isGuest) {
+                guestAddNotification({
+                  id: Date.now(),
+                  type: 'ROAD_SAFETY',
+                  message: alert.description,
+                  soundType: alert.name,
+                  timestamp: new Date().toISOString(),
+                  read: false
+                });
+              }
+            }
+          }}
+          showToast={showToast}
+        />
+      </div>
+
+      {/* ===== SOUND HISTORY ===== */}
+      <div className="dashboard-secondary">
+        <SoundHistory soundHistory={soundHistory.slice(0, 5)} />
       </div>
 
       {/* ===== Road Safety Banner ===== */}
