@@ -464,6 +464,12 @@ function AppContent() {
       return;
     }
 
+    // Log what we're sending
+    console.log(`📤 Sending ${alertType} alert to ${contact.name}`);
+    console.log(`   - WhatsApp: ${contact.notifyByWhatsApp ? '✅' : '❌'}`);
+    console.log(`   - SMS: ${contact.notifyBySMS ? '✅' : '❌'}`);
+    console.log(`   - Desktop: ${contact.notifyByDesktop ? '✅' : '❌'}`);
+
     // WhatsApp (if enabled)
     if (contact.notifyByWhatsApp) {
       const waMessage = buildWhatsAppMessage(contact.name, location, userEmail, alertType);
@@ -474,6 +480,7 @@ function AppContent() {
       const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(waMessage)}`;
       window.open(url, '_blank', 'noopener,noreferrer');
       console.log(`✅ WhatsApp sent to ${contact.name}`);
+      showToast(`💬 WhatsApp sent to ${contact.name}`, 'info');
     }
 
     // SMS (if enabled)
@@ -482,6 +489,7 @@ function AppContent() {
       const smsUrl = `sms:${contact.phone}?body=${encodeURIComponent(smsMessage)}`;
       window.open(smsUrl, '_blank');
       console.log(`✅ SMS sent to ${contact.name}`);
+      showToast(`✉️ SMS sent to ${contact.name}`, 'info');
     }
 
     // Desktop notification
@@ -505,6 +513,7 @@ function AppContent() {
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, enableHighAccuracy: true })
       );
       currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      console.log("📍 Location obtained:", currentLocation);
     } catch (e) {
       console.warn("Location error:", e.message);
     }
@@ -518,6 +527,7 @@ function AppContent() {
         userId: user ? user.uid : "GUEST_USER",
         location: currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : "Location Unavailable"
       });
+      console.log("✅ Emergency alert saved to Firebase");
     } catch (error) {
       console.error("Firebase error:", error);
     }
@@ -525,6 +535,7 @@ function AppContent() {
     // Always vibrate
     if (navigator.vibrate) {
       navigator.vibrate([500, 200, 500, 200, 500]);
+      console.log("📳 Vibration triggered");
     }
 
     // Emergency flash
@@ -540,13 +551,18 @@ function AppContent() {
       setEmergencyMessage('🚨 FALL DETECTED!');
       showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
       setTimeout(() => setFlashEmergency(false), 8000);
+      console.log("🔴 Emergency flash shown");
     }
 
     // ===== SEND ALERTS TO ALL CONTACTS =====
     if (currentRelatives && currentRelatives.length > 0) {
+      console.log(`📤 Sending fall alerts to ${currentRelatives.length} contacts...`);
       currentRelatives.forEach(contact => {
         sendAlertToContact(contact, 'FALL DETECTED', currentLocation, user?.email || 'Guest User');
       });
+    } else {
+      console.warn("⚠️ No emergency contacts found!");
+      showToast("⚠️ No emergency contacts added. Add contacts in the Contacts tab.", "warning");
     }
   };
 
@@ -560,6 +576,7 @@ function AppContent() {
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, enableHighAccuracy: true })
       );
       currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      console.log("📍 Location obtained:", currentLocation);
     } catch (e) {
       console.warn("Location error:", e.message);
     }
@@ -575,10 +592,12 @@ function AppContent() {
       location: currentLocation
     });
     showToast(`🚨 EMERGENCY: ${msg || 'SOS Activated!'}`, 'error');
+    console.log("🔴 Emergency flash shown");
 
     // Always vibrate
     if (navigator.vibrate) {
       navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+      console.log("📳 SOS vibration triggered");
     }
 
     // Save to Firestore if logged in
@@ -590,6 +609,7 @@ function AppContent() {
           timestamp: serverTimestamp(),
           location: currentLocation
         });
+        console.log("✅ SOS saved to Firebase");
       } catch (e) {
         console.error("Error saving emergency:", e);
       }
@@ -602,13 +622,18 @@ function AppContent() {
         read: false,
         location: currentLocation
       });
+      console.log("✅ SOS saved to guest notifications");
     }
 
     // ===== SEND ALERTS TO ALL CONTACTS =====
     if (currentRelatives && currentRelatives.length > 0) {
+      console.log(`📤 Sending SOS alerts to ${currentRelatives.length} contacts...`);
       currentRelatives.forEach(contact => {
         sendAlertToContact(contact, msg || 'SOS', currentLocation, user?.email || 'Guest User');
       });
+    } else {
+      console.warn("⚠️ No emergency contacts found!");
+      showToast("⚠️ No emergency contacts added. Add contacts in the Contacts tab.", "warning");
     }
 
     // Auto-hide flash after 8 seconds
