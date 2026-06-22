@@ -165,12 +165,12 @@
   overflow-x: auto;
   justify-content: center;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Hide default scrollbar */
+  scrollbar-width: none;
   width: 100%;
 }
 
 .fingerspell-row::-webkit-scrollbar {
-  display: none; /* Hide default scrollbar */
+  display: none;
 }
 
 /* ===== FINGERSPELLING ITEMS ===== */
