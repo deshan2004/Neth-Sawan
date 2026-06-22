@@ -450,4 +450,124 @@
   .test-fall-btn span:last-child {
     display: none;
   }
+}/* ===== SOS HEADER BUTTON – Big, Bold, Mobile-Friendly ===== */
+.sos-header-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 60px;
+  font-weight: 800;
+  font-size: 1.1rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  min-height: 52px;
+  background: linear-gradient(135deg, #FF0033, #CC0022);
+  color: #FFFFFF;
+  box-shadow: 0 4px 20px rgba(255, 0, 51, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+  animation: sosPulse 2s ease-in-out infinite;
+}
+
+/* Glow effect behind SOS button */
+.sos-header-btn::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 64px;
+  background: linear-gradient(135deg, rgba(255, 0, 51, 0.3), rgba(255, 51, 85, 0.1));
+  z-index: -1;
+  filter: blur(8px);
+  animation: sosGlow 2s ease-in-out infinite;
+}
+
+@keyframes sosPulse {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 4px 20px rgba(255, 0, 51, 0.4);
+  }
+  50% { 
+    transform: scale(1.02);
+    box-shadow: 0 6px 32px rgba(255, 0, 51, 0.6);
+  }
+}
+
+@keyframes sosGlow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.sos-header-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 8px 32px rgba(255, 0, 51, 0.6);
+  background: linear-gradient(135deg, #FF2244, #DD0033);
+}
+
+.sos-header-btn:active {
+  transform: scale(0.94);
+}
+
+.sos-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.sos-text {
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile: keep icon + text, just smaller padding */
+@media (max-width: 768px) {
+  .sos-header-btn {
+    padding: 8px 16px;
+    min-height: 44px;
+    gap: 6px;
+    font-size: 0.95rem;
+  }
+  .sos-icon {
+    font-size: 1.4rem;
+  }
+  .sos-text {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .sos-header-btn {
+    padding: 6px 12px;
+    min-height: 38px;
+    gap: 4px;
+    border-radius: 40px;
+  }
+  .sos-icon {
+    font-size: 1.2rem;
+  }
+  .sos-text {
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+  }
+}
+
+/* Very small screens: icon only, but still big */
+@media (max-width: 380px) {
+  .sos-header-btn {
+    padding: 6px 10px;
+    min-height: 34px;
+  }
+  .sos-text {
+    display: none;
+  }
+  .sos-icon {
+    font-size: 1.6rem;
+  }
 }

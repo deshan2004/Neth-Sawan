@@ -9,7 +9,8 @@ const Header = ({
   emergencyNotificationsEnabled, onToggleEmergencyNotifications,
   onToggleSidebar, sidebarOpen,
   fallDetectorBlocked, onRequestFallPermission,
-  onTestFall  // 👈 New prop
+  onTestFall,
+  onTriggerEmergency
 }) => {
   const { t } = useLanguage();
 
@@ -27,14 +28,14 @@ const Header = ({
       </div>
 
       <div className="header-right">
-        {/* 🔥 TEST FALL BUTTON – Red Emergency Style */}
+        {/* 🔥 SOS BUTTON – Big, Bold, Mobile-Friendly */}
         <button 
-          className="test-fall-btn"
+          className="sos-header-btn"
           onClick={onTestFall}
-          title="Simulate a fall to test emergency alerts"
+          title="SOS Emergency"
         >
-          
-          <span>SOS</span>
+          <span className="sos-icon">🆘</span>
+          <span className="sos-text">SOS</span>
         </button>
 
         {fallDetectorBlocked && (
