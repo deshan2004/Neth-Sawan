@@ -23,19 +23,16 @@ const BLANK = {
   notifyByCall: false,
   notifyByDesktop: true,
   autoSendWhatsApp: false,
-  // We'll add a derived notificationMethod for UI convenience
   notificationMethod: 'whatsapp', // 'whatsapp' | 'sms' | 'both'
 };
 
-// Helper to convert checkboxes to method
 const getMethodFromCheckboxes = (notifyByWhatsApp, notifyBySMS) => {
   if (notifyByWhatsApp && notifyBySMS) return 'both';
   if (notifyByWhatsApp) return 'whatsapp';
   if (notifyBySMS) return 'sms';
-  return 'whatsapp'; // fallback
+  return 'whatsapp';
 };
 
-// Helper to set checkboxes from method
 const getCheckboxesFromMethod = (method) => {
   switch (method) {
     case 'whatsapp': return { notifyByWhatsApp: true, notifyBySMS: false };
@@ -72,13 +69,6 @@ const RelativesManager = ({
 
   const setField = (key, value) => setForm(f => ({ ...f, [key]: value }));
 
-  // When checkboxes change, update the method
-  const updateMethodFromCheckboxes = (whatsapp, sms) => {
-    const method = getMethodFromCheckboxes(whatsapp, sms);
-    setForm(f => ({ ...f, notificationMethod: method }));
-  };
-
-  // When method changes, update checkboxes
   const handleMethodChange = (method) => {
     const { notifyByWhatsApp, notifyBySMS } = getCheckboxesFromMethod(method);
     setForm(f => ({
@@ -98,7 +88,6 @@ const RelativesManager = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
-    // Ensure method syncs with checkboxes (just in case)
     const method = form.notificationMethod;
     const { notifyByWhatsApp, notifyBySMS } = getCheckboxesFromMethod(method);
     const payload = { ...form, notifyByWhatsApp, notifyBySMS };
@@ -111,7 +100,6 @@ const RelativesManager = ({
   };
 
   const startEdit = (rel) => {
-    // Determine method from existing checkboxes
     const method = getMethodFromCheckboxes(rel.notifyByWhatsApp, rel.notifyBySMS);
     setForm({ ...BLANK, ...rel, notificationMethod: method });
     setEditId(rel.id);

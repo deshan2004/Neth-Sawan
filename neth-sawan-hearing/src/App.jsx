@@ -35,7 +35,39 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
 
-// ===== BUILD SMS EMERGENCY MESSAGE (short, plain text) =====
+// ===== BUILD WHATSAPP MESSAGE (rich, formatted) =====
+const buildWhatsAppMessage = (contactName, location, userEmail, alertType) => {
+  const time = new Date().toLocaleString('en-LK', {
+    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+
+  let message = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
+  message += `Dear ${contactName},\n\n`;
+  message += `⚠️ *This is an automated emergency alert from your loved one's device.*\n\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `📢 *ALERT TYPE:* 🆘 ${alertType || 'SOS EMERGENCY'}\n`;
+  message += `🕒 *TIME:* ${time}\n`;
+  message += `👤 *USER:* ${userEmail || 'Neth-Sawan User'}\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+  if (location) {
+    message += `📍 *LIVE LOCATION:*\n`;
+    message += `https://maps.google.com/?q=${location.lat},${location.lng}\n\n`;
+  } else {
+    message += `📍 *LOCATION:* Location services unavailable. Please call immediately.\n\n`;
+  }
+
+  message += `📝 *MESSAGE:* ${alertType || 'SOS'} button was pressed. Immediate assistance may be required. Please check on your loved one as soon as possible.\n\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `⚠️ *PLEASE RESPOND PROMPTLY* ⚠️\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  message += `_This is an automated message from Neth-Sawan Hearing Assistant._\n`;
+  message += `_For more info, visit neth-sawan.app_`;
+
+  return message;
+};
+
+// ===== BUILD SMS MESSAGE (plain text, short) =====
 const buildSmsMessage = (contactName, location, userEmail, alertType) => {
   const time = new Date().toLocaleString('en-LK', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -51,34 +83,7 @@ const buildSmsMessage = (contactName, location, userEmail, alertType) => {
   } else {
     message += `Location: Not available - please call immediately.\n`;
   }
-  message += `Message: ${alertType || 'SOS'} button pressed. Immediate assistance required.`;
-  return message;
-};
-
-// ===== WHATSAPP FALL MESSAGE (kept for fall detection only) =====
-const buildFallWhatsAppMessage = (contactName, location, userEmail) => {
-  const time = new Date().toLocaleString('en-LK', {
-    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
-  let message = `🚨 *URGENT: FALL DETECTED - Neth-Sawan* 🚨\n\n`;
-  message += `Dear ${contactName},\n\n`;
-  message += `⚠️ *An immediate fall/impact was detected by your loved one's device, and they have not responded to the safety countdown.*\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `📢 *ALERT TYPE:* 🛑 AUTOMATIC FALL DETECTION\n`;
-  message += `🕒 *TIME:* ${time}\n`;
-  message += `👤 *USER:* ${userEmail || 'Neth-Sawan User'}\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  if (location) {
-    message += `📍 *LAST KNOWN LIVE LOCATION:*\n`;
-    message += `https://maps.google.com/?q=${location.lat},${location.lng}\n\n`;
-  } else {
-    message += `📍 *LOCATION:* Location services were unavailable, please try calling them immediately.\n\n`;
-  }
-  message += `📝 *MESSAGE:* This is an automated emergency alert. Immediate assistance may be required. Please contact or check on your loved one right away!\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `⚠️ *PLEASE RESPOND IMMEDIATELY* ⚠️\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  message += `_Sent automatically by Neth-Sawan Accessibility Assistant._`;
+  message += `Message: ${alertType || 'SOS'} pressed. Immediate assistance required.`;
   return message;
 };
 
@@ -449,6 +454,48 @@ function AppContent() {
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
+  // ============================================================
+  // ===== HELPER: SEND ALERT TO A SINGLE CONTACT =====
+  // ============================================================
+  const sendAlertToContact = (contact, alertType, location, userEmail) => {
+    // Skip if no phone number
+    if (!contact.phone) {
+      console.warn(`❌ ${contact.name} has no phone number`);
+      return;
+    }
+
+    // WhatsApp (if enabled)
+    if (contact.notifyByWhatsApp) {
+      const waMessage = buildWhatsAppMessage(contact.name, location, userEmail, alertType);
+      let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
+      if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
+      else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
+      else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
+      const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(waMessage)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      console.log(`✅ WhatsApp sent to ${contact.name}`);
+    }
+
+    // SMS (if enabled)
+    if (contact.notifyBySMS) {
+      const smsMessage = buildSmsMessage(contact.name, location, userEmail, alertType);
+      const smsUrl = `sms:${contact.phone}?body=${encodeURIComponent(smsMessage)}`;
+      window.open(smsUrl, '_blank');
+      console.log(`✅ SMS sent to ${contact.name}`);
+    }
+
+    // Desktop notification
+    if (contact.notifyByDesktop && Notification.permission === 'granted') {
+      new Notification(`🆘 EMERGENCY ALERT - ${contact.name}`, {
+        body: `${alertType} - Immediate attention needed!`,
+        icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670051.png',
+        requireInteraction: true,
+        vibrate: [200, 100, 200]
+      });
+      console.log(`✅ Desktop notification sent to ${contact.name}`);
+    }
+  };
+
   // ===== FALL DETECTION HANDLER =====
   const handleFallEmergency = async () => {
     console.log("🚨 Fall emergency triggered!");
@@ -458,8 +505,11 @@ function AppContent() {
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, enableHighAccuracy: true })
       );
       currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    } catch (e) { console.warn("Location error:", e.message); }
+    } catch (e) {
+      console.warn("Location error:", e.message);
+    }
 
+    // Save to Firebase
     try {
       await addDoc(collection(db, "emergency_alerts"), {
         alertType: "AUTOMATIC_FALL_DETECTION",
@@ -468,40 +518,39 @@ function AppContent() {
         userId: user ? user.uid : "GUEST_USER",
         location: currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : "Location Unavailable"
       });
-    } catch (error) { console.error("Firebase error:", error); }
+    } catch (error) {
+      console.error("Firebase error:", error);
+    }
 
+    // Always vibrate
     if (navigator.vibrate) {
       navigator.vibrate([500, 200, 500, 200, 500]);
     }
 
+    // Emergency flash
     if (emergencyNotificationsEnabled) {
       setFlashEmergency(true);
-      setEmergencyData({ soundType: '🛑 FALL DETECTED', message: 'An automatic fall was detected!', timestamp: new Date(), volume: 1.0, location: currentLocation });
+      setEmergencyData({
+        soundType: '🛑 FALL DETECTED',
+        message: 'An automatic fall was detected!',
+        timestamp: new Date(),
+        volume: 1.0,
+        location: currentLocation
+      });
       setEmergencyMessage('🚨 FALL DETECTED!');
       showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
       setTimeout(() => setFlashEmergency(false), 8000);
     }
 
+    // ===== SEND ALERTS TO ALL CONTACTS =====
     if (currentRelatives && currentRelatives.length > 0) {
       currentRelatives.forEach(contact => {
-        // Send SMS for fall (not WhatsApp)
-        if (contact.notifyBySMS && contact.phone) {
-          const smsMessage = `🚨 FALL DETECTED! ${currentLocation ? `Location: https://maps.google.com/?q=${currentLocation.lat},${currentLocation.lng}` : ''}`;
-          window.open(`sms:${contact.phone}?body=${encodeURIComponent(smsMessage)}`, '_blank');
-        }
-        if (contact.notifyByDesktop && Notification.permission === 'granted') {
-          new Notification(`🚨 FALL DETECTED - ${contact.name}`, {
-            body: `Fall detected! Immediate attention needed.`,
-            icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670051.png',
-            requireInteraction: true,
-            vibrate: [200, 100, 200]
-          });
-        }
+        sendAlertToContact(contact, 'FALL DETECTED', currentLocation, user?.email || 'Guest User');
       });
     }
   };
 
-  // ===== TRIGGER EMERGENCY (SOS) — SMS ONLY =====
+  // ===== TRIGGER EMERGENCY (SOS) =====
   const triggerEmergency = async (msg) => {
     console.log("🆘 SOS triggered:", msg);
 
@@ -515,6 +564,7 @@ function AppContent() {
       console.warn("Location error:", e.message);
     }
 
+    // Emergency flash
     setEmergencyMessage(msg || '🚨 SOS Activated!');
     setFlashEmergency(true);
     setEmergencyData({
@@ -526,10 +576,12 @@ function AppContent() {
     });
     showToast(`🚨 EMERGENCY: ${msg || 'SOS Activated!'}`, 'error');
 
+    // Always vibrate
     if (navigator.vibrate) {
       navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
     }
 
+    // Save to Firestore if logged in
     if (user && !isGuest) {
       try {
         await addDoc(collection(db, 'emergencies'), {
@@ -552,39 +604,14 @@ function AppContent() {
       });
     }
 
-    // ===== SEND SMS TO ALL EMERGENCY CONTACTS =====
-    const contacts = currentRelatives || [];
-    console.log(`📤 Sending SMS emergency alerts to ${contacts.length} contacts...`);
-
-    for (const contact of contacts) {
-      if (!contact.phone) continue;
-
-      const smsMessage = buildSmsMessage(
-        contact.name,
-        currentLocation,
-        user?.email || 'Guest User',
-        msg || 'SOS'
-      );
-
-      // Send SMS if enabled
-      if (contact.notifyBySMS) {
-        const smsUrl = `sms:${contact.phone}?body=${encodeURIComponent(smsMessage)}`;
-        window.open(smsUrl, '_blank');
-        console.log(`✅ SMS sent to ${contact.name}`);
-      }
-
-      // Desktop notification
-      if (contact.notifyByDesktop && Notification.permission === 'granted') {
-        new Notification(`🆘 EMERGENCY ALERT - ${contact.name}`, {
-          body: `${msg || 'SOS'} - Immediate attention needed!`,
-          icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670051.png',
-          requireInteraction: true,
-          vibrate: [200, 100, 200]
-        });
-        console.log(`✅ Desktop notification sent to ${contact.name}`);
-      }
+    // ===== SEND ALERTS TO ALL CONTACTS =====
+    if (currentRelatives && currentRelatives.length > 0) {
+      currentRelatives.forEach(contact => {
+        sendAlertToContact(contact, msg || 'SOS', currentLocation, user?.email || 'Guest User');
+      });
     }
 
+    // Auto-hide flash after 8 seconds
     setTimeout(() => setFlashEmergency(false), 8000);
   };
 
@@ -838,7 +865,7 @@ function AppContent() {
                 <ul style={{ listStyle: 'none', padding: 0 }}>
                   <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>🔴 {t('redFlashing') || 'Red Flashing Screen = Emergency detected or SOS activated'}</li>
                   <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📳 {t('vibration') || 'Phone Vibration = Alert being sent to your contacts'}</li>
-                  <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📱 {t('contactsNotify') || 'Emergency Contacts = Will receive SMS alerts'}</li>
+                  <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📱 {t('contactsNotify') || 'Emergency Contacts = Will receive WhatsApp/SMS alerts'}</li>
                   <li style={{ padding: '8px 0' }}>📍 {t('liveLocation') || 'Live Location = Automatically shared with emergency contacts'}</li>
                 </ul>
               </div>
