@@ -14,50 +14,44 @@ const RELATIONS = [
 ];
 
 const BLANK = {
-  name: '', phone: '', email: '', relation: '',
+  name: '',
+  phone: '',
+  email: '',
+  relation: '',
   notifyByWhatsApp: true,
   notifyBySMS: false,
   notifyByCall: false,
   notifyByDesktop: true,
   autoSendWhatsApp: false,
+  // We'll add a derived notificationMethod for UI convenience
+  notificationMethod: 'whatsapp', // 'whatsapp' | 'sms' | 'both'
 };
 
-// Beautiful WhatsApp message template
-const buildWhatsAppMessage = (contactName, emergencyData, userInfo) => {
-  const time = new Date(emergencyData.timestamp || new Date()).toLocaleString('en-LK', {
-    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
-  
-  let message = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
-  message += `Dear ${contactName},\n\n`;
-  message += `⚠️ *This is an automated emergency alert from your loved one's device.*\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `📢 *DETECTED:* ${emergencyData.soundType || 'SOS button pressed'}\n`;
-  message += `🕒 *TIME:* ${time}\n`;
-  message += `👤 *USER:* ${userInfo?.name || 'Neth-Sawan User'}\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  
-  if (emergencyData.location) {
-    message += `📍 *LIVE LOCATION:*\n`;
-    message += `https://maps.google.com/?q=${emergencyData.location.lat},${emergencyData.location.lng}\n\n`;
+// Helper to convert checkboxes to method
+const getMethodFromCheckboxes = (notifyByWhatsApp, notifyBySMS) => {
+  if (notifyByWhatsApp && notifyBySMS) return 'both';
+  if (notifyByWhatsApp) return 'whatsapp';
+  if (notifyBySMS) return 'sms';
+  return 'whatsapp'; // fallback
+};
+
+// Helper to set checkboxes from method
+const getCheckboxesFromMethod = (method) => {
+  switch (method) {
+    case 'whatsapp': return { notifyByWhatsApp: true, notifyBySMS: false };
+    case 'sms': return { notifyByWhatsApp: false, notifyBySMS: true };
+    case 'both': return { notifyByWhatsApp: true, notifyBySMS: true };
+    default: return { notifyByWhatsApp: true, notifyBySMS: false };
   }
-  
-  message += `📝 *MESSAGE:* ${emergencyData.message || 'Immediate assistance may be required. Please check on your loved one as soon as possible.'}\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `⚠️ *PLEASE RESPOND PROMPTLY* ⚠️\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  message += `_This is an automated message from Neth-Sawan Hearing Assistant._\n`;
-  message += `_For more info, visit neth-sawan.app_`;
-  return message;
 };
 
-const RelativesManager = ({ 
-  relatives = [], 
-  onAdd, 
-  onRemove, 
-  onUpdate, 
+const RelativesManager = ({
+  relatives = [],
+  onAdd,
+  onRemove,
+  onUpdate,
   autoSendStatus = {},
-  isGuest = false 
+  isGuest = false
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -65,7 +59,6 @@ const RelativesManager = ({
   const [sendingWhatsApp, setSendingWhatsApp] = useState(null);
   const [userInfo, setUserInfo] = useState({ name: '', email: '' });
 
-  // Get current user info for WhatsApp message
   useEffect(() => {
     if (auth.currentUser) {
       setUserInfo({
@@ -79,8 +72,25 @@ const RelativesManager = ({
 
   const setField = (key, value) => setForm(f => ({ ...f, [key]: value }));
 
+  // When checkboxes change, update the method
+  const updateMethodFromCheckboxes = (whatsapp, sms) => {
+    const method = getMethodFromCheckboxes(whatsapp, sms);
+    setForm(f => ({ ...f, notificationMethod: method }));
+  };
+
+  // When method changes, update checkboxes
+  const handleMethodChange = (method) => {
+    const { notifyByWhatsApp, notifyBySMS } = getCheckboxesFromMethod(method);
+    setForm(f => ({
+      ...f,
+      notificationMethod: method,
+      notifyByWhatsApp,
+      notifyBySMS,
+    }));
+  };
+
   const resetForm = () => {
-    setForm(BLANK);
+    setForm({ ...BLANK, notificationMethod: 'whatsapp' });
     setEditId(null);
     setShowForm(false);
   };
@@ -88,16 +98,22 @@ const RelativesManager = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
+    // Ensure method syncs with checkboxes (just in case)
+    const method = form.notificationMethod;
+    const { notifyByWhatsApp, notifyBySMS } = getCheckboxesFromMethod(method);
+    const payload = { ...form, notifyByWhatsApp, notifyBySMS };
     if (editId) {
-      if (onUpdate) await onUpdate(editId, form);
+      if (onUpdate) await onUpdate(editId, payload);
     } else {
-      if (onAdd) await onAdd(form);
+      if (onAdd) await onAdd(payload);
     }
     resetForm();
   };
 
   const startEdit = (rel) => {
-    setForm({ ...BLANK, ...rel });
+    // Determine method from existing checkboxes
+    const method = getMethodFromCheckboxes(rel.notifyByWhatsApp, rel.notifyBySMS);
+    setForm({ ...BLANK, ...rel, notificationMethod: method });
     setEditId(rel.id);
     setShowForm(true);
   };
@@ -107,43 +123,61 @@ const RelativesManager = ({
     return r ? `${r.emoji} ${r.si} / ${r.label}` : value;
   };
 
-  // Send WhatsApp message (manually)
   const sendWhatsAppNow = async (contact, isTest = true) => {
     setSendingWhatsApp(contact.id);
-    
     const emergencyData = {
       soundType: isTest ? '🔔 TEST ALERT' : '🚨 EMERGENCY',
-      message: isTest 
-        ? 'This is a TEST alert from Neth-Sawan. Please ignore if everything is fine.' 
+      message: isTest
+        ? 'This is a TEST alert from Neth-Sawan. Please ignore if everything is fine.'
         : 'Emergency detected! Immediate attention needed. Please contact urgently.',
       timestamp: new Date(),
       location: null,
     };
-    
     if (!isTest) {
       try {
         const pos = await new Promise((resolve, reject) =>
           navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 })
         );
         emergencyData.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      } catch (e) { /* ignore location failure */ }
+      } catch (e) { /* ignore */ }
     }
-    
     const message = buildWhatsAppMessage(contact.name, emergencyData, userInfo);
     let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
     if (phoneNumber.startsWith('0')) phoneNumber = '+94' + phoneNumber.slice(1);
     else if (!phoneNumber.startsWith('+')) phoneNumber = '+94' + phoneNumber;
-    
     const url = `https://wa.me/${phoneNumber.replace('+', '')}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
-    
     setTimeout(() => setSendingWhatsApp(null), 1500);
+  };
+
+  const buildWhatsAppMessage = (contactName, emergencyData, userInfo) => {
+    const time = new Date(emergencyData.timestamp || new Date()).toLocaleString('en-LK', {
+      day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    let message = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
+    message += `Dear ${contactName},\n\n`;
+    message += `⚠️ *This is an automated emergency alert from your loved one's device.*\n\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `📢 *DETECTED:* ${emergencyData.soundType || 'SOS button pressed'}\n`;
+    message += `🕒 *TIME:* ${time}\n`;
+    message += `👤 *USER:* ${userInfo?.name || 'Neth-Sawan User'}\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    if (emergencyData.location) {
+      message += `📍 *LIVE LOCATION:*\n`;
+      message += `https://maps.google.com/?q=${emergencyData.location.lat},${emergencyData.location.lng}\n\n`;
+    }
+    message += `📝 *MESSAGE:* ${emergencyData.message || 'Immediate assistance may be required. Please check on your loved one as soon as possible.'}\n\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `⚠️ *PLEASE RESPOND PROMPTLY* ⚠️\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    message += `_This is an automated message from Neth-Sawan Hearing Assistant._\n`;
+    message += `_For more info, visit neth-sawan.app_`;
+    return message;
   };
 
   return (
     <div className="card relatives-manager-card" style={{ borderRadius: '28px', overflow: 'hidden' }}>
-      {/* Header */}
-      <div className="card-head" style={{ 
+      <div className="card-head" style={{
         background: 'linear-gradient(135deg, rgba(0,221,179,0.1), rgba(0,221,179,0.02))',
         padding: '20px 24px',
         borderBottom: '1px solid rgba(0,221,179,0.2)'
@@ -170,7 +204,6 @@ const RelativesManager = ({
         </button>
       </div>
 
-      {/* Add/Edit Form */}
       {showForm && (
         <form onSubmit={handleSubmit} style={{
           background: 'rgba(0,0,0,0.2)',
@@ -226,14 +259,56 @@ const RelativesManager = ({
             </div>
           </div>
 
+          {/* ===== PRIMARY NOTIFICATION METHOD ===== */}
           <div style={{ marginTop: '20px' }}>
-            <label style={{ fontWeight: '600', display: 'block', marginBottom: '12px' }}>Notification Methods</label>
+            <label style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+              📨 Send emergency alerts via:
+            </label>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              {[
+                { value: 'whatsapp', label: '💬 WhatsApp (Rich Message)', color: '#25D366' },
+                { value: 'sms', label: '✉️ SMS (Normal Text)', color: '#4488FF' },
+                { value: 'both', label: '📲 Both (WhatsApp + SMS)', color: '#F5A623' },
+              ].map(opt => (
+                <label key={opt.value} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  padding: '8px 16px',
+                  background: form.notificationMethod === opt.value ? 'rgba(0,221,179,0.15)' : '#1A1E3A',
+                  borderRadius: '40px',
+                  border: form.notificationMethod === opt.value ? `2px solid ${opt.color}` : '1px solid #2A2F55',
+                  transition: 'all 0.2s'
+                }}>
+                  <input
+                    type="radio"
+                    name="notificationMethod"
+                    value={opt.value}
+                    checked={form.notificationMethod === opt.value}
+                    onChange={() => handleMethodChange(opt.value)}
+                    style={{ display: 'none' }}
+                  />
+                  <span style={{ color: form.notificationMethod === opt.value ? opt.color : '#A0A8D0' }}>
+                    {opt.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <small style={{ color: '#8899CC', display: 'block', marginTop: '6px' }}>
+              Choose how this contact will receive emergency alerts.
+            </small>
+          </div>
+
+          {/* ===== ADDITIONAL OPTIONS (Call, Desktop) ===== */}
+          <div style={{ marginTop: '20px' }}>
+            <label style={{ fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+              🔔 Additional notification methods:
+            </label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
               {[
-                { key: 'notifyByWhatsApp', label: 'WhatsApp', color: '#25D366', icon: '💬' },
-                { key: 'notifyBySMS',      label: 'SMS',       color: '#4488FF', icon: '✉️' },
-                { key: 'notifyByCall',     label: 'Phone Call', color: '#F5A623', icon: '📞' },
-                { key: 'notifyByDesktop',  label: 'Desktop',    color: '#00DDB3', icon: '🖥️' },
+                { key: 'notifyByCall', label: '📞 Phone Call', color: '#F5A623' },
+                { key: 'notifyByDesktop', label: '🖥️ Desktop Notification', color: '#00DDB3' },
               ].map(opt => (
                 <label key={opt.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '8px 16px', background: '#1A1E3A', borderRadius: '40px' }}>
                   <input
@@ -242,7 +317,7 @@ const RelativesManager = ({
                     onChange={e => setField(opt.key, e.target.checked)}
                     style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                   />
-                  <span style={{ color: form[opt.key] ? opt.color : '#A0A8D0' }}>{opt.icon} {opt.label}</span>
+                  <span style={{ color: form[opt.key] ? opt.color : '#A0A8D0' }}>{opt.label}</span>
                 </label>
               ))}
             </div>
@@ -256,7 +331,9 @@ const RelativesManager = ({
                 onChange={e => setField('autoSendWhatsApp', e.target.checked)}
                 style={{ width: '18px', height: '18px' }}
               />
-              <span style={{ color: form.autoSendWhatsApp ? '#25D366' : '#A0A8D0' }}>🤖 Auto-send WhatsApp on emergency (no confirmation)</span>
+              <span style={{ color: form.autoSendWhatsApp ? '#25D366' : '#A0A8D0' }}>
+                🤖 Auto-send WhatsApp on emergency (no confirmation)
+              </span>
             </label>
           </div>
 
@@ -271,7 +348,6 @@ const RelativesManager = ({
         </form>
       )}
 
-      {/* Contacts List */}
       <div className="rel-list" style={{ padding: '20px' }}>
         {(!relatives || relatives.length === 0) ? (
           <div style={{ textAlign: 'center', padding: '48px 20px', background: 'rgba(0,0,0,0.15)', borderRadius: '24px' }}>
@@ -387,7 +463,6 @@ const RelativesManager = ({
         )}
       </div>
 
-      {/* Desktop notifications permission prompt */}
       {'Notification' in window && Notification.permission !== 'granted' && !isGuest && (
         <div style={{ margin: '0 20px 20px 20px', padding: '16px', background: 'rgba(68,136,255,0.1)', borderRadius: '20px', textAlign: 'center' }}>
           <button
