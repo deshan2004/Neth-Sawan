@@ -11,7 +11,7 @@ const SIGN_DICTIONARY = {
   'PLEASE': { asl: '🤲', sinhala: 'කරුණාකර', description: 'Flat hand circles on chest' },
   'SORRY': { asl: '😔', sinhala: 'සමාවන්න', description: 'Fist circles on chest' },
   'YES': { asl: '👍', sinhala: 'ඔව්', description: 'Nodding fist' },
-  'NO': { asl: '👎', sinhala: 'නැහැ', description: 'Tap index and middle together' },
+  'NO': { asl: '👎', description: 'Tap index and middle together' },
 
   // Emergency
   'HELP': { asl: '🤝👍', sinhala: 'උදව්', description: 'One hand taps other palm, then thumbs up' },
@@ -74,7 +74,7 @@ const SIGN_DICTIONARY = {
   'FLOWER': { asl: '🌸', sinhala: 'මල', description: 'Fingers touching nose then spread' },
   'ANIMAL': { asl: '🐾', sinhala: 'සත්ව', description: 'Hands on chest like paws' },
   'DOG': { asl: '🐕', sinhala: 'බල්ලා', description: 'Snap fingers then pat leg' },
-  'CAT': { asl: '🐈', sinhala: 'බළලා', description: 'Fingers stroking whiskers' },
+  'CAT': { asl: '🐈', description: 'Fingers stroking whiskers' },
   'BIRD': { asl: '🐦', sinhala: 'කුරුල්ලා', description: 'Fingers at mouth like beak' },
   'FISH': { asl: '🐟', sinhala: 'මාළුවා', description: 'Hand swimming motion' }
 };
@@ -98,8 +98,16 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
   const historyEndRef = useRef(null);
 
   // ===== DETERMINE INPUT SOURCE =====
-  // Use currentWord if provided, otherwise use transcript
   const inputText = currentWord || transcript || '';
+
+  // Helper function to remove modifiers / පිලි අකුරු during fingerspelling
+  const getBaseLetters = (text) => {
+    if (!text) return [];
+    const cleanedText = text.toLowerCase().replace(/\s/g, '');
+    const singleCharArray = Array.from(cleanedText);
+    const modifiers = ['ා', 'ැ', 'ෑ', 'ි', 'ී', 'ු', 'ූ', 'ෘ', 'ෙ', 'ේ', 'ෛ', 'ො', 'ෝ', 'ෞ', '්', 'ෲ', 'ෟ', '්‍ය'];
+    return singleCharArray.filter(char => !modifiers.includes(char));
+  };
 
   // ===== UPDATE SIGN BASED ON INPUT =====
   useEffect(() => {
@@ -115,11 +123,9 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
     let found = null;
     const words = cleanInput.split(/\s+/);
 
-    // First try to match the whole input
     if (SIGN_DICTIONARY[cleanInput]) {
       found = { key: cleanInput, data: SIGN_DICTIONARY[cleanInput] };
     } else {
-      // Then try to match individual words (take the first match)
       for (const word of words) {
         const cleanWord = word.replace(/[^\w]/g, '');
         if (SIGN_DICTIONARY[cleanWord]) {
@@ -127,7 +133,6 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
           break;
         }
       }
-      // Check for multi-word phrases (e.g., "THANK YOU")
       if (!found) {
         for (const phrase of Object.keys(SIGN_DICTIONARY)) {
           if (phrase.includes(' ') && cleanInput.includes(phrase)) {
@@ -143,7 +148,6 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
       setCurrentSign({ word: found.key, ...found.data });
       setIsFingerspelling(false);
 
-      // Add to recent signs (avoid duplicates in a row)
       if (lastSignRef.current !== found.key) {
         setRecentSigns(prev => {
           const filtered = prev.filter(item => item.key !== found.key);
@@ -151,29 +155,25 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
         });
         lastSignRef.current = found.key;
 
-        // Add to history with timestamp
         setSignHistory(prev => {
           const newEntry = {
             word: found.key,
             sinhala: found.data.sinhala,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
           };
-          // Avoid duplicate consecutive entries
           if (prev.length > 0 && prev[prev.length - 1].word === found.key) return prev;
           return [...prev, newEntry].slice(-10);
         });
       }
 
-      // Auto-hide after 5 seconds
       const timer = setTimeout(() => {
         setCurrentSign(prev => prev?.word === found.key ? null : prev);
       }, 5000);
       return () => clearTimeout(timer);
     }
 
-    // ===== FINGERSPELLING MODE (word not in dictionary) =====
-    // Extract letters (handles both Sinhala and English)
-    const letters = Array.from(cleanInput.replace(/\s/g, ''));
+    // ===== FINGERSPELLING MODE =====
+    const letters = getBaseLetters(inputText);
     if (letters.length > 0) {
       setActiveWord(cleanInput);
       setLettersArray(letters);
@@ -247,7 +247,6 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
       setCurrentSign({ word: key, ...data });
       setIsFingerspelling(false);
       speakSign(key);
-      // Also add to recent signs
       setRecentSigns(prev => {
         const filtered = prev.filter(i => i.key !== key);
         return [item, ...filtered].slice(0, 8);
@@ -277,12 +276,23 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
     }, 4000);
   };
 
-  // ===== RENDER FINGERSPELLING LETTER =====
+  // ===== RENDER FINGERSPELLING LETTER WITH IMAGE =====
   const renderFingerspellingLetter = () => {
-    const letter = lettersArray[currentLetterIdx]?.toUpperCase() || '?';
+    const letterChar = lettersArray[currentLetterIdx];
+    const letterUpper = letterChar?.toUpperCase() || '?';
+    
     return (
       <div className="fingerspell-container">
-        <div className="fingerspell-letter">{letter}</div>
+        <div className="fingerspell-letter">{letterUpper}</div>
+        <img
+          src={`/assets/signs/${letterChar}.png`}
+          alt={`Sign for ${letterChar}`}
+          className="sign-avatar-img"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23F5C842' stroke-width='2'><path d='M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h11z'/><path d='M19 15l4-3-4-3v6z'/></svg>";
+          }}
+        />
         <div className="fingerspell-hint">
           <span>🔤 {currentLetterIdx + 1}/{lettersArray.length}</span>
         </div>
@@ -604,16 +614,25 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
           gap: 8px;
         }
         .fingerspell-letter {
-          font-size: 3.5rem;
+          font-size: 3rem;
           font-weight: 800;
           color: #F5C842;
           text-shadow: 0 0 20px rgba(245, 200, 66, 0.3);
           min-width: 80px;
           text-align: center;
         }
+        .sign-avatar-img {
+          width: 100px;
+          height: 100px;
+          object-fit: contain;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.05);
+          padding: 4px;
+        }
         .fingerspell-hint {
           font-size: 0.7rem;
           color: #8899CC;
+          margin-top: 4px;
         }
 
         /* Waiting State */

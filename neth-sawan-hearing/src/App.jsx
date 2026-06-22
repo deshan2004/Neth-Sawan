@@ -133,14 +133,8 @@ function AppContent() {
   const [guestRelatives, setGuestRelatives] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
 
-  // ===== AUTO LANGUAGE SWITCH =====
-  useEffect(() => {
-    if (transcript && transcript.trim().length > 0) {
-      updateLanguageFromTranscript(transcript);
-    }
-  }, [transcript, updateLanguageFromTranscript]);
-
-  // ===== UI LANGUAGE SYNC WITH DROPDOWN =====
+  // ===== UI LANGUAGE SYNC WITH RECOGNITION LANGUAGE =====
+  // This ensures the UI language follows the header selection (which changes `lang`)
   useEffect(() => {
     if (lang === 'si-LK') {
       updateLanguageFromTranscript('සිංහල');
@@ -150,6 +144,11 @@ function AppContent() {
       updateLanguageFromTranscript('Hello');
     }
   }, [lang, updateLanguageFromTranscript]);
+
+  // ===== REMOVED: Auto‑detection of language from transcript =====
+  // The following effect has been removed to prevent the UI language
+  // from changing automatically based on the transcript content.
+  // This ensures the user's header selection is respected at all times.
 
   // ===== REAL-TIME SIGN LANGUAGE TRANSLATION (Sinhala → English) =====
   useEffect(() => {
@@ -388,12 +387,11 @@ function AppContent() {
     }
   };
 
-  // Determine which text to pass to SignLanguageBox
+  // ===== TEXT TO PASS TO SIGN LANGUAGE BOX =====
+  // Use the manually typed Sinhala text if available; otherwise the transcript.
+  // This ensures the sign box always shows the same text as the captions.
   const getSignLanguageText = () => {
-    if (lang === 'si-LK') {
-      return sinhalaText || signWord;
-    }
-    return transcript || signWord;
+    return sinhalaText || transcript;
   };
 
   // ===== GUEST RELATIVES HANDLERS =====
