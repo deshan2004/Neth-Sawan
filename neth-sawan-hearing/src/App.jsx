@@ -30,6 +30,7 @@ import InPersonTranslator from './components/InPersonTranslator';
 import { useSpeech } from './hooks/useSpeech';
 import { useVolume } from './hooks/useVolume';
 import { useNotifications } from './hooks/useNotifications';
+import { useGuestNotifications } from './hooks/useGuestNotifications';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
@@ -69,6 +70,8 @@ function AppContent() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [showLanding, setShowLanding] = useState(true);
 
   // ===== UI STATES =====
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -76,6 +79,7 @@ function AppContent() {
   const [toastMessage, setToastMessage] = useState({ show: false, message: '', type: '' });
   const [flashEmergency, setFlashEmergency] = useState(false);
   const [emergencyData, setEmergencyData] = useState(null);
+  const [emergencyMessage, setEmergencyMessage] = useState('');
   const [roadSafetyActive, setRoadSafetyActive] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
@@ -94,9 +98,9 @@ function AppContent() {
   const [fallDetectorBlocked, setFallDetectorBlocked] = useState(false);
 
   // ===== HOOKS =====
-  // 🎯 මුලින්ම සිංහලෙන් වැඩ කරන්න 'si-LK' Default ලබා දී ඇත
   const {
     transcript,
+    setTranscript,
     isListening,
     startListening,
     stopListening,
@@ -109,7 +113,7 @@ function AppContent() {
     microphonePermission,
     recognitionStatus,
     supported
-  } = useSpeech('si-LK'); 
+  } = useSpeech('si-LK');
 
   const { volume, isLoud, soundType, soundHistory, threshold, setThreshold } = useVolume(0.15);
   const {
@@ -118,22 +122,25 @@ function AppContent() {
     autoSendStatus
   } = useNotifications();
 
+  // ===== GUEST NOTIFICATIONS =====
+  const { notifications: guestNotifications, addNotification: guestAddNotification, clearAll: guestClearAll } = useGuestNotifications();
+
   // ===== SINHALA TYPING STATE =====
   const [sinhalaText, setSinhalaText] = useState('');
+  const [signWord, setSignWord] = useState('');
 
-  // ===== GUEST DATA =====
+  // ===== GUEST DATA (Relatives & Sound History) =====
   const [guestRelatives, setGuestRelatives] = useState([]);
-  const [guestNotifications, setGuestNotifications] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
 
-  // ===== AUTO LANGUAGE SWITCH & MANUAL DROPDOWN SWITCH =====
+  // ===== AUTO LANGUAGE SWITCH =====
   useEffect(() => {
     if (transcript && transcript.trim().length > 0) {
       updateLanguageFromTranscript(transcript);
     }
   }, [transcript, updateLanguageFromTranscript]);
 
-  // 🎯 Dropdown එකෙන් භාෂාව වෙනස් කරනකොට මුළු App එකේම UI Language එකත් වෙනස් වීමට:
+  // ===== UI LANGUAGE SYNC WITH DROPDOWN =====
   useEffect(() => {
     if (lang === 'si-LK') {
       updateLanguageFromTranscript('සිංහල');
@@ -143,6 +150,41 @@ function AppContent() {
       updateLanguageFromTranscript('Hello');
     }
   }, [lang, updateLanguageFromTranscript]);
+
+  // ===== REAL-TIME SIGN LANGUAGE TRANSLATION (Sinhala → English) =====
+  useEffect(() => {
+    if (!transcript) {
+      setSignWord('');
+      return;
+    }
+
+    const wordsArray = transcript.trim().split(/\s+/);
+    const lastWord = wordsArray[wordsArray.length - 1];
+    if (!lastWord) return;
+
+    if (/^[A-Za-z0-9]+$/.test(lastWord)) {
+      setSignWord(lastWord.toLowerCase());
+      return;
+    }
+
+    const fetchTranslation = async () => {
+      try {
+        const response = await fetch(
+          `https://translate.googleapis.com/translate_a/single?client=gtx&sl=si&tl=en&dt=t&q=${encodeURIComponent(lastWord)}`
+        );
+        const data = await response.json();
+        if (data && data[0] && data[0][0] && data[0][0][0]) {
+          setSignWord(data[0][0][0].trim().toLowerCase());
+        }
+      } catch (error) {
+        console.error("Translation failed:", error);
+        setSignWord(lastWord.toLowerCase());
+      }
+    };
+
+    const delayDebounce = setTimeout(fetchTranslation, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [transcript]);
 
   // ===== SAVE EMERGENCY TOGGLE =====
   useEffect(() => {
@@ -164,10 +206,8 @@ function AppContent() {
   useEffect(() => {
     if (isGuest) {
       const savedRelatives = localStorage.getItem('neth_sawan_guest_relatives');
-      const savedNotifications = localStorage.getItem('neth_sawan_guest_notifications');
       const savedSoundHistory = localStorage.getItem('neth_sawan_guest_sound_history');
       if (savedRelatives) setGuestRelatives(JSON.parse(savedRelatives));
-      if (savedNotifications) setGuestNotifications(JSON.parse(savedNotifications));
       if (savedSoundHistory) setGuestSoundHistory(JSON.parse(savedSoundHistory));
     }
   }, [isGuest]);
@@ -190,6 +230,7 @@ function AppContent() {
     if (isLoud && soundType && !roadSafetyActive && emergencyNotificationsEnabled) {
       setFlashEmergency(true);
       setEmergencyData({ soundType, message: `Emergency: ${soundType}`, timestamp: new Date(), volume });
+      setEmergencyMessage(`🚨 ${soundType} detected!`);
       if (isGuest) {
         guestAddNotification({
           id: Date.now(),
@@ -203,7 +244,7 @@ function AppContent() {
       }
       setTimeout(() => setFlashEmergency(false), 3000);
     }
-  }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled]);
+  }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled, isGuest]);
 
   // ===== SAVE SOUND HISTORY FOR GUEST =====
   useEffect(() => {
@@ -219,9 +260,29 @@ function AppContent() {
   // ===== AUTH LISTENER =====
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsGuest(false);
-      setAuthLoading(false);
+      if (currentUser) {
+        setUser(currentUser);
+        setIsGuest(false);
+        setShowLanding(false);
+        setAuthLoading(false);
+      } else {
+        const storedGuest = localStorage.getItem('guestUser');
+        if (storedGuest) {
+          try {
+            const gData = JSON.parse(storedGuest);
+            setIsGuest(true);
+            setGuestName(gData.name || 'Guest');
+            setShowLanding(false);
+          } catch {
+            setShowLanding(true);
+          }
+        } else {
+          setUser(null);
+          setIsGuest(false);
+          setShowLanding(true);
+        }
+        setAuthLoading(false);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -239,6 +300,11 @@ function AppContent() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      localStorage.removeItem('guestUser');
+      setIsGuest(false);
+      setGuestName('');
+      setUser(null);
+      setShowLanding(true);
       showToast(t('loggedOut') || "Logged out", "success");
     } catch {
       showToast(t('logoutFailed') || "Logout failed", "error");
@@ -246,24 +312,32 @@ function AppContent() {
   };
 
   const handleGuestMode = () => {
+    const name = prompt('Enter your guest name:') || 'Guest';
+    localStorage.setItem('guestUser', JSON.stringify({ name, timestamp: Date.now() }));
     setIsGuest(true);
-    setUser(null);
+    setGuestName(name);
+    setShowLanding(false);
     showToast(t('guestModeActivated') || "Guest mode activated", "success");
   };
 
   const handleSignOutGuest = () => {
+    localStorage.removeItem('guestUser');
     setIsGuest(false);
+    setGuestName('');
+    setShowLanding(true);
     showToast(t('guestSignedOut') || "Signed out from guest mode", "info");
   };
 
   // ===== ACCESSIBILITY HANDLERS =====
   const handleThemeChange = (theme) => {
     setCurrentTheme(theme);
+    document.body.className = theme === 'light' ? 'light-theme' : '';
     localStorage.setItem('accessibility_theme', theme);
   };
 
   const handleFontSizeChange = (size) => {
     setCurrentFontSize(size);
+    document.documentElement.setAttribute('data-size', size);
     localStorage.setItem('accessibility_fontSize', size);
   };
 
@@ -290,17 +364,39 @@ function AppContent() {
   // ===== SINHALA TRANSCRIPT HANDLER =====
   const handleTranscriptChange = (text) => {
     setSinhalaText(text);
+    if (text && text.trim()) {
+      const words = text.trim().split(/\s+/);
+      const lastWord = words[words.length - 1];
+      if (/[\u0D80-\u0DFF]/.test(lastWord)) {
+        const fetchTranslation = async () => {
+          try {
+            const response = await fetch(
+              `https://translate.googleapis.com/translate_a/single?client=gtx&sl=si&tl=en&dt=t&q=${encodeURIComponent(lastWord)}`
+            );
+            const data = await response.json();
+            if (data && data[0] && data[0][0] && data[0][0][0]) {
+              setSignWord(data[0][0][0].trim().toLowerCase());
+            }
+          } catch (error) {
+            console.error("Translation failed:", error);
+          }
+        };
+        fetchTranslation();
+      } else {
+        setSignWord(lastWord.toLowerCase());
+      }
+    }
   };
 
   // Determine which text to pass to SignLanguageBox
   const getSignLanguageText = () => {
     if (lang === 'si-LK') {
-      return sinhalaText;
+      return sinhalaText || signWord;
     }
-    return transcript;
+    return transcript || signWord;
   };
 
-  // ===== GUEST HANDLERS =====
+  // ===== GUEST RELATIVES HANDLERS =====
   const guestAddRelative = (data) => {
     const entry = {
       id: Date.now(),
@@ -339,23 +435,6 @@ function AppContent() {
     });
   };
 
-  const guestAddNotification = (notification) => {
-    setGuestNotifications(prev => {
-      const updated = [notification, ...prev].slice(0, 50);
-      localStorage.setItem('neth_sawan_guest_notifications', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const guestMarkAsRead = (id) => {
-    setGuestNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-
-  const guestClearNotifications = () => {
-    setGuestNotifications([]);
-    localStorage.setItem('neth_sawan_guest_notifications', JSON.stringify([]));
-  };
-
   const currentRelatives = isGuest ? guestRelatives : relatives;
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
@@ -384,6 +463,7 @@ function AppContent() {
     if (emergencyNotificationsEnabled) {
       setFlashEmergency(true);
       setEmergencyData({ soundType: '🛑 FALL DETECTED', message: 'An automatic fall was detected!', timestamp: new Date(), volume: 1.0 });
+      setEmergencyMessage('🚨 FALL DETECTED!');
       showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
       if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
       setTimeout(() => setFlashEmergency(false), 8000);
@@ -406,6 +486,41 @@ function AppContent() {
     }
   };
 
+  // ===== TRIGGER EMERGENCY (SOS) =====
+  const triggerEmergency = async (msg) => {
+    setEmergencyMessage(msg || 'SOS Button Pressed');
+    setFlashEmergency(true);
+    setEmergencyData({
+      soundType: 'SOS',
+      message: msg || 'Manual SOS Triggered!',
+      timestamp: new Date(),
+      volume: 1.0
+    });
+    showToast(`🚨 EMERGENCY: ${msg || 'SOS'}`, 'danger');
+
+    if (user && !isGuest) {
+      try {
+        await addDoc(collection(db, 'emergencies'), {
+          userId: user.uid,
+          message: msg || 'SOS',
+          timestamp: serverTimestamp()
+        });
+      } catch (e) {
+        console.error("Error saving emergency:", e);
+      }
+    } else if (isGuest) {
+      guestAddNotification({
+        id: Date.now(),
+        type: 'EMERGENCY',
+        message: msg || 'SOS',
+        timestamp: new Date().toISOString(),
+        read: false
+      });
+    }
+
+    setTimeout(() => setFlashEmergency(false), 8000);
+  };
+
   // ===== LOADING SCREEN =====
   if (authLoading) {
     return (
@@ -423,7 +538,7 @@ function AppContent() {
   }
 
   // ===== LANDING PAGE =====
-  if (!user && !isGuest) {
+  if (showLanding && !user && !isGuest) {
     return <LandingPage onGuestMode={handleGuestMode} onShowInstructions={() => setShowInstructions(true)} />;
   }
 
@@ -431,7 +546,7 @@ function AppContent() {
   const isMobile = window.innerWidth <= 1024;
 
   return (
-    <div className="app-wrapper" style={{ fontSize: `${currentFontSize}px` }}>
+    <div className={`app-wrapper ${currentTheme}`} style={{ fontSize: `${currentFontSize}px` }}>
       <BackgroundVideo opacity={0.85} />
 
       {/* ===== FALL DETECTOR ===== */}
@@ -456,6 +571,8 @@ function AppContent() {
       <EmergencyFlash
         isVisible={flashEmergency && emergencyNotificationsEnabled}
         emergencyData={emergencyData}
+        message={emergencyMessage}
+        onClose={() => setFlashEmergency(false)}
       />
 
       {/* ===== SIDEBAR ===== */}
@@ -466,6 +583,7 @@ function AppContent() {
         onClose={() => setSidebarOpen(false)}
         user={user}
         isGuest={isGuest}
+        guestName={guestName}
         onLogout={isGuest ? handleSignOutGuest : handleLogout}
         onShowInstructions={() => setShowInstructions(true)}
       />
@@ -487,6 +605,7 @@ function AppContent() {
           showToast={showToast}
           user={user}
           isGuest={isGuest}
+          guestName={guestName}
           roadSafetyActive={roadSafetyActive}
           setRoadSafetyActive={setRoadSafetyActive}
           emergencyNotificationsEnabled={emergencyNotificationsEnabled}
@@ -496,6 +615,7 @@ function AppContent() {
           fallDetectorBlocked={fallDetectorBlocked}
           onRequestFallPermission={handleRequestFallPermission}
           onTestFall={handleFallEmergency}
+          onTriggerEmergency={triggerEmergency}
         />
 
         {/* ===== MAIN CONTENT ===== */}
@@ -504,41 +624,52 @@ function AppContent() {
           {/* ===== DASHBOARD TAB ===== */}
           {activeTab === 'dashboard' && (
             <>
-              {/* Row 1: Live Captions + Sign Language Translator */}
-              <div className="captions-sign-row">
-                <div className="captions-box">
-                  <TranscriptBox
-                    transcript={transcript}
-                    isListening={isListening}
-                    startListening={startListening}
-                    stopListening={stopListening}
-                    clearTranscript={clearTranscript}
-                    error={speechError}
-                    browserInfo={browserInfo}
-                    setLang={setLang}
-                    currentLang={lang}
-                    retryListening={retryListening}
-                    microphonePermission={microphonePermission}
-                    recognitionStatus={recognitionStatus}
-                    supported={supported}
-                    onTranscriptChange={handleTranscriptChange}  // 👈 Sinhala typing
-                  />
+              <div className="dashboard-grid">
+                <div className="dashboard-left">
+                  <div className="captions-box">
+                    <TranscriptBox
+                      transcript={transcript}
+                      isListening={isListening}
+                      startListening={startListening}
+                      stopListening={stopListening}
+                      clearTranscript={clearTranscript}
+                      error={speechError}
+                      browserInfo={browserInfo}
+                      setLang={setLang}
+                      currentLang={lang}
+                      retryListening={retryListening}
+                      microphonePermission={microphonePermission}
+                      recognitionStatus={recognitionStatus}
+                      supported={supported}
+                      onTranscriptChange={handleTranscriptChange}
+                    />
+                  </div>
                 </div>
-                <div className="sign-box">
-                  <SignLanguageBox transcript={getSignLanguageText()} />  {/* 👈 Pass correct text */}
+
+                <div className="dashboard-right">
+                  <div className="sign-box">
+                    <SignLanguageBox transcript={getSignLanguageText()} />
+                  </div>
+
+                  <VisualAlert
+                    isLoud={isLoud && emergencyNotificationsEnabled}
+                    soundType={soundType}
+                    volume={volume}
+                    threshold={threshold}
+                    onThresholdChange={setThreshold}
+                    soundHistory={currentSoundHistory}
+                  />
                 </div>
               </div>
 
-              {/* Row 2: Sound Monitor + Road Safety */}
               <div className="dashboard-primary">
-                <VisualAlert
-                  isLoud={isLoud && emergencyNotificationsEnabled}
-                  soundType={soundType}
-                  volume={volume}
-                  threshold={threshold}
-                  onThresholdChange={setThreshold}
-                  soundHistory={currentSoundHistory}
-                />
+                <div className="sound-card">
+                  <h3 className="card-title-simple">
+                    <span>🔊</span> Sound Monitor
+                  </h3>
+                  <SoundVisualizer volume={volume} isLoud={isLoud} soundType={soundType} />
+                </div>
+
                 <RoadSafetyMonitor
                   isActive={roadSafetyActive}
                   onAlert={(alert) => {
@@ -551,6 +682,7 @@ function AppContent() {
                         timestamp: new Date(),
                         volume: alert.volume
                       });
+                      setEmergencyMessage(`🚗 ${alert.name}`);
                       setTimeout(() => setFlashEmergency(false), 5000);
                       if (isGuest) {
                         guestAddNotification({
@@ -568,51 +700,57 @@ function AppContent() {
                 />
               </div>
 
-              {/* Row 3: Sound Visualizer + Sound History */}
               <div className="dashboard-secondary">
-                <SoundVisualizer volume={volume} isLoud={isLoud} soundType={soundType} />
                 <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
               </div>
             </>
           )}
 
-          {/* AI VISION */}
+          {/* ===== AI VISION ===== */}
           {activeTab === 'vision' && <Aivision showToast={showToast} />}
 
-          {/* SIGN LANGUAGE TUTOR */}
+          {/* ===== SIGN LANGUAGE TUTOR ===== */}
           {activeTab === 'learn' && <SignLanguageTutor />}
 
-          {/* IN-PERSON TRANSLATOR */}
+          {/* ===== IN-PERSON TRANSLATOR ===== */}
           {activeTab === 'inperson' && (
             <InPersonTranslator onClose={() => setActiveTab('dashboard')} />
           )}
 
-          {/* COMMUNITY */}
-          {activeTab === 'community' && <OnlineUsers />}
+          {/* ===== COMMUNITY ===== */}
+          {activeTab === 'community' && <OnlineUsers user={user} isGuest={isGuest} guestName={guestName} />}
 
-          {/* NOTIFICATIONS */}
+          {/* ===== NOTIFICATIONS ===== */}
           {activeTab === 'alerts' && (
             <NotificationCenter
               queue={currentNotifications}
-              onMarkRead={isGuest ? guestMarkAsRead : markAsRead}
-              onClear={isGuest ? guestClearNotifications : clearNotifications}
+              onMarkRead={isGuest ? (id) => {
+                const updated = guestNotifications.map(n => n.id === id ? { ...n, read: true } : n);
+                localStorage.setItem('neth_sawan_guest_notifications', JSON.stringify(updated));
+              } : markAsRead}
+              onClear={isGuest ? () => {
+                localStorage.setItem('neth_sawan_guest_notifications', JSON.stringify([]));
+                guestClearAll();
+              } : clearNotifications}
             />
           )}
 
-          {/* EMERGENCY CONTACTS */}
+          {/* ===== EMERGENCY CONTACTS ===== */}
           {activeTab === 'contacts' && (
             <RelativesManager
+              user={user}
+              isGuest={isGuest}
+              showToast={showToast}
               relatives={currentRelatives}
               onAdd={isGuest ? guestAddRelative : addRelative}
               onRemove={isGuest ? guestRemoveRelative : removeRelative}
               onUpdate={isGuest ? guestUpdateRelative : updateRelative}
               onTest={(rel) => showToast(`Test alert ready for ${rel.name}`, 'info')}
               autoSendStatus={autoSendStatus}
-              isGuest={isGuest}
             />
           )}
 
-          {/* SOS EMERGENCY */}
+          {/* ===== SOS EMERGENCY ===== */}
           {activeTab === 'emergency' && (
             <div className="emergency-sos-card card">
               <div className="sos-header card-head">
@@ -629,19 +767,7 @@ function AppContent() {
                   marginBottom: '20px',
                   transition: 'transform 0.2s'
                 }}
-                onClick={() => {
-                  if (emergencyNotificationsEnabled) {
-                    setFlashEmergency(true);
-                    setEmergencyData({
-                      soundType: 'SOS',
-                      message: 'Manual SOS Triggered!',
-                      timestamp: new Date()
-                    });
-                    setTimeout(() => setFlashEmergency(false), 8000);
-                    showToast('🚨 SOS Activated!', 'error');
-                    if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
-                  }
-                }}
+                onClick={() => triggerEmergency('SOS Button Pressed')}
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
@@ -671,7 +797,7 @@ function AppContent() {
             </div>
           )}
 
-          {/* ROAD MONITOR */}
+          {/* ===== ROAD MONITOR ===== */}
           {activeTab === 'roadmonitor' && (
             <div style={{ maxWidth: '900px', margin: '0 auto' }}>
               <div style={{ marginBottom: '20px', textAlign: 'center' }}>
@@ -692,6 +818,7 @@ function AppContent() {
                       timestamp: new Date(),
                       volume: alert.volume
                     });
+                    setEmergencyMessage(`🚗 ${alert.name}`);
                     setTimeout(() => setFlashEmergency(false), 5000);
                     if (isGuest) {
                       guestAddNotification({
@@ -710,7 +837,7 @@ function AppContent() {
             </div>
           )}
 
-          {/* ACCESSIBILITY SETTINGS */}
+          {/* ===== ACCESSIBILITY SETTINGS ===== */}
           {activeTab === 'settings' && (
             <AccessibilitySettings
               onThemeChange={handleThemeChange}
