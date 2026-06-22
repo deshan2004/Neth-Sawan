@@ -37,6 +37,58 @@
   gap: 16px;
 }
 
+/* ================================================================ */
+/* ===== RESPONSIVE – TABLET & MOBILE ===== */
+/* ================================================================ */
+
+/* Tablet (1024px and below) – reduce gaps and sizes */
+@media (max-width: 1024px) {
+  .dashboard-split {
+    gap: 12px;
+  }
+  .dashboard-center {
+    flex: 0.5;
+    min-width: 60px;
+  }
+}
+
+/* Mobile – stack everything vertically, cleaner layout */
+@media (max-width: 768px) {
+  .dashboard-split {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dashboard-left,
+  .dashboard-right {
+    flex: none;
+    width: 100%;
+  }
+
+  .dashboard-center {
+    flex: none;
+    width: 100%;
+    min-height: auto;
+    /* Place center between left and right on mobile */
+    order: 2;
+  }
+
+  .dashboard-left { order: 1; }
+  .dashboard-center { order: 2; }
+  .dashboard-right { order: 3; }
+}
+
+/* Very small screens – extra compact */
+@media (max-width: 480px) {
+  .dashboard-split {
+    gap: 12px;
+  }
+  .dashboard-left,
+  .dashboard-right {
+    gap: 12px;
+  }
+}
+
 /* ===== SOUND WAVE CENTER ===== */
 .sound-wave-center {
   display: flex;
@@ -70,6 +122,28 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
+/* Mobile: make the wave horizontal and more compact */
+@media (max-width: 768px) {
+  .wave-container {
+    flex-direction: row;
+    max-width: 100%;
+    aspect-ratio: auto;
+    min-height: 80px;
+    padding: 12px 20px;
+    gap: 20px;
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wave-container {
+    padding: 10px 16px;
+    min-height: 60px;
+    gap: 12px;
+    border-radius: 12px;
+  }
+}
+
 .wave-ring {
   width: 100%;
   aspect-ratio: 1;
@@ -81,6 +155,22 @@
   position: relative;
 }
 
+/* Mobile: smaller ring */
+@media (max-width: 768px) {
+  .wave-ring {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .wave-ring {
+    width: 60px;
+    height: 60px;
+  }
+}
+
 .wave-ring-inner {
   width: 75%;
   aspect-ratio: 1;
@@ -89,6 +179,19 @@
   justify-content: center;
   gap: 3px;
   flex-wrap: nowrap;
+}
+
+@media (max-width: 768px) {
+  .wave-ring-inner {
+    width: 70%;
+    gap: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wave-ring-inner {
+    gap: 1.5px;
+  }
 }
 
 .wave-bar {
@@ -114,6 +217,20 @@
   100% { transform: scaleY(1); opacity: 1; }
 }
 
+/* Mobile: thinner bars */
+@media (max-width: 768px) {
+  .wave-bar {
+    width: 3px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wave-bar {
+    width: 2.5px;
+    min-height: 3px;
+  }
+}
+
 /* ===== WAVE STATUS ===== */
 .wave-status {
   display: flex;
@@ -121,6 +238,16 @@
   align-items: center;
   gap: 2px;
   text-align: center;
+}
+
+/* Mobile: horizontal status */
+@media (max-width: 768px) {
+  .wave-status {
+    flex-direction: row;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 
 .status-live {
@@ -161,6 +288,12 @@
   margin-top: 2px;
 }
 
+@media (max-width: 768px) {
+  .wave-sound-type {
+    margin-top: 0;
+  }
+}
+
 .wave-volume {
   font-size: 16px;
   font-weight: 800;
@@ -169,7 +302,26 @@
   margin-top: 2px;
 }
 
-/* ===== PRIMARY CARDS ===== */
+@media (max-width: 768px) {
+  .wave-volume {
+    font-size: 18px;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .wave-volume {
+    font-size: 15px;
+  }
+  .status-live {
+    font-size: 10px;
+  }
+  .wave-sound-type {
+    font-size: 9px;
+  }
+}
+
+/* ===== PRIMARY CARDS (unchanged) ===== */
 .primary-card {
   background: rgba(13, 17, 40, 0.75);
   backdrop-filter: blur(16px);
@@ -188,7 +340,6 @@
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
 }
 
-/* Sign Card – distinct border color */
 .sign-card {
   border-color: rgba(245, 200, 66, 0.2);
 }
@@ -197,7 +348,6 @@
   border-color: rgba(245, 200, 66, 0.4);
 }
 
-/* ===== CARD HEADERS ===== */
 .card-header-simple {
   display: flex;
   justify-content: space-between;
@@ -229,7 +379,6 @@
   background: none;
 }
 
-/* ===== BADGES ===== */
 .live-badge {
   background: rgba(0, 221, 179, 0.2);
   color: #00DDB3;
@@ -255,7 +404,6 @@
   font-weight: 600;
 }
 
-/* ===== SOUND ROW ===== */
 .sound-row {
   display: grid;
   grid-template-columns: 1fr;
@@ -269,7 +417,6 @@
   }
 }
 
-/* ===== SOUND CARDS ===== */
 .sound-card {
   background: rgba(13, 17, 40, 0.7);
   backdrop-filter: blur(12px);
@@ -300,7 +447,6 @@
   font-size: 24px;
 }
 
-/* ===== ROAD SAFETY BANNER ===== */
 .road-safety-banner {
   display: flex;
   align-items: center;
@@ -333,31 +479,8 @@
   color: #8899CC;
 }
 
-/* ================================================================ */
-/* ===== RESPONSIVE – TABLET & MOBILE ===== */
-/* ================================================================ */
-
+/* Tablet header adjustments */
 @media (max-width: 1024px) {
-  .dashboard-split {
-    gap: 12px;
-  }
-  .dashboard-center {
-    flex: 0.5;
-    min-width: 60px;
-  }
-  .wave-container {
-    max-width: 140px;
-    padding: 12px;
-  }
-  .wave-ring-inner {
-    gap: 2px;
-  }
-  .wave-bar {
-    width: 3px;
-  }
-  .wave-volume {
-    font-size: 14px;
-  }
   .card-header-simple {
     flex-direction: column;
     align-items: flex-start;
@@ -371,63 +494,6 @@
 }
 
 @media (max-width: 768px) {
-  .dashboard-split {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .dashboard-left,
-  .dashboard-right {
-    flex: none;
-    width: 100%;
-  }
-
-  .dashboard-center {
-    flex: none;
-    width: 100%;
-    min-height: auto;
-    order: 2; /* Move center between left and right on mobile */
-  }
-
-  .dashboard-left { order: 1; }
-  .dashboard-center { order: 2; }
-  .dashboard-right { order: 3; }
-
-  .wave-container {
-    max-width: 100%;
-    flex-direction: row;
-    padding: 16px 24px;
-    aspect-ratio: auto;
-    min-height: 80px;
-    gap: 20px;
-  }
-
-  .wave-ring {
-    width: 80px;
-    height: 80px;
-    flex-shrink: 0;
-  }
-
-  .wave-ring-inner {
-    width: 70%;
-    gap: 2px;
-  }
-
-  .wave-bar {
-    width: 3px;
-  }
-
-  .wave-status {
-    flex-direction: row;
-    gap: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .wave-volume {
-    font-size: 18px;
-  }
-
   .card-header-simple {
     padding: 14px 16px;
   }
@@ -442,48 +508,6 @@
 }
 
 @media (max-width: 480px) {
-  .dashboard-split {
-    gap: 12px;
-  }
-  .dashboard-left,
-  .dashboard-right {
-    gap: 12px;
-  }
-
-  .wave-container {
-    padding: 12px 16px;
-    min-height: 60px;
-    gap: 12px;
-  }
-
-  .wave-ring {
-    width: 60px;
-    height: 60px;
-  }
-
-  .wave-ring-inner {
-    gap: 1.5px;
-  }
-
-  .wave-bar {
-    width: 2.5px;
-    min-height: 3px;
-  }
-
-  .wave-status {
-    gap: 6px;
-  }
-
-  .status-live {
-    font-size: 10px;
-  }
-  .wave-sound-type {
-    font-size: 9px;
-  }
-  .wave-volume {
-    font-size: 15px;
-  }
-
   .card-header-simple h2 {
     font-size: 1rem;
     flex-wrap: wrap;
@@ -497,10 +521,6 @@
     padding: 2px 10px;
   }
 }
-
-/* ================================================================ */
-/* ===== DASHBOARD PRIMARY & SECONDARY ===== */
-/* ================================================================ */
 
 .dashboard-primary,
 .dashboard-secondary {
