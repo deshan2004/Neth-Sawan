@@ -134,7 +134,6 @@ function AppContent() {
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
 
   // ===== UI LANGUAGE SYNC WITH RECOGNITION LANGUAGE =====
-  // This ensures the UI language follows the header selection (which changes `lang`)
   useEffect(() => {
     if (lang === 'si-LK') {
       updateLanguageFromTranscript('සිංහල');
@@ -146,11 +145,9 @@ function AppContent() {
   }, [lang, updateLanguageFromTranscript]);
 
   // ===== REMOVED: Auto‑detection of language from transcript =====
-  // The following effect has been removed to prevent the UI language
-  // from changing automatically based on the transcript content.
-  // This ensures the user's header selection is respected at all times.
+  // (Removed to prevent UI language changing automatically)
 
-  // ===== REAL-TIME SIGN LANGUAGE TRANSLATION (Sinhala → English) =====
+  // ===== REAL-TIME SIGN LANGUAGE TRANSLATION =====
   useEffect(() => {
     if (!transcript) {
       setSignWord('');
@@ -388,8 +385,6 @@ function AppContent() {
   };
 
   // ===== TEXT TO PASS TO SIGN LANGUAGE BOX =====
-  // Use the manually typed Sinhala text if available; otherwise the transcript.
-  // This ensures the sign box always shows the same text as the captions.
   const getSignLanguageText = () => {
     return sinhalaText || transcript;
   };
@@ -458,12 +453,16 @@ function AppContent() {
       });
     } catch (error) { console.error("Firebase error:", error); }
 
+    // 🔥 VIBRATION: Always vibrate on fall detection (even if notifications are off)
+    if (navigator.vibrate) {
+      navigator.vibrate([500, 200, 500, 200, 500]);
+    }
+
     if (emergencyNotificationsEnabled) {
       setFlashEmergency(true);
       setEmergencyData({ soundType: '🛑 FALL DETECTED', message: 'An automatic fall was detected!', timestamp: new Date(), volume: 1.0 });
       setEmergencyMessage('🚨 FALL DETECTED!');
       showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
-      if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
       setTimeout(() => setFlashEmergency(false), 8000);
     }
 

@@ -18,7 +18,20 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
   const cooldownRef = useRef(false);
   const lastAccelData = useRef({ x: 0, y: 0, z: 0 });
   const countdownIntervalRef = useRef(null);
-  const isCountingDownRef = useRef(false); // track without causing re-renders
+  const isCountingDownRef = useRef(false);
+
+  // ===== VIBRATION HELPER =====
+  const vibrate = (pattern) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(pattern);
+      } catch (error) {
+        console.warn('Vibration failed:', error);
+      }
+    } else {
+      console.warn('Vibration not supported');
+    }
+  };
 
   // ===== Expose methods to parent =====
   useImperativeHandle(ref, () => ({
@@ -102,12 +115,15 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     const deltaExceeded = delta > 12 && totalAccel > 12;
     const extremePeak = totalAccel > 30;
 
-    // Only trigger if not already counting down
     if ((peakExceeded && deltaExceeded) || extremePeak) {
       if (!isCountingDownRef.current && !fallTriggeredRef.current) {
         console.log(`🚨 FALL DETECTED! Accel: ${totalAccel.toFixed(2)} m/s², delta: ${delta.toFixed(2)}`);
         fallTriggeredRef.current = true;
         cooldownRef.current = true;
+        
+        // Vibrate immediately on fall detection (short buzz)
+        vibrate([200, 100, 200]);
+        
         // Start the countdown
         startCountdown();
 
@@ -118,15 +134,13 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
     }
   };
 
-  // ===== Start countdown (separate function to avoid re-render issues) =====
+  // ===== Start countdown =====
   const startCountdown = () => {
-    // Clear any previous interval
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
 
-    // Reset state
     setIsCountingDown(true);
     isCountingDownRef.current = true;
     setCountdown(10);
@@ -139,6 +153,11 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
       setCountdown(currentCount);
       console.log(`[FallDetector] Countdown: ${currentCount}`);
 
+      // Vibrate every second during countdown (short buzz)
+      if (currentCount > 0 && currentCount <= 5) {
+        vibrate(100); // quick buzz to remind
+      }
+
       if (currentCount <= 0) {
         clearInterval(interval);
         countdownIntervalRef.current = null;
@@ -146,6 +165,10 @@ const FallDetector = forwardRef(({ user, isGuest, showToast, onFallDetected }, r
         isCountingDownRef.current = false;
         fallTriggeredRef.current = false;
         cooldownRef.current = false;
+
+        // Trigger emergency vibration pattern (SOS)
+        vibrate([500, 200, 500, 200, 500, 200, 500]);
+
         // Trigger emergency
         if (onFallDetected) onFallDetected();
         showToast('🚨 EMERGENCY: Fall alert dispatched!', 'error');

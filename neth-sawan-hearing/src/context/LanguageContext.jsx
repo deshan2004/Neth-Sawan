@@ -126,7 +126,7 @@ const translations = {
     howItWorks: 'මෙය ක්‍රියා කරන ආකාරය',
 
     // Sidebar navigation (Sinhala)
-    home: 'මුල් පිටුව',
+    dashboard: 'මුල් පිටුව',
     vision: 'AI දෘෂ්ටිය',
     learn: 'සංඥා ඉගෙන ගන්න',
     inperson: 'සජීවී පරිවර්තකය',      // 👈 new
