@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './VideoTutorial.css';
 
-// ── Define your video playlist ──
+// ── Video playlist ──
 const VIDEO_PLAYLIST = [
   {
     id: 1,
@@ -47,7 +47,7 @@ const VideoTutorial = () => {
   const [hasError, setHasError] = useState(false);
   const videoRef = useRef(null);
 
-  // Auto-play when a video is selected
+  // Auto‑play when a video is selected
   useEffect(() => {
     if (selectedVideo && videoRef.current) {
       const playPromise = videoRef.current.play();
@@ -90,6 +90,16 @@ const VideoTutorial = () => {
     setIsPlaying(false);
   };
 
+  const toggleFullscreen = () => {
+    if (videoRef.current) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        videoRef.current.requestFullscreen?.();
+      }
+    }
+  };
+
   return (
     <div className="video-tutorial-card">
       <div className="video-header">
@@ -124,22 +134,26 @@ const VideoTutorial = () => {
                 </button>
               </div>
             ) : (
-              <video
-                ref={videoRef}
-                key={selectedVideo.id}
-                src={selectedVideo.src}
-                controls
-                playsInline
-                autoPlay
-                onEnded={handleVideoEnd}
-                onError={handleError}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  background: '#000',
-                }}
-              />
+              <>
+                <video
+                  ref={videoRef}
+                  key={selectedVideo.id}
+                  src={selectedVideo.src}
+                  controls
+                  playsInline
+                  autoPlay
+                  onEnded={handleVideoEnd}
+                  onError={handleError}
+                  className="video-player"
+                />
+                <button
+                  className="fullscreen-btn"
+                  onClick={toggleFullscreen}
+                  aria-label="Fullscreen"
+                >
+                  ⛶
+                </button>
+              </>
             )}
             <button className="close-video" onClick={handleClose}>
               ✕
