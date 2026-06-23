@@ -1,7 +1,8 @@
 // src/admin/AdminDashboard.jsx
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
 import { collection, query, where, getDocs, onSnapshot, doc, getDoc, orderBy, limit } from 'firebase/firestore';
+import { db } from '../firebase';
+import toast, { Toaster } from 'react-hot-toast';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import DashboardOverview from './dashboard/DashboardOverview';
@@ -10,6 +11,7 @@ import EmergencyAlerts from './emergencies/EmergencyAlerts';
 import SoundHistory from './sounds/SoundHistory';
 import SystemSettings from './settings/SystemSettings';
 import Reports from './reports/Reports';
+import AuditLog from './audit/AuditLog'; // 🆕
 import './admin.css';
 
 const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
@@ -21,7 +23,7 @@ const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
     totalAlerts: 0,
     totalSounds: 0,
     onlineUsers: 0,
-    storageUsed: '0 MB'
+    storageUsed: '0 MB',
   });
   const [isAdmin, setIsAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1024);
@@ -29,18 +31,18 @@ const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
   const [notifications, setNotifications] = useState([]);
   const [onlineUsersList, setOnlineUsersList] = useState([]);
 
-  // Handle window resize – close sidebar on mobile if open
+  const closeSidebar = () => setSidebarOpen(false);
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth <= 1024 && sidebarOpen) {
-        setSidebarOpen(false);
+        closeSidebar();
       }
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [sidebarOpen]);
 
-  // Check if user is admin
   useEffect(() => {
     const checkAdmin = async () => {
       if (!user) return;
@@ -57,7 +59,6 @@ const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
     checkAdmin();
   }, [user]);
 
-  // Load stats and online users
   useEffect(() => {
     if (!isAdmin) return;
 
@@ -72,14 +73,14 @@ const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
         const onlineUsers = onlineSnapshot.size;
 
         const onlineList = [];
-        onlineSnapshot.forEach(doc => {
+        onlineSnapshot.forEach((doc) => {
           const data = doc.data();
           onlineList.push({
             id: doc.id,
             name: data.name || data.displayName || 'User',
             photoURL: data.photoURL || null,
             lastSeen: data.lastSeen?.toDate?.() || new Date(),
-            email: data.email || ''
+            email: data.email || '',
           });
         });
         setOnlineUsersList(onlineList);
@@ -94,12 +95,12 @@ const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
         }
 
         setStats({
-          totalUsers: totalUsers,
+          totalUsers,
           activeUsers: Math.floor(totalUsers * 0.7),
           totalAlerts: alertsSnapshot.size,
-          totalSounds: totalSounds,
-          onlineUsers: onlineUsers,
-          storageUsed: '156 MB'
+          totalSounds,
+          onlineUsers,
+          storageUsed: '156 MB',
         });
       } catch (err) {
         console.error('Failed to load stats:', err);
@@ -109,11 +110,11 @@ const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
 
     loadStats();
 
-    const unsubscribe = onSnapshot(
+    const unsubscribeAlerts = onSnapshot(
       query(collection(db, 'emergency_alerts'), orderBy('timestamp', 'desc'), limit(10)),
       (snapshot) => {
         const alerts = [];
-        snapshot.forEach(doc => {
+        snapshot.forEach((doc) => {
           alerts.push({ id: doc.id, ...doc.data() });
         });
         setNotifications(alerts);
@@ -124,27 +125,50 @@ const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
       query(collection(db, 'users'), where('online', '==', true)),
       (snapshot) => {
         const list = [];
-        snapshot.forEach(doc => {
+        snapshot.forEach((doc) => {
           const data = doc.data();
           list.push({
             id: doc.id,
             name: data.name || data.displayName || 'User',
             photoURL: data.photoURL || null,
             lastSeen: data.lastSeen?.toDate?.() || new Date(),
-            email: data.email || ''
+            email: data.email || '',
           });
         });
         setOnlineUsersList(list);
       }
     );
 
+    // Live Toast for Critical Alerts
+    const unsubscribeCritical = onSnapshot(
+      query(
+        collection(db, 'emergency_alerts'),
+        where('status', '==', 'CRITICAL'),
+        orderBy('timestamp', 'desc'),
+        limit(1)
+      ),
+      (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            const type = data.alertType || 'Emergency';
+            toast.error(`🚨 ${type} Alert!`, {
+              duration: 6000,
+              position: 'bottom-right',
+              icon: '🆘',
+            });
+          }
+        });
+      }
+    );
+
     return () => {
-      unsubscribe();
+      unsubscribeAlerts();
       unsubscribeOnline();
+      unsubscribeCritical();
     };
   }, [isAdmin]);
 
-  // Toggle: on mobile – open/close; on desktop – collapse/expand
   const toggleSidebar = () => {
     if (window.innerWidth <= 1024) {
       setSidebarOpen(!sidebarOpen);
@@ -154,14 +178,23 @@ const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
   };
 
   const renderContent = () => {
-    switch(activeTab) {
-      case 'overview': return <DashboardOverview stats={stats} loading={loading} onlineUsers={onlineUsersList} />;
-      case 'users': return <UserManagement />;
-      case 'alerts': return <EmergencyAlerts />;
-      case 'sounds': return <SoundHistory />;
-      case 'reports': return <Reports />;
-      case 'settings': return <SystemSettings />;
-      default: return <DashboardOverview stats={stats} loading={loading} onlineUsers={onlineUsersList} />;
+    switch (activeTab) {
+      case 'overview':
+        return <DashboardOverview stats={stats} loading={loading} onlineUsers={onlineUsersList} />;
+      case 'users':
+        return <UserManagement />;
+      case 'alerts':
+        return <EmergencyAlerts />;
+      case 'sounds':
+        return <SoundHistory />;
+      case 'reports':
+        return <Reports />;
+      case 'audit':
+        return <AuditLog />;
+      case 'settings':
+        return <SystemSettings />;
+      default:
+        return <DashboardOverview stats={stats} loading={loading} onlineUsers={onlineUsersList} />;
     }
   };
 
@@ -171,20 +204,36 @@ const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
         <span style={{ fontSize: '64px' }}>🔒</span>
         <h2>Access Denied</h2>
         <p>You do not have admin privileges.</p>
-        <button onClick={onClose} className="admin-back-btn">← Back to App</button>
+        <button onClick={onClose} className="admin-back-btn">
+          ← Back to App
+        </button>
       </div>
     );
   }
 
   return (
     <div className="admin-dashboard">
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#0D1128',
+            color: '#FFFFFF',
+            border: '1px solid #2A2F55',
+            borderRadius: '16px',
+            padding: '16px 20px',
+          },
+        }}
+      />
       <AdminSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onCloseSidebar={closeSidebar}
+        onBackToApp={onClose}
         user={user}
         collapsed={sidebarCollapsed}
+        onToggleCollapse={toggleSidebar}
       />
       <div
         className={`admin-main ${sidebarOpen ? 'sidebar-open' : ''} ${
@@ -200,9 +249,7 @@ const AdminDashboard = ({ user, onClose, currentTheme, onThemeChange }) => {
           currentTheme={currentTheme}
           onThemeChange={onThemeChange}
         />
-        <div className="admin-content">
-          {renderContent()}
-        </div>
+        <div className="admin-content">{renderContent()}</div>
       </div>
     </div>
   );

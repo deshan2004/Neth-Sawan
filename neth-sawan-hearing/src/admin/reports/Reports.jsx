@@ -2,6 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
 import { collection, query, getDocs, where, orderBy, limit } from 'firebase/firestore';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import '../admin.css';
 
 const Reports = () => {
@@ -9,13 +13,24 @@ const Reports = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({});
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   useEffect(() => {
     const generateReport = async () => {
       setLoading(true);
       try {
+        let allData = [];
         if (reportType === 'users') {
-          const snapshot = await getDocs(collection(db, 'users'));
+          let usersQuery = collection(db, 'users');
+          if (startDate && endDate) {
+            usersQuery = query(
+              collection(db, 'users'),
+              where('createdAt', '>=', startDate),
+              where('createdAt', '<=', endDate)
+            );
+          }
+          const snapshot = await getDocs(usersQuery);
           const users = [];
           snapshot.forEach(doc => {
             const data = doc.data();
@@ -35,22 +50,25 @@ const Reports = () => {
             admins: users.filter(u => u.role === 'admin').length
           });
         } else if (reportType === 'alerts') {
-          const alerts = [];
-          const snapshots = [
-            await getDocs(collection(db, 'emergency_alerts')),
-            await getDocs(collection(db, 'emergencies'))
-          ];
-          for (const snapshot of snapshots) {
-            snapshot.forEach(doc => {
-              const data = doc.data();
-              alerts.push({
-                id: doc.id,
-                type: data.alertType || data.message || 'Emergency',
-                timestamp: data.timestamp?.toDate?.() || new Date(),
-                status: data.status || 'NEW'
-              });
-            });
+          let alertsQuery = collection(db, 'emergency_alerts');
+          if (startDate && endDate) {
+            alertsQuery = query(
+              collection(db, 'emergency_alerts'),
+              where('timestamp', '>=', startDate),
+              where('timestamp', '<=', endDate)
+            );
           }
+          const alerts = [];
+          const snapshot = await getDocs(alertsQuery);
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            alerts.push({
+              id: doc.id,
+              type: data.alertType || data.message || 'Emergency',
+              timestamp: data.timestamp?.toDate?.() || new Date(),
+              status: data.status || 'NEW'
+            });
+          });
           alerts.sort((a, b) => b.timestamp - a.timestamp);
           setData(alerts);
           setSummary({
@@ -62,9 +80,15 @@ const Reports = () => {
           const sounds = [];
           const usersSnapshot = await getDocs(collection(db, 'users'));
           for (const userDoc of usersSnapshot.docs) {
-            const soundSnapshot = await getDocs(
-              query(collection(db, 'users', userDoc.id, 'sound_history'), limit(30))
-            );
+            let soundQuery = collection(db, 'users', userDoc.id, 'sound_history');
+            if (startDate && endDate) {
+              soundQuery = query(
+                collection(db, 'users', userDoc.id, 'sound_history'),
+                where('timestamp', '>=', startDate),
+                where('timestamp', '<=', endDate)
+              );
+            }
+            const soundSnapshot = await getDocs(soundQuery);
             soundSnapshot.forEach(doc => {
               const data = doc.data();
               sounds.push({
@@ -78,7 +102,6 @@ const Reports = () => {
           }
           sounds.sort((a, b) => b.timestamp - a.timestamp);
           setData(sounds);
-          // Group by type
           const typeCount = {};
           sounds.forEach(s => {
             typeCount[s.type] = (typeCount[s.type] || 0) + 1;
@@ -94,7 +117,7 @@ const Reports = () => {
       setLoading(false);
     };
     generateReport();
-  }, [reportType]);
+  }, [reportType, startDate, endDate]);
 
   const formatDate = (date) => {
     return date?.toLocaleDateString?.() || 'N/A';
@@ -114,28 +137,70 @@ const Reports = () => {
     URL.revokeObjectURL(url);
   };
 
+  const exportPDF = () => {
+    if (data.length === 0) return;
+    const doc = new jsPDF('landscape');
+    const title = reportType.charAt(0).toUpperCase() + reportType.slice(1) + ' Report';
+    doc.setFontSize(18);
+    doc.text(title, 14, 22);
+    const headers = Object.keys(data[0]).map(key => key.replace(/_/g, ' ').toUpperCase());
+    const rows = data.slice(0, 50).map(obj => Object.values(obj).map(val =>
+      typeof val === 'object' ? JSON.stringify(val).slice(0, 30) : val
+    ));
+    doc.autoTable({
+      head: [headers],
+      body: rows,
+      startY: 30,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [0, 221, 179] },
+    });
+    doc.save(`${reportType}_report.pdf`);
+  };
+
   return (
     <div className="admin-reports">
       <div className="admin-page-header">
         <h2>📈 Reports</h2>
         <div className="admin-page-actions">
           <button className="admin-export-btn" onClick={exportCSV}>📥 Export CSV</button>
+          <button className="admin-export-btn" onClick={exportPDF}>📄 Export PDF</button>
         </div>
       </div>
 
+      {/* Filters: report type + date range */}
       <div className="admin-filters">
         <select value={reportType} onChange={(e) => setReportType(e.target.value)} className="admin-filter-select">
           <option value="users">Users Report</option>
           <option value="alerts">Alerts Report</option>
           <option value="sounds">Sound Events Report</option>
         </select>
+        <DatePicker
+          selected={startDate}
+          onChange={date => setStartDate(date)}
+          placeholderText="Start Date"
+          className="admin-date-picker"
+          dateFormat="yyyy-MM-dd"
+        />
+        <DatePicker
+          selected={endDate}
+          onChange={date => setEndDate(date)}
+          placeholderText="End Date"
+          className="admin-date-picker"
+          dateFormat="yyyy-MM-dd"
+        />
+        {(startDate || endDate) && (
+          <button onClick={() => { setStartDate(null); setEndDate(null); }} className="admin-clear-filters">
+            ✕ Clear
+          </button>
+        )}
       </div>
 
       {/* Summary Cards */}
       <div className="admin-report-summary">
         {Object.entries(summary).map(([key, value]) => (
           <div key={key} className="admin-summary-card">
-            <span className="admin-summary-value">{value}</span>
+            <span className="admin-summary-value">{typeof value === 'object' ? Object.keys(value).length : value}</span>
             <span className="admin-summary-label">{key.replace(/_/g, ' ').toUpperCase()}</span>
           </div>
         ))}

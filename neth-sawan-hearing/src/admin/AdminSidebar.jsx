@@ -1,11 +1,19 @@
 // src/admin/AdminSidebar.jsx
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 import ProfileEditModal from '../components/ProfileEditModal';
 import './admin.css';
 
-const AdminSidebar = ({ activeTab, setActiveTab, isOpen, onClose, user, collapsed }) => {
+const AdminSidebar = ({
+  activeTab,
+  setActiveTab,
+  isOpen,
+  onCloseSidebar,
+  onBackToApp,
+  user,
+  collapsed,
+}) => {
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || user?.email?.split('@')[0] || 'Admin',
     photoURL: user?.photoURL || null,
@@ -13,9 +21,21 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, onClose, user, collapse
   });
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Real‑time profile listener…
   useEffect(() => {
-    // … (unchanged)
+    if (!user) return;
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setProfileData((prev) => ({
+          ...prev,
+          displayName: data.displayName || data.name || user.displayName || user.email?.split('@')[0] || 'Admin',
+          photoURL: data.photoURL || user.photoURL || null,
+          email: data.email || user.email || '',
+        }));
+      }
+    });
+    return () => unsubscribe();
   }, [user]);
 
   const menuItems = [
@@ -24,17 +44,37 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, onClose, user, collapse
     { id: 'alerts', icon: '🚨', label: 'Emergency Alerts' },
     { id: 'sounds', icon: '🔊', label: 'Sound History' },
     { id: 'reports', icon: '📈', label: 'Reports' },
+    { id: 'audit', icon: '📋', label: 'Audit Log' },
     { id: 'settings', icon: '⚙️', label: 'Settings' },
   ];
 
   const handleProfileUpdate = (updatedData) => {
-    setProfileData(prev => ({ ...prev, ...updatedData }));
+    setProfileData((prev) => ({ ...prev, ...updatedData }));
+  };
+
+  const handleNavClick = (tabId) => {
+    setActiveTab(tabId);
+    if (window.innerWidth <= 1024) {
+      onCloseSidebar();
+    }
   };
 
   return (
     <>
       <div className={`admin-sidebar ${isOpen ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`}>
-        {/* Profile Section – hide extra info when collapsed */}
+        {/* ─── Sidebar Header – Logo removed, only close button ─── */}
+        <div className="admin-sidebar-header">
+          <span className="admin-sidebar-header-spacer"></span>
+          <button
+            className="admin-close-sidebar-btn"
+            onClick={onCloseSidebar}
+            aria-label="Close sidebar"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* ─── Profile Section (unchanged) ─── */}
         <div className="admin-profile-section" onClick={() => setShowProfileModal(true)}>
           <div className="admin-profile-glow"></div>
           <div className="admin-profile-avatar-wrapper">
@@ -52,7 +92,6 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, onClose, user, collapse
               </div>
             </div>
           </div>
-          {/* 👇 Hidden when collapsed */}
           {!collapsed && (
             <div className="admin-profile-info">
               <div className="admin-profile-name-row">
@@ -67,15 +106,13 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, onClose, user, collapse
           {!collapsed && <span className="admin-profile-chevron">›</span>}
         </div>
 
+        {/* ─── Navigation ─── */}
         <div className="admin-sidebar-nav">
           {menuItems.map((item) => (
             <button
               key={item.id}
               className={`admin-nav-item ${activeTab === item.id ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab(item.id);
-                if (window.innerWidth <= 1024) onClose(); // close on mobile after click
-              }}
+              onClick={() => handleNavClick(item.id)}
             >
               <span className="admin-nav-icon">{item.icon}</span>
               {!collapsed && <span className="admin-nav-label">{item.label}</span>}
@@ -83,8 +120,9 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, onClose, user, collapse
           ))}
         </div>
 
+        {/* ─── Footer ─── */}
         <div className="admin-sidebar-footer">
-          <button className="admin-nav-item" onClick={onClose}>
+          <button className="admin-nav-item" onClick={onBackToApp}>
             <span className="admin-nav-icon">🚪</span>
             {!collapsed && <span className="admin-nav-label">Back to App</span>}
           </button>
@@ -92,9 +130,10 @@ const AdminSidebar = ({ activeTab, setActiveTab, isOpen, onClose, user, collapse
         </div>
       </div>
 
+      {/* ─── Mobile Backdrop ─── */}
       <div
         className={`admin-sidebar-backdrop ${isOpen ? 'active' : ''}`}
-        onClick={() => window.innerWidth <= 1024 && onClose()}
+        onClick={() => window.innerWidth <= 1024 && onCloseSidebar()}
       />
 
       {showProfileModal && (
