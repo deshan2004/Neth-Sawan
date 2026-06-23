@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './VideoTutorial.css';
 
-// ── Video playlist (order matters) ──
+// ── Video playlist ──
 const VIDEO_PLAYLIST = [
   { id: 1, title: 'Getting Started', emoji: '🚀', src: '/videos/tutorial.mp4' },
   { id: 2, title: 'Emergency Signs',   emoji: '🆘', src: '/videos/tutorial1.mp4' },
@@ -15,6 +15,7 @@ const VideoTutorial = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // 🔇 Mute by default
   const videoRef = useRef(null);
 
   const currentVideo = VIDEO_PLAYLIST[currentIndex];
@@ -23,6 +24,8 @@ const VideoTutorial = () => {
   // Auto‑play when video source changes
   useEffect(() => {
     if (videoRef.current) {
+      // Set muted state on the video element
+      videoRef.current.muted = isMuted;
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
@@ -30,18 +33,15 @@ const VideoTutorial = () => {
         });
       }
     }
-  }, [currentIndex]);
+  }, [currentIndex, isMuted]);
 
   const handlePlay = () => setIsPlaying(true);
   const handlePause = () => setIsPlaying(false);
 
   const handleEnded = () => {
-    // Move to next video automatically
     if (currentIndex < totalVideos - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Loop back to start (optional)
-      // setCurrentIndex(0);
       setIsPlaying(false);
     }
   };
@@ -75,6 +75,14 @@ const VideoTutorial = () => {
     }
   };
 
+  // ── Toggle Mute ──
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(!isMuted);
+    }
+  };
+
   return (
     <div className="video-tutorial-card">
       {/* Header with playlist info */}
@@ -83,6 +91,21 @@ const VideoTutorial = () => {
         <h4>Video Tutorial</h4>
         <span className="video-badge">
           {currentIndex + 1} / {totalVideos}
+        </span>
+        {/* 🔇 Mute indicator */}
+        <span 
+          className="mute-indicator"
+          style={{
+            fontSize: '0.7rem',
+            padding: '2px 10px',
+            borderRadius: '40px',
+            background: isMuted ? 'rgba(255,200,0,0.15)' : 'rgba(0,221,179,0.15)',
+            color: isMuted ? '#F5C842' : '#00DDB3',
+            border: isMuted ? '1px solid #F5C842' : '1px solid #00DDB3',
+            marginLeft: '8px'
+          }}
+        >
+          {isMuted ? '🔇 Muted' : '🔊 Sound On'}
         </span>
       </div>
 
@@ -122,6 +145,7 @@ const VideoTutorial = () => {
                 controls
                 playsInline
                 autoPlay
+                muted={isMuted} // 🔥 Mute by default
                 onPlay={handlePlay}
                 onPause={handlePause}
                 onEnded={handleEnded}
@@ -134,6 +158,36 @@ const VideoTutorial = () => {
                 aria-label="Fullscreen"
               >
                 ⛶
+              </button>
+              {/* Custom Mute Toggle Button */}
+              <button
+                className="mute-toggle-btn"
+                onClick={toggleMute}
+                aria-label={isMuted ? 'Unmute' : 'Mute'}
+                style={{
+                  position: 'absolute',
+                  bottom: '70px',
+                  right: '16px',
+                  background: 'rgba(0,0,0,0.6)',
+                  backdropFilter: 'blur(4px)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  zIndex: 10,
+                  fontSize: '1.2rem',
+                  transition: 'all 0.2s',
+                  minWidth: '40px',
+                  minHeight: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,221,179,0.3)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
+              >
+                {isMuted ? '🔇' : '🔊'}
               </button>
             </>
           )}
@@ -163,7 +217,7 @@ const VideoTutorial = () => {
       </div>
 
       <div className="video-footer">
-        <span>💡 Videos play automatically. Use buttons to skip.</span>
+        <span>💡 Videos play automatically. Sound is muted by default. Click 🔊 to unmute.</span>
       </div>
     </div>
   );

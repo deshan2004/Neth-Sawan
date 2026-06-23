@@ -19,6 +19,7 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
   const timeoutRef = useRef(null);
   const isMountedRef = useRef(true);
   const isUploadingRef = useRef(false);
+  const uploadStartedRef = useRef(false);
 
   const [privacy, setPrivacy] = useState({
     shareLocation: true,
@@ -26,7 +27,6 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
     showOnlineStatus: true,
   });
 
-  // ── Load existing data ──
   useEffect(() => {
     isMountedRef.current = true;
     if (user && !isGuest) {
@@ -47,7 +47,6 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
     }
   }, [user, isGuest]);
 
-  // ── Guest mode load ──
   useEffect(() => {
     if (isGuest) {
       const saved = localStorage.getItem('neth_sawan_guest_profile');
@@ -61,16 +60,14 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
     }
   }, [isGuest]);
 
-  // ── Cleanup ──
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      // 🔥 DO NOT cancel upload – let it finish
+      // 🔥 DO NOT cancel upload on unmount – let it finish
     };
   }, []);
 
-  // ── Handle file select ──
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
@@ -85,7 +82,6 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
     }
   };
 
-  // ── Compress image (max 800px, 0.7 quality) ──
   const compressImage = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -122,7 +118,6 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
     });
   };
 
-  // ── Handle drop ──
   const handleDrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
@@ -143,53 +138,64 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
   // ── Upload with real progress ──
   const uploadPhoto = (file, uid) => {
     return new Promise((resolve, reject) => {
-      const storageRef = ref(storage, `profile_photos/${uid}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-      uploadTaskRef.current = uploadTask;
-      isUploadingRef.current = true;
+      try {
+        const storageRef = ref(storage, `profile_photos/${uid}`);
+        console.log('📁 Storage path:', `profile_photos/${uid}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        uploadTaskRef.current = uploadTask;
+        isUploadingRef.current = true;
+        uploadStartedRef.current = true;
 
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          console.log(`📤 Upload progress: ${progress}%`);
-          if (isMountedRef.current) {
-            setUploadProgress(progress);
-          }
-        },
-        (err) => {
-          console.error('❌ Upload error:', err);
-          isUploadingRef.current = false;
-          if (err.code === 'storage/canceled') {
-            reject(new Error('Upload was cancelled.'));
-          } else {
-            reject(err);
-          }
-        },
-        async () => {
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            console.log('✅ Upload complete, URL:', downloadURL);
-            isUploadingRef.current = false;
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+            console.log(`📤 Upload progress: ${progress}%`);
             if (isMountedRef.current) {
-              setUploadProgress(100);
+              setUploadProgress(progress);
             }
-            resolve(downloadURL);
-          } catch (err) {
+          },
+          (err) => {
+            console.error('❌ Upload error:', err.code, err.message);
             isUploadingRef.current = false;
-            reject(err);
+            let errorMsg = err.message || 'Upload failed.';
+            if (err.code === 'storage/canceled') {
+              errorMsg = 'Upload was cancelled.';
+            } else if (err.code === 'storage/unauthorized' || err.code === 'storage/permission-denied') {
+              errorMsg = 'Permission denied. Check Firebase Storage rules.';
+            } else if (err.code === 'storage/retry-limit-exceeded') {
+              errorMsg = 'Network error. Please check your connection.';
+            }
+            reject(new Error(errorMsg));
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              console.log('✅ Upload complete, URL:', downloadURL);
+              isUploadingRef.current = false;
+              if (isMountedRef.current) {
+                setUploadProgress(100);
+              }
+              resolve(downloadURL);
+            } catch (err) {
+              console.error('❌ Failed to get download URL:', err);
+              isUploadingRef.current = false;
+              reject(new Error('Failed to get download URL.'));
+            }
           }
-        }
-      );
+        );
+      } catch (err) {
+        console.error('❌ Upload setup error:', err);
+        reject(new Error('Failed to start upload.'));
+      }
     });
   };
 
-  // ── Save handler ──
   const handleSave = async () => {
-    // ── Check if signed in ──
     const currentUser = auth.currentUser;
     console.log('🔍 isGuest:', isGuest);
     console.log('🔍 currentUser:', currentUser?.uid || 'No user');
+    console.log('🔍 photoFile:', photoFile ? `Yes (${photoFile.size} bytes)` : 'No');
 
     if (!displayName.trim()) {
       setError('Please enter a display name');
@@ -200,20 +206,25 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
     setError('');
     setUploadProgress(0);
     isUploadingRef.current = false;
+    uploadStartedRef.current = false;
 
-    // ── 60 second timeout ──
+    // ── 120 second timeout (increased) ──
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       console.warn('⚠️ Save timeout');
-      if (isMountedRef.current) {
-        setLoading(false);
-        setError('Upload timed out. Please try again with a smaller image.');
-        if (uploadTaskRef.current && isUploadingRef.current) {
+      // Only cancel if upload is still in progress AND progress < 100
+      if (isUploadingRef.current && uploadProgress < 100) {
+        console.warn('⏹️ Cancelling upload due to timeout');
+        if (uploadTaskRef.current) {
           uploadTaskRef.current.cancel();
         }
         isUploadingRef.current = false;
       }
-    }, 60000);
+      if (isMountedRef.current) {
+        setLoading(false);
+        setError('Upload timed out. Please try again with a smaller image.');
+      }
+    }, 120000); // 2 minutes
 
     try {
       // ── GUEST MODE ──
@@ -251,8 +262,7 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
         } catch (uploadErr) {
           console.error('❌ Upload failed:', uploadErr);
           if (isMountedRef.current) {
-            const errMsg = uploadErr.message || 'Please try again';
-            setError(`Upload failed: ${errMsg}`);
+            setError(`Upload failed: ${uploadErr.message}`);
           }
           clearTimeout(timeoutRef.current);
           if (isMountedRef.current) setLoading(false);
@@ -322,21 +332,19 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
       console.log('⏳ Upload in progress. Cannot cancel.');
       return;
     }
-    if (uploadTaskRef.current) {
+    if (uploadTaskRef.current && isUploadingRef.current) {
       uploadTaskRef.current.cancel();
     }
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     onClose();
   };
 
-  // ── Overlay click handler ──
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget && !loading) {
       handleCancel();
     }
   };
 
-  // ── Retry ──
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
     setError('');
@@ -346,7 +354,6 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
   return (
     <div className="profile-modal-overlay" onClick={handleOverlayClick}>
       <div className="profile-modal-container" onClick={e => e.stopPropagation()}>
-        {/* ── Header ── */}
         <div className="profile-modal-header">
           <h3>✎ Edit Profile</h3>
           <button 
@@ -359,9 +366,7 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
           </button>
         </div>
 
-        {/* ── Body ── */}
         <div className="profile-modal-body">
-          {/* Photo Upload */}
           <div
             className="profile-photo-section"
             onDrop={handleDrop}
@@ -401,7 +406,6 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
             </p>
           </div>
 
-          {/* Display Name */}
           <div className="profile-field">
             <label>Display Name</label>
             <input
@@ -413,7 +417,6 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
             />
           </div>
 
-          {/* Error */}
           {error && (
             <div style={{ 
               padding: '10px 14px', 
@@ -445,7 +448,6 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
             </div>
           )}
 
-          {/* Privacy */}
           <div className="privacy-section">
             <h4>Privacy Settings</h4>
             <div className="privacy-option">
@@ -473,7 +475,6 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
           </div>
         </div>
 
-        {/* ── Footer ── */}
         <div className="profile-modal-footer">
           <button 
             className="btn-cancel" 
