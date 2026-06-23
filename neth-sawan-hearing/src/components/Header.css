@@ -570,4 +570,41 @@
   .sos-icon {
     font-size: 1.6rem;
   }
+}/* src/components/Header.css */
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 90%, var(--dynamic-text, #FFFFFF) 10%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 2px solid color-mix(in srgb, var(--dynamic-primary, #00DDB3) 30%, transparent);
+  padding: 12px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  transition: all 0.3s;
 }
+
+/* ... keep all existing styles, replace colour values with variables: */
+
+.brand-name {
+  font-size: 24px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--dynamic-primary, #00DDB3), #F5C842);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+
+.brand-tagline {
+  color: var(--dynamic-text, #A0A8D0);
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 10%, transparent);
+}
+
+/* ... all other colours use var(--dynamic-*) or color-mix */

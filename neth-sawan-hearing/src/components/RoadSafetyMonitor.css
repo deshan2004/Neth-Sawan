@@ -88,4 +88,31 @@
   .direction span {
     font-size: 32px;
   }
+}/* src/components/RoadSafetyMonitor.css */
+
+.road-safety-monitor {
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 80%, var(--dynamic-text, #FFFFFF) 20%);
+  color: var(--dynamic-text, #FFFFFF);
+}
+
+.monitor-title {
+  color: var(--dynamic-text, #FFFFFF);
+}
+
+.monitor-status.active {
+  color: var(--dynamic-primary, #00DDB3);
+}
+
+.start-monitor-btn {
+  background: linear-gradient(135deg, var(--dynamic-primary, #00DDB3), color-mix(in srgb, var(--dynamic-primary, #00DDB3) 70%, #000));
+  color: var(--dynamic-bg, #000);
+}
+
+.direction-indicator {
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 10%, transparent);
+}
+
+.safety-tips {
+  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 8%, transparent);
+  border-left: 4px solid var(--dynamic-primary, #00DDB3);
 }

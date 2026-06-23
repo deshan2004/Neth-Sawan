@@ -226,4 +226,28 @@
     margin-left: 0;
     width: 100%;
   }
+}/* src/components/Dashboard.css (SimpleDashboard) */
+
+.dashboard-stats {
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 80%, var(--dynamic-text, #FFFFFF) 20%);
+  border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 10%, transparent);
 }
+
+.stat-label {
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 50%, transparent);
+}
+
+.stat-value {
+  color: var(--dynamic-text, #FFFFFF);
+}
+
+.dashboard-card {
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 80%, var(--dynamic-text, #FFFFFF) 20%);
+  border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 10%, transparent);
+}
+
+.card-header h3 {
+  color: var(--dynamic-text, #FFFFFF);
+}
+
+/* ... etc */

@@ -78,7 +78,7 @@ const TranscriptBox = ({
   return (
     <div className={`transcript-card ${isListening ? 'listening-active' : ''}`}>
       
-      {/* ===== HEADER ===== */}
+      {/* HEADER */}
       <div className="transcript-header">
         <div className="header-left">
           <span className="header-icon">🎤</span>
@@ -125,7 +125,7 @@ const TranscriptBox = ({
         </div>
       </div>
 
-      {/* ===== DIAGNOSTICS ===== */}
+      {/* DIAGNOSTICS */}
       {showDiagnostics && (
         <div className="diagnostics-panel">
           <div className="diag-grid">
@@ -137,7 +137,7 @@ const TranscriptBox = ({
         </div>
       )}
 
-      {/* ===== ERROR BANNER ===== */}
+      {/* ERROR */}
       {error && (
         <div className="error-message">
           <div className="error-text">
@@ -153,20 +153,8 @@ const TranscriptBox = ({
         </div>
       )}
 
-      {/* ===== MAIN CAPTION DISPLAY ===== */}
-      <div 
-        className="transcript-body" 
-        ref={scrollRef} 
-        style={{ 
-          fontSize: `${fontSize}px`,
-          background: 'rgba(0, 0, 0, 0.7)',
-          minHeight: '120px',
-          maxHeight: '220px',
-          overflowY: 'auto',
-          padding: '20px',
-          scrollBehavior: 'smooth'
-        }}
-      >
+      {/* TRANSCRIPT BODY */}
+      <div className="transcript-body" ref={scrollRef}>
         {!transcript && !typedText ? (
           <div className="placeholder-container">
             <div className="placeholder-icon">🎙️</div>
@@ -191,7 +179,7 @@ const TranscriptBox = ({
         )}
       </div>
 
-      {/* ===== FOOTER CONTROLS ===== */}
+      {/* FOOTER */}
       <div className="transcript-footer">
         <button 
           className={`action-btn-main ${isListening ? 'stop' : 'start'}`}
@@ -212,7 +200,7 @@ const TranscriptBox = ({
         </button>
       </div>
 
-      {/* ===== SINHALA MANUAL TYPING – ENHANCED ===== */}
+      {/* SINHALA TYPING */}
       {currentLang === 'si-LK' && (
         <div className="sinhala-typing-extension">
           <div className="extension-header">

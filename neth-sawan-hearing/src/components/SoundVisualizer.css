@@ -11,4 +11,20 @@ canvas {
   padding: 8px;
   background: rgba(0,0,0,0.2);
   border-radius: var(--radius-md);
+}/* src/components/SoundVisualizer.css */
+
+canvas {
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 50%, var(--dynamic-text, #FFFFFF) 5%);
+}
+
+.viz-info {
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 5%, transparent);
+}
+
+.viz-type {
+  color: var(--dynamic-text, #FFFFFF);
+}
+
+.viz-pct.loud {
+  color: #FF3355;
 }
