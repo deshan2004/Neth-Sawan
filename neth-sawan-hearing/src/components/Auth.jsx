@@ -18,6 +18,11 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // 🔥 Check if email is the admin email
+  const isAdminEmail = (email) => {
+    return email === 'admin@neth-sawan.com';
+  };
+
   // Google Sign-In
   const handleGoogleSignIn = async () => {
     setError('');
@@ -27,13 +32,15 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess, onClose }) => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
-      // Save/update user in Firestore with privacy defaults
+      // Check if user is admin
+      const role = isAdminEmail(user.email) ? 'admin' : 'user';
+      
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name: user.displayName || 'Google User',
         email: user.email,
         createdAt: serverTimestamp(),
-        role: 'user',
+        role: role,
         privacy: {
           shareLocation: true,
           shareEmergencyAlerts: true,
@@ -41,7 +48,6 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess, onClose }) => {
         }
       }, { merge: true });
 
-      // Optional backend sync
       try {
         await fetch('http://localhost:5000/api/users', {
           method: 'POST',
@@ -50,7 +56,7 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess, onClose }) => {
             uid: user.uid,
             name: user.displayName || 'Google User',
             email: user.email,
-            role: 'user'
+            role: role
           }),
         });
       } catch (backendErr) {
@@ -86,13 +92,16 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess, onClose }) => {
         // Update display name
         await updateProfile(user, { displayName: formData.name });
         
-        // Create Firestore document with privacy defaults
+        // Check if admin
+        const role = isAdminEmail(formData.email) ? 'admin' : 'user';
+        
+        // Create Firestore document
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           name: formData.name,
           email: formData.email,
           createdAt: serverTimestamp(),
-          role: 'user',
+          role: role,
           privacy: {
             shareLocation: true,
             shareEmergencyAlerts: true,
@@ -100,7 +109,6 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess, onClose }) => {
           }
         });
 
-        // Optional backend sync
         try {
           await fetch('http://localhost:5000/api/users', {
             method: 'POST',
@@ -109,7 +117,7 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess, onClose }) => {
               uid: user.uid,
               name: formData.name,
               email: formData.email,
-              role: 'user'
+              role: role
             }),
           });
         } catch (backendErr) {
@@ -133,7 +141,6 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess, onClose }) => {
   return (
     <div className="auth-container-fixed">
       <div className="auth-card-clean">
-        {/* Close button (if modal) */}
         {onClose && (
           <button type="button" className="auth-close-x" onClick={onClose} aria-label="Close">✕</button>
         )}
@@ -147,7 +154,6 @@ const Auth = ({ onGuestMode, initialMode = 'login', onSuccess, onClose }) => {
           <p>{isLogin ? 'Sign in to Neth-Sawan' : 'Join the hearing assistant community'}</p>
         </div>
 
-        {/* Google Login Button */}
         <button 
           type="button" 
           className="google-login-btn" 

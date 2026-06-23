@@ -10,7 +10,10 @@ const Header = ({
   onToggleSidebar, sidebarOpen,
   fallDetectorBlocked, onRequestFallPermission,
   onTestFall,
-  onTriggerEmergency
+  onTriggerEmergency,
+  // 👇 new props for admin
+  isAdmin = false,
+  onOpenAdmin
 }) => {
   const { t } = useLanguage();
 
@@ -28,7 +31,7 @@ const Header = ({
       </div>
 
       <div className="header-right">
-        {/* 🔥 SOS BUTTON – Big, Bold, Mobile-Friendly */}
+        {/* 🔥 SOS BUTTON */}
         <button 
           className="sos-header-btn"
           onClick={onTestFall}
@@ -82,6 +85,36 @@ const Header = ({
           <span className="status-text">{isListening ? t('listening') : t('stopped')}</span>
         </div>
         
+        {/* 🔥 ADMIN BUTTON – only for logged‑in admin users */}
+        {isAdmin && !isGuest && onOpenAdmin && (
+          <button 
+            className="admin-header-btn"
+            onClick={onOpenAdmin}
+            title="Open Admin Panel"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '40px',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              border: 'none',
+              cursor: 'pointer',
+              background: 'linear-gradient(135deg, #F5C842, #E8B830)',
+              color: '#000',
+              boxShadow: '0 2px 12px rgba(245, 200, 66, 0.3)',
+              transition: 'all 0.2s',
+              minHeight: '44px'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.04)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <span style={{ fontSize: '1.2rem' }}>🛡️</span>
+            <span>Admin</span>
+          </button>
+        )}
+
         <div className="user-badge">
           <span>{isGuest ? '👤' : '👂'}</span>
           <span>

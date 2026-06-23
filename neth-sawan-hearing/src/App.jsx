@@ -1,10 +1,10 @@
-// src/App.jsx – Full Updated Code with Firestore Notification Save
+// src/App.jsx – Full Updated Code with Admin Integration
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, addDoc, collection, serverTimestamp } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-// Components (all imports same as before)
+// Components
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import TranscriptBox from './components/TranscriptBox';
@@ -27,6 +27,9 @@ import OnlineUsers from './components/OnlineUsers';
 import InstructionsPage from './components/InstructionsPage';
 import InPersonTranslator from './components/InPersonTranslator';
 
+// Admin Dashboard
+import AdminDashboard from './admin/AdminDashboard';
+
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
 import { useVolume } from './hooks/useVolume';
@@ -36,7 +39,7 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
 
-// ---- Helper functions (same as before) ----
+// ---- Helper functions ----
 const buildWhatsAppMessage = (contactName, location, userEmail, alertType) => {
   const time = new Date().toLocaleString('en-LK', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   let msg = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
@@ -82,7 +85,7 @@ const buildSmsMessage = (contactName, location, userEmail, alertType) => {
 // APP CONTENT
 // ================================================================
 function AppContent() {
-  const { updateLanguageFromTranscript, t } = useLanguage();
+  const { language, setLanguage, updateLanguageFromTranscript, t } = useLanguage();
 
   // ---- Authentication ----
   const [user, setUser] = useState(null);
@@ -90,6 +93,11 @@ function AppContent() {
   const [isGuest, setIsGuest] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [showLanding, setShowLanding] = useState(true);
+
+  // ---- Admin State ----
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRoleLoaded, setUserRoleLoaded] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   // ---- UI State ----
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -155,23 +163,18 @@ function AppContent() {
     clearAll: guestClearAll
   } = useGuestNotifications();
 
-  // ---- Guest data ----
   const [guestRelatives, setGuestRelatives] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
-
-  // ---- Sinhala typing ----
   const [sinhalaText, setSinhalaText] = useState('');
   const [signWord, setSignWord] = useState('');
 
-  // ===== NEW: Save notification to Firestore =====
+  // ===== Save notification to Firestore =====
   const addNotificationToFirestore = async (notification) => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
-      // Guest mode – fallback to localStorage
       guestAddNotification(notification);
       return;
     }
-
     try {
       await addDoc(collection(db, 'users', currentUser.uid, 'notifications'), {
         type: notification.type || 'GENERAL',
@@ -185,13 +188,78 @@ function AppContent() {
       console.log('✅ Notification saved to Firestore');
     } catch (err) {
       console.error('Failed to save notification to Firestore:', err);
-      // Fallback to guest mode (localStorage)
       guestAddNotification(notification);
     }
   };
 
   // ============================================================
-  // PREFERENCES LOAD/SAVE (same as before)
+  // 🔥 SCROLL TO TOP & SET LANGUAGE TO ENGLISH ON LOAD
+  // ============================================================
+  useEffect(() => {
+    // Scroll to top of page
+    window.scrollTo(0, 0);
+    // Set language to English (if not already)
+    if (language !== 'en') {
+      setLanguage('en');
+    }
+    // Also ensure the speech recognition language matches
+    if (lang !== 'en-US') {
+      setLang('en-US');
+    }
+  }, []); // Empty array = runs once on mount
+
+  // ============================================================
+  // AUTHENTICATION & ROLE FETCH
+  // ============================================================
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        setIsGuest(false);
+        setShowLanding(false);
+        // Fetch role
+        try {
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            const admin = data.role === 'admin' || currentUser.email === 'admin@neth-sawan.com';
+            setIsAdmin(admin);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (err) {
+          console.error('Role fetch error:', err);
+          setIsAdmin(false);
+        }
+        setUserRoleLoaded(true);
+      } else {
+        // Guest or no user
+        const storedGuest = localStorage.getItem('guestUser');
+        if (storedGuest) {
+          try {
+            const gData = JSON.parse(storedGuest);
+            setIsGuest(true);
+            setGuestName(gData.name || 'Guest');
+            setShowLanding(false);
+            setIsAdmin(false);
+          } catch {
+            setShowLanding(true);
+          }
+        } else {
+          setUser(null);
+          setIsGuest(false);
+          setShowLanding(true);
+          setIsAdmin(false);
+        }
+        setUserRoleLoaded(true);
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // ============================================================
+  // PREFERENCES
   // ============================================================
   useEffect(() => {
     const loadPreferences = async () => {
@@ -204,7 +272,6 @@ function AppContent() {
         if (savedToggle !== null) setEmergencyNotificationsEnabled(savedToggle === 'true');
         return;
       }
-
       try {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
@@ -225,7 +292,6 @@ function AppContent() {
         console.error('Failed to load preferences from Firestore:', err);
       }
     };
-
     if (!authLoading) {
       loadPreferences();
     }
@@ -240,7 +306,6 @@ function AppContent() {
       }
       return;
     }
-
     try {
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, {
@@ -279,6 +344,9 @@ function AppContent() {
     );
   };
 
+  // ============================================================
+  // OTHER EFFECTS
+  // ============================================================
   useEffect(() => {
     localStorage.setItem('emergency_notifications_enabled', String(emergencyNotificationsEnabled));
   }, [emergencyNotificationsEnabled]);
@@ -340,14 +408,12 @@ function AppContent() {
     return () => clearInterval(interval);
   }, []);
 
-  // ---- Loud sound emergency flash (now uses addNotificationToFirestore) ----
+  // ---- Loud sound emergency flash ----
   useEffect(() => {
     if (isLoud && soundType && !roadSafetyActive && emergencyNotificationsEnabled) {
       setFlashEmergency(true);
       setEmergencyData({ soundType, message: `Emergency: ${soundType}`, timestamp: new Date(), volume });
       setEmergencyMessage(`🚨 ${soundType} detected!`);
-
-      // 🔥 Save notification to Firestore (or localStorage for guest)
       addNotificationToFirestore({
         type: 'EMERGENCY',
         message: `Emergency: ${soundType}`,
@@ -355,10 +421,9 @@ function AppContent() {
         location: null,
         read: false
       });
-
       setTimeout(() => setFlashEmergency(false), 3000);
     }
-  }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled, isGuest, addNotificationToFirestore]);
+  }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled, addNotificationToFirestore]);
 
   useEffect(() => {
     if (isGuest && soundHistory?.length > 0) {
@@ -370,34 +435,9 @@ function AppContent() {
     }
   }, [soundHistory, isGuest]);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setIsGuest(false);
-        setShowLanding(false);
-      } else {
-        const storedGuest = localStorage.getItem('guestUser');
-        if (storedGuest) {
-          try {
-            const gData = JSON.parse(storedGuest);
-            setIsGuest(true);
-            setGuestName(gData.name || 'Guest');
-            setShowLanding(false);
-          } catch {
-            setShowLanding(true);
-          }
-        } else {
-          setUser(null);
-          setIsGuest(false);
-          setShowLanding(true);
-        }
-      }
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
+  // ============================================================
+  // TOAST, SIDEBAR, LOGOUT, GUEST MODE, FALL PERMISSION, ETC.
+  // ============================================================
   const showToast = (message, type = 'info') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
@@ -413,6 +453,8 @@ function AppContent() {
       setGuestName('');
       setUser(null);
       setShowLanding(true);
+      setIsAdmin(false);
+      setShowAdmin(false);
       showToast(t('loggedOut') || 'Logged out', 'success');
     } catch {
       showToast(t('logoutFailed') || 'Logout failed', 'error');
@@ -425,6 +467,7 @@ function AppContent() {
     setIsGuest(true);
     setGuestName(name);
     setShowLanding(false);
+    setIsAdmin(false);
     showToast(t('guestModeActivated') || 'Guest mode activated', 'success');
   };
 
@@ -518,7 +561,9 @@ function AppContent() {
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
-  // ===== EMERGENCY DISPATCH (uses addNotificationToFirestore) =====
+  // ============================================================
+  // EMERGENCY DISPATCH
+  // ============================================================
   const sendAlertToContact = (contact, alertType, location, userEmail) => {
     if (!contact.phone) {
       console.warn(`❌ ${contact.name} has no phone number`);
@@ -548,7 +593,6 @@ function AppContent() {
     }
   };
 
-  // Fall Detection
   const handleFallEmergency = async () => {
     console.log("🚨 Fall emergency triggered!");
     let location = null;
@@ -588,8 +632,6 @@ function AppContent() {
       });
       setEmergencyMessage('🚨 FALL DETECTED!');
       showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
-      
-      // 🔥 Save notification to Firestore (or localStorage)
       addNotificationToFirestore({
         type: 'EMERGENCY',
         message: 'Automatic fall detected!',
@@ -597,7 +639,6 @@ function AppContent() {
         location: location,
         read: false
       });
-
       setTimeout(() => setFlashEmergency(false), 8000);
     }
 
@@ -610,7 +651,6 @@ function AppContent() {
     }
   };
 
-  // Manual SOS
   const triggerEmergency = async (msg) => {
     console.log("🆘 SOS triggered:", msg);
     let location = null;
@@ -635,7 +675,6 @@ function AppContent() {
     showToast(`🚨 EMERGENCY: ${msg || 'SOS Activated!'}`, 'error');
     if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
 
-    // Save to Firestore / LocalStorage
     if (user && !isGuest) {
       try {
         await addDoc(collection(db, 'emergencies'), {
@@ -658,7 +697,6 @@ function AppContent() {
       });
     }
 
-    // 🔥 Save notification to Firestore (or localStorage)
     addNotificationToFirestore({
       type: 'EMERGENCY',
       message: msg || 'SOS Button Pressed',
@@ -682,7 +720,7 @@ function AppContent() {
   // RENDER
   // ================================================================
 
-  if (authLoading) {
+  if (authLoading || !userRoleLoaded) {
     return (
       <div className="loading-screen">
         <div className="loading-spinner"></div>
@@ -700,6 +738,19 @@ function AppContent() {
     return <LandingPage onGuestMode={handleGuestMode} onShowInstructions={() => setShowInstructions(true)} />;
   }
 
+  // 🔥 If user is admin and showAdmin is true, render AdminDashboard
+  if (user && isAdmin && showAdmin) {
+    return (
+      <AdminDashboard 
+        user={user} 
+        onClose={() => {
+          setShowAdmin(false);
+        }}
+      />
+    );
+  }
+
+  // Otherwise render the main user app
   const isMobile = window.innerWidth <= 1024;
 
   return (
@@ -765,6 +816,8 @@ function AppContent() {
           onRequestFallPermission={handleRequestFallPermission}
           onTestFall={handleFallEmergency}
           onTriggerEmergency={triggerEmergency}
+          isAdmin={isAdmin}
+          onOpenAdmin={() => setShowAdmin(true)}
         />
 
         <main className="main-content">
@@ -803,10 +856,7 @@ function AppContent() {
               </div>
 
               <div className="dashboard-secondary">
-                <SoundHistory 
-                  soundHistory={currentSoundHistory} 
-                  onClear={() => setSoundHistory([])} 
-                />
+                <SoundHistory soundHistory={currentSoundHistory} onClear={() => setSoundHistory([])} />
                 <VideoTutorial />
               </div>
 
@@ -828,8 +878,6 @@ function AppContent() {
                         volume: alert.volume
                       });
                       setEmergencyMessage(`🚗 ${alert.name}`);
-                      
-                      // 🔥 Save notification to Firestore
                       addNotificationToFirestore({
                         type: 'ROAD_SAFETY',
                         message: alert.description,
@@ -837,7 +885,6 @@ function AppContent() {
                         location: null,
                         read: false
                       });
-
                       setTimeout(() => setFlashEmergency(false), 5000);
                     }
                   }}
@@ -1009,8 +1056,6 @@ function AppContent() {
                       volume: alert.volume
                     });
                     setEmergencyMessage(`🚗 ${alert.name}`);
-                    
-                    // 🔥 Save notification to Firestore
                     addNotificationToFirestore({
                       type: 'ROAD_SAFETY',
                       message: alert.description,
@@ -1018,7 +1063,6 @@ function AppContent() {
                       location: null,
                       read: false
                     });
-
                     setTimeout(() => setFlashEmergency(false), 5000);
                   }
                 }}

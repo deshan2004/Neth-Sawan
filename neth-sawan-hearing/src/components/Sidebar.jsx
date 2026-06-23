@@ -1,3 +1,4 @@
+
 // src/components/Sidebar.jsx
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
@@ -14,9 +15,9 @@ const Sidebar = ({
   user, 
   isGuest, 
   onLogout,
-  onShowInstructions 
+  onShowInstructions
 }) => {
-  const { t, language } = useLanguage(); // also get language to conditionally show
+  const { t, language } = useLanguage();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileData, setProfileData] = useState({
     displayName: isGuest ? t('guest') : (user?.displayName || user?.email?.split('@')[0] || t('user')),
@@ -57,17 +58,17 @@ const Sidebar = ({
     setProfileData(prev => ({ ...prev, ...updatedData }));
   };
 
-  // 👇 Updated menu items – only id and icon; labels come from translations
+  // 👇 Menu items – removed any admin entry
   const menuItems = [
     { id: 'dashboard', icon: '🏠' },
     { id: 'roadmonitor', icon: '🛣️' },
     { id: 'vision', icon: '👁️' },
     { id: 'inperson', icon: '📸' },
-     { id: 'emergency', icon: '🆘' },
+    { id: 'emergency', icon: '🆘' },
     { id: 'community', icon: '👥' },
     { id: 'alerts', icon: '🔔' },
     { id: 'contacts', icon: '📇' },
-     { id: 'learn', icon: '🤟' },
+    { id: 'learn', icon: '🤟' },
     { id: 'settings', icon: '♿' }
   ];
 
@@ -127,7 +128,6 @@ const Sidebar = ({
               }}
             >
               <span className="nav-icon">{item.icon}</span>
-              {/* Only one label – translated via t() */}
               <span className="nav-label">{t(item.id)}</span>
             </button>
           ))}

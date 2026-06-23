@@ -606,5 +606,31 @@
   background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 5%, transparent);
   border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 10%, transparent);
 }
-
+.admin-header-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 40px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #F5C842, #E8B830);
+  color: #000;
+  box-shadow: 0 2px 12px rgba(245, 200, 66, 0.3);
+  transition: all 0.2s;
+  min-height: 44px;
+}
+.admin-header-btn:hover {
+  transform: scale(1.04);
+}
+@media (max-width: 480px) {
+  .admin-header-btn span:last-child {
+    display: none;
+  }
+  .admin-header-btn span:first-child {
+    font-size: 1.4rem;
+  }
+}
 /* ... all other colours use var(--dynamic-*) or color-mix */
