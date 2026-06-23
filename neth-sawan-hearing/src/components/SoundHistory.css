@@ -1,4 +1,4 @@
-/* SoundHistory – Clean timeline */
+/* src/components/SoundHistory.css */
 
 .history-list {
   display: flex;
@@ -17,6 +17,7 @@
   background: rgba(0, 0, 0, 0.2);
   border-radius: 16px;
   transition: all 0.2s;
+  flex-wrap: wrap;
 }
 
 .history-row:hover {
@@ -28,12 +29,14 @@
   font-size: 24px;
   width: 36px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .h-type {
   flex: 1;
   font-weight: 500;
   font-size: 0.9rem;
+  min-width: 80px;
 }
 
 .h-vol {
@@ -51,7 +54,53 @@
   font-family: monospace;
 }
 
-/* Empty state */
+/* ── Playback Button ── */
+.playback-btn {
+  background: rgba(0, 221, 179, 0.15);
+  border: 1px solid rgba(0, 221, 179, 0.3);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00DDB3;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.playback-btn:hover:not(:disabled) {
+  background: rgba(0, 221, 179, 0.3);
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(0, 221, 179, 0.2);
+}
+
+.playback-btn:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.playback-btn.playing {
+  background: rgba(255, 51, 85, 0.2);
+  border-color: #FF3355;
+  color: #FF3355;
+  animation: pulsePlay 0.8s ease infinite;
+}
+
+@keyframes pulsePlay {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.playback-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ── Empty State ── */
 .history-empty {
   text-align: center;
   padding: 40px 20px;
@@ -64,7 +113,7 @@
   opacity: 0.5;
 }
 
-/* Scrollbar */
+/* ── Scrollbar ── */
 .history-list::-webkit-scrollbar {
   width: 4px;
 }
@@ -75,16 +124,26 @@
 .history-list::-webkit-scrollbar-thumb {
   background: #00DDB3;
   border-radius: 4px;
-}.history-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 10px;
 }
+
+/* ── Mobile Responsive ── */
 @media (max-width: 480px) {
   .history-row {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .h-type {
+    font-size: 0.8rem;
+    min-width: 60px;
+  }
+  .h-time {
+    font-size: 0.6rem;
+  }
+  .playback-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
   }
 }

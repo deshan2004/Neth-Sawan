@@ -1,6 +1,5 @@
-/* src/components/RoadSafetyMonitor.css – Advanced & Superb */
+/* src/components/RoadSafetyMonitor.css */
 
-/* ── Container ── */
 .road-safety-monitor {
   display: flex;
   flex-direction: column;
@@ -10,7 +9,6 @@
   margin: 0 auto;
 }
 
-/* ── Base Card ── */
 .safety-card {
   background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 85%, var(--dynamic-text, #FFFFFF) 15%);
   border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 8%, transparent);
@@ -25,7 +23,6 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-/* ── Header ── */
 .header-card {
   display: flex;
   align-items: center;
@@ -55,7 +52,6 @@
   margin: 0;
 }
 
-/* ── Status Badge ── */
 .monitor-status {
   display: flex;
   align-items: center;
@@ -98,7 +94,6 @@
   50% { opacity: 0.2; transform: scale(0.7); }
 }
 
-/* ── Action Card ── */
 .action-card {
   padding: 16px;
   display: flex;
@@ -153,7 +148,6 @@
 .btn-text { font-size: 1.05rem; font-weight: 700; }
 .btn-sub { font-size: 0.75rem; opacity: 0.8; font-weight: 400; }
 
-/* ── Controls (Test & Clear) ── */
 .monitor-controls {
   display: flex;
   gap: 10px;
@@ -201,7 +195,6 @@
   transform: none !important;
 }
 
-/* ── Sensitivity Slider ── */
 .sensitivity-control {
   margin-top: 4px;
   display: flex;
@@ -251,7 +244,6 @@
   border: none;
 }
 
-/* ── Spectrum Analyzer ── */
 .spectrum-card {
   padding: 12px 16px;
 }
@@ -300,7 +292,6 @@
   margin-left: auto;
 }
 
-/* ── Alert Card ── */
 .alert-card {
   border-left: 6px solid #FF0033;
   animation: alertSlide 0.4s ease;
@@ -400,7 +391,6 @@
   transform: scale(1.1);
 }
 
-/* ── Direction Card ── */
 .direction-card {
   padding: 12px 16px;
 }
@@ -515,7 +505,6 @@
   color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 40%, transparent);
 }
 
-/* ── History Card ── */
 .history-card {
   padding: 12px 16px;
 }
@@ -609,7 +598,6 @@
   color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 30%, transparent);
 }
 
-/* ── Tips Card ── */
 .tips-card {
   padding: 12px 16px;
 }
@@ -663,29 +651,13 @@
   color: #FF3355 !important;
 }
 
-/* ================================================================ */
-/* ===== RESPONSIVE – MOBILE FIRST ===== */
-/* ================================================================ */
-
+/* ── Responsive ── */
 @media (max-width: 768px) {
-  .safety-card {
-    padding: 10px 14px;
-  }
-  .header-card {
-    padding: 10px 14px;
-    flex-wrap: wrap;
-  }
-  .card-title {
-    font-size: 0.95rem;
-  }
-  .card-icon {
-    font-size: 1.2rem;
-  }
-  .start-monitor-btn,
-  .stop-monitor-btn {
-    padding: 14px 16px;
-    font-size: 0.9rem;
-  }
+  .safety-card { padding: 10px 14px; }
+  .header-card { padding: 10px 14px; flex-wrap: wrap; }
+  .card-title { font-size: 0.95rem; }
+  .card-icon { font-size: 1.2rem; }
+  .start-monitor-btn, .stop-monitor-btn { padding: 14px 16px; font-size: 0.9rem; }
   .btn-text { font-size: 0.95rem; }
   .btn-icon { font-size: 1.5rem; }
   .spectrum-bars { height: 50px; }
@@ -695,42 +667,16 @@
 }
 
 @media (max-width: 600px) {
-  .safety-card {
-    padding: 8px 12px;
-    border-radius: 12px;
-  }
-  .header-card {
-    padding: 8px 12px;
-  }
-  .card-title {
-    font-size: 0.85rem;
-  }
-  .monitor-status {
-    font-size: 0.55rem;
-    padding: 2px 10px;
-  }
-  .start-monitor-btn,
-  .stop-monitor-btn {
-    padding: 12px 14px;
-    border-radius: 10px;
-    font-size: 0.85rem;
-  }
+  .safety-card { padding: 8px 12px; border-radius: 12px; }
+  .header-card { padding: 8px 12px; }
+  .card-title { font-size: 0.85rem; }
+  .monitor-status { font-size: 0.55rem; padding: 2px 10px; }
+  .start-monitor-btn, .stop-monitor-btn { padding: 12px 14px; border-radius: 10px; font-size: 0.85rem; }
   .btn-text { font-size: 0.85rem; }
   .btn-sub { font-size: 0.6rem; }
-  .monitor-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .test-btn,
-  .clear-btn {
-    width: 100%;
-    justify-content: center;
-    min-height: 48px;
-  }
-  .sensitivity-slider::-webkit-slider-thumb {
-    width: 24px;
-    height: 24px;
-  }
+  .monitor-controls { flex-direction: column; align-items: stretch; }
+  .test-btn, .clear-btn { width: 100%; justify-content: center; min-height: 48px; }
+  .sensitivity-slider::-webkit-slider-thumb { width: 24px; height: 24px; }
   .spectrum-bars { height: 40px; gap: 8px; }
   .spectrum-fill { max-width: 20px; }
   .alert-icon { font-size: 1.8rem; }
@@ -745,46 +691,19 @@
   .tip-number { width: 18px; height: 18px; font-size: 0.55rem; }
 }
 
-/* ================================================================ */
-/* ===== ACCESSIBILITY: HIGH CONTRAST & REDUCED MOTION ===== */
-/* ================================================================ */
-
+/* ── Accessibility ── */
 @media (prefers-contrast: high) {
-  .safety-card {
-    border: 2px solid var(--dynamic-text, #FFFFFF);
-  }
-  .header-card {
-    border-bottom: 4px solid var(--dynamic-primary, #00DDB3);
-  }
-  .start-monitor-btn {
-    border: 2px solid #000000;
-  }
-  .stop-monitor-btn {
-    border: 2px solid #FF0000;
-  }
-  .alert-card {
-    border-left: 8px solid #FF0000;
-  }
-  .tag {
-    border: 1px solid currentColor;
-  }
+  .safety-card { border: 2px solid var(--dynamic-text, #FFFFFF); }
+  .header-card { border-bottom: 4px solid var(--dynamic-primary, #00DDB3); }
+  .start-monitor-btn { border: 2px solid #000000; }
+  .stop-monitor-btn { border: 2px solid #FF0000; }
+  .alert-card { border-left: 8px solid #FF0000; }
+  .tag { border: 1px solid currentColor; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  .alert-card {
-    animation: none !important;
-  }
-  .start-monitor-btn:hover,
-  .stop-monitor-btn:hover,
-  .test-btn:hover,
-  .clear-btn:hover {
-    transform: none !important;
-  }
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  .alert-card { animation: none !important; }
+  .start-monitor-btn:hover, .stop-monitor-btn:hover,
+  .test-btn:hover, .clear-btn:hover { transform: none !important; }
 }

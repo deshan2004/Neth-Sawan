@@ -1,3 +1,5 @@
+/* src/components/EmergencyFlash.css */
+
 .emergency-flash-overlay {
   position: fixed;
   top: 0;
@@ -11,10 +13,12 @@
   justify-content: center;
   animation: flashBg 0.3s infinite alternate;
 }
+
 @keyframes flashBg {
   0% { background: rgba(255, 0, 51, 0.95); }
   100% { background: rgba(0, 0, 0, 0.95); }
 }
+
 .emergency-flash-content {
   text-align: center;
   background: rgba(0, 0, 0, 0.85);
@@ -24,13 +28,21 @@
   width: 500px;
   border: 4px solid #FF0033;
   box-shadow: 0 0 30px rgba(255, 0, 51, 0.5);
+  animation: contentPop 0.4s ease;
 }
+
+@keyframes contentPop {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
 .emergency-siren {
   position: relative;
   width: 100px;
   height: 100px;
   margin: 0 auto 20px;
 }
+
 .siren-ring {
   position: absolute;
   top: 50%;
@@ -42,12 +54,15 @@
   transform: translate(-50%, -50%);
   animation: ring 1.5s ease-out infinite;
 }
+
 .siren-ring:nth-child(2) { animation-delay: 0.5s; }
 .siren-ring:nth-child(3) { animation-delay: 1s; }
+
 @keyframes ring {
   0% { width: 100%; height: 100%; opacity: 1; }
   100% { width: 200%; height: 200%; opacity: 0; }
 }
+
 .siren-icon {
   position: absolute;
   top: 50%;
@@ -55,65 +70,177 @@
   transform: translate(-50%, -50%);
   font-size: 50px;
 }
+
 .emergency-flash-content h1 {
   font-size: 32px;
   color: #FF0033;
   margin-bottom: 20px;
   text-shadow: 2px 2px 0 white;
 }
+
 .emergency-details {
   background: rgba(0, 0, 0, 0.4);
   border-radius: 20px;
   padding: 15px;
   margin: 20px 0;
+  color: #FFFFFF;
 }
+
+.emergency-details p {
+  margin: 8px 0;
+}
+
+.emergency-details a {
+  color: #FFD700;
+  text-decoration: none;
+}
+
+.emergency-details a:hover {
+  text-decoration: underline;
+}
+
 .visual-cues {
   display: flex;
   justify-content: center;
   gap: 15px;
   margin: 20px 0;
 }
+
 .visual-bar {
   width: 60px;
   height: 60px;
   border-radius: 12px;
   animation: flashBar 0.4s infinite alternate;
 }
+
 .visual-bar.red { background: #FF0033; }
 .visual-bar.orange { background: #FF8800; animation-delay: 0.15s; }
 .visual-bar.yellow { background: #FFFF00; animation-delay: 0.3s; }
+
 @keyframes flashBar {
   0% { opacity: 0.3; transform: scale(0.9); }
   100% { opacity: 1; transform: scale(1.1); }
 }
+
 .warning-text {
   font-size: 18px;
   font-weight: bold;
   margin: 15px 0;
+  color: #FFD700;
 }
+
 .countdown {
   font-size: 16px;
   margin-top: 15px;
+  color: #FFFFFF;
 }
+
 .countdown strong {
   font-size: 28px;
   color: #FF0033;
 }
-@media (max-width: 768px) {
-  .emergency-flash-content { width: 95%; padding: 20px; }
-  .emergency-flash-content h1 { font-size: 24px; }
-  .visual-bar { width: 45px; height: 45px; }
-}.emergency-flash-content {
-  width: 90%;
-  max-width: 500px;
-  padding: 30px 20px;
+
+.dismiss-flash-btn {
+  margin-top: 20px;
+  padding: 12px 32px;
+  border-radius: 40px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
+
+.dismiss-flash-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.dismiss-flash-btn:active {
+  transform: scale(0.95);
+}
+
+/* ── Responsive ── */
 @media (max-width: 768px) {
+  .emergency-flash-content { 
+    width: 95%; 
+    padding: 20px; 
+    border-radius: 32px;
+  }
+  .emergency-flash-content h1 { 
+    font-size: 24px; 
+  }
+  .visual-bar { 
+    width: 45px; 
+    height: 45px; 
+  }
+  .siren-icon {
+    font-size: 36px;
+  }
+  .emergency-siren {
+    width: 80px;
+    height: 80px;
+  }
+  .countdown strong {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .emergency-flash-content {
+    padding: 16px;
+    border-radius: 24px;
+  }
   .emergency-flash-content h1 {
-    font-size: 24px;
+    font-size: 20px;
   }
   .visual-bar {
-    width: 45px;
-    height: 45px;
+    width: 36px;
+    height: 36px;
+  }
+  .warning-text {
+    font-size: 14px;
+  }
+  .dismiss-flash-btn {
+    padding: 10px 24px;
+    font-size: 14px;
+  }
+  .emergency-siren {
+    width: 60px;
+    height: 60px;
+  }
+  .siren-icon {
+    font-size: 28px;
+  }
+  .countdown strong {
+    font-size: 18px;
+  }
+}
+
+/* ── High Contrast ── */
+@media (prefers-contrast: high) {
+  .emergency-flash-content {
+    border: 6px solid #FF0000;
+  }
+  .emergency-flash-content h1 {
+    text-shadow: none;
+    color: #FF0000;
+  }
+  .visual-bar {
+    border: 2px solid #FFFFFF;
+  }
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .emergency-flash-overlay,
+  .siren-ring,
+  .visual-bar {
+    animation: none !important;
+  }
+  .emergency-flash-content {
+    animation: none !important;
   }
 }

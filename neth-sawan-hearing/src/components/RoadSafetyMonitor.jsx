@@ -12,7 +12,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
   const [distance, setDistance] = useState(null);
   const [volume, setVolume] = useState(0);
   const [frequencyData, setFrequencyData] = useState({ low: 0, mid: 0, high: 0 });
-  const [sensitivity, setSensitivity] = useState(0.25); // 0.1 – 0.5
+  const [sensitivity, setSensitivity] = useState(0.25);
 
   const audioContextRef = useRef(null);
   const mediaStreamRef = useRef(null);
@@ -21,7 +21,6 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
   const alertTimeoutRef = useRef(null);
   const stereoDataRef = useRef(null);
 
-  // Advanced sound classification with frequency band analysis
   const VEHICLE_SOUNDS = {
     HORN: {
       name: '🚨 Vehicle Horn',
@@ -81,7 +80,6 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     }
   };
 
-  // ── Start / Stop ──
   useEffect(() => {
     if (isActive) {
       startMonitoring();
@@ -109,7 +107,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
       const source = audioContext.createMediaStreamSource(stream);
       source.connect(analyser);
 
-      // For stereo panning (direction)
+      // Stereo for direction
       const splitter = audioContext.createChannelSplitter(2);
       source.connect(splitter);
 
@@ -122,10 +120,8 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
       stereoDataRef.current = { leftAnalyser, rightAnalyser };
 
       await audioContext.resume();
-
       setIsMonitoring(true);
       if (showToast) showToast(t('monitorActive'), 'success');
-
       analyzeAudio();
     } catch (error) {
       console.error('Microphone access error:', error);
@@ -147,20 +143,18 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     setFrequencyData({ low: 0, mid: 0, high: 0 });
   };
 
-  // ── Audio Analysis Loop ──
   const analyzeAudio = useCallback(() => {
     if (!analyserRef.current) return;
 
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
     analyserRef.current.getByteFrequencyData(dataArray);
 
-    // Overall volume
     let sum = 0;
     for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
     const avgVolume = sum / dataArray.length / 255;
     setVolume(avgVolume);
 
-    // Frequency bands for visual
+    // Frequency bands for spectrum
     const lowBand = dataArray.slice(0, 80);
     const midBand = dataArray.slice(80, 200);
     const highBand = dataArray.slice(200, 400);
@@ -169,17 +163,13 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     const highAvg = highBand.reduce((a,b) => a + b, 0) / highBand.length / 255;
     setFrequencyData({ low: lowAvg, mid: midAvg, high: highAvg });
 
-    // Direction from stereo
     estimateDirection();
-
-    // Detect vehicle sounds
     detectVehicleSounds(dataArray, avgVolume);
     estimateDistance(avgVolume);
 
     animationRef.current = requestAnimationFrame(analyzeAudio);
   }, []);
 
-  // ── Direction Estimation (stereo panning) ──
   const estimateDirection = () => {
     if (!stereoDataRef.current) return;
     const { leftAnalyser, rightAnalyser } = stereoDataRef.current;
@@ -191,7 +181,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     const leftSum = leftData.reduce((a,b) => a + b, 0);
     const rightSum = rightData.reduce((a,b) => a + b, 0);
     const diff = leftSum - rightSum;
-    const threshold = 50; // sensitivity
+    const threshold = 50;
     if (Math.abs(diff) > threshold) {
       setVehicleDirection(diff > 0 ? 'left' : 'right');
     } else {
@@ -199,18 +189,14 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     }
   };
 
-  // ── Detection Logic ──
   const detectVehicleSounds = (dataArray, avgVolume) => {
     const lowAvg = dataArray.slice(0, 80).reduce((a,b) => a + b, 0) / 80;
     const midAvg = dataArray.slice(80, 200).reduce((a,b) => a + b, 0) / 120;
     const highAvg = dataArray.slice(200, 400).reduce((a,b) => a + b, 0) / 200;
 
-    // Normalize to 0-1
     const normLow = lowAvg / 255;
     const normMid = midAvg / 255;
     const normHigh = highAvg / 255;
-
-    // Sensitivity threshold applied
     const threshold = sensitivity;
 
     if (normHigh > 0.7 && avgVolume > threshold) {
@@ -239,7 +225,6 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     }
   };
 
-  // Helper patterns
   const isSirenPattern = (data) => {
     let peaks = 0;
     for (let i = 120; i < 220; i += 15) {
@@ -271,7 +256,6 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     else setDistance('far');
   };
 
-  // ── Trigger Alert ──
   const triggerAlert = (soundType, volumeLevel) => {
     const vehicleSound = VEHICLE_SOUNDS[soundType];
     if (!vehicleSound) return;
@@ -305,9 +289,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     }, 5000);
   };
 
-  // ── Visual & Haptic Feedback ──
   const triggerVisualAlert = (alert) => {
-    // Flash overlay
     const flashDiv = document.createElement('div');
     flashDiv.style.cssText = `
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -317,7 +299,6 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     document.body.appendChild(flashDiv);
     setTimeout(() => flashDiv.remove(), 500);
 
-    // Direction arrow banner
     if (alert.direction) {
       const dirDiv = document.createElement('div');
       const arrow = alert.direction === 'left' ? '◀' : '▶';
@@ -353,15 +334,16 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     navigator.vibrate(pattern);
   };
 
-  // ── Clear History ──
   const clearHistory = () => setAlertHistory([]);
-
-  // ── Test Alert ──
-  const simulateAlert = () => {
-    triggerAlert('HORN', 0.8);
+  const simulateAlert = () => triggerAlert('HORN', 0.8);
+  const clearCurrentAlert = () => {
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current);
+      alertTimeoutRef.current = null;
+    }
+    setCurrentAlert(null);
   };
 
-  // ── Format Time ──
   const formatTime = (date) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -380,7 +362,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
         </div>
       </div>
 
-      {/* Action & Controls */}
+      {/* Action */}
       <div className="safety-card action-card">
         {!isMonitoring ? (
           <button className="start-monitor-btn" onClick={startMonitoring}>
@@ -396,7 +378,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
         )}
         <div className="monitor-controls">
           <button className="test-btn" onClick={simulateAlert} disabled={!isMonitoring}>
-            🔔 Alert
+            🔔 Test Alert
           </button>
           <button className="clear-btn" onClick={clearHistory} disabled={alertHistory.length === 0}>
             🗑️ Clear
@@ -416,7 +398,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
         </div>
       </div>
 
-      {/* Spectrum Analyzer (Frequency Bands) */}
+      {/* Spectrum */}
       <div className="safety-card spectrum-card">
         <div className="card-header">
           <span className="card-icon">📊</span>
@@ -439,7 +421,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
         </div>
       </div>
 
-      {/* Alert Card */}
+      {/* Alert */}
       {currentAlert && (
         <div className="safety-card alert-card" style={{ borderColor: currentAlert.color }}>
           <div className="alert-content">
@@ -463,15 +445,12 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
                 <span className="tag volume">{Math.round(currentAlert.volume * 100)}%</span>
               </div>
             </div>
-            <button className="dismiss-alert" onClick={() => {
-              if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
-              setCurrentAlert(null);
-            }}>✕</button>
+            <button className="dismiss-alert" onClick={clearCurrentAlert}>✕</button>
           </div>
         </div>
       )}
 
-      {/* Direction & Distance */}
+      {/* Direction */}
       <div className="safety-card direction-card">
         <div className="direction-indicator">
           <div className={`direction left ${vehicleDirection === 'left' ? 'active' : ''}`}>
@@ -507,7 +486,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
       <div className="safety-card history-card">
         <div className="card-header">
           <span className="card-icon">📜</span>
-          <h3 className="card-title">{t('soundHistory')}</h3>
+          <h3 className="card-title">Alert History</h3>
           <span className="history-count">{alertHistory.length} events</span>
         </div>
         <div className="history-list">

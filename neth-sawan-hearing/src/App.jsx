@@ -11,7 +11,7 @@ import Sidebar from './components/Sidebar';
 import TranscriptBox from './components/TranscriptBox';
 import VisualAlert from './components/VisualAlert';
 import SignLanguageBox from './components/SignLanguageBox';
-import { SoundHistory } from './components/SoundHistory';
+import SoundHistory from './components/SoundHistory'; // NEW
 import SoundVisualizer from './components/SoundVisualizer';
 import RelativesManager from './components/RelativesManager';
 import NotificationCenter from './components/NotificationCenter';
@@ -30,7 +30,7 @@ import InPersonTranslator from './components/InPersonTranslator';
 
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
-import { useVolume } from './hooks/useVolume';
+import { useVolume } from './hooks/useVolume'; // UPDATED
 import { useNotifications } from './hooks/useNotifications';
 import { useGuestNotifications } from './hooks/useGuestNotifications';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -134,11 +134,13 @@ function AppContent() {
     supported
   } = useSpeech('si-LK');
 
+  // ── Volume Hook (UPDATED with soundHistory & setSoundHistory) ──
   const {
     volume,
     isLoud,
     soundType,
     soundHistory,
+    setSoundHistory, // for clearing history
     threshold,
     setThreshold
   } = useVolume(0.15);
@@ -786,7 +788,11 @@ function AppContent() {
               </div>
 
               <div className="dashboard-secondary">
-                <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
+                {/* SoundHistory with Playback */}
+                <SoundHistory 
+                  soundHistory={currentSoundHistory} 
+                  onClear={() => setSoundHistory([])} 
+                />
                 <VideoTutorial />
               </div>
 
