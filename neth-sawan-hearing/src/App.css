@@ -480,4 +480,54 @@ h1, h2, h3, h4, h5, h6, .card-title, .section-header h3 {
 /* Links */
 a {
   color: var(--dynamic-primary, #00DDB3) !important;
+}/* ── Emergency Instructions with Styled Icons ── */
+.emergency-instruction-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.emergency-instruction-item:last-child {
+  border-bottom: none;
+}
+
+.instruction-icon {
+  font-size: 28px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.emergency-instruction-item:hover .instruction-icon {
+  background: rgba(255, 0, 51, 0.15);
+  transform: scale(1.05);
+}
+
+.instruction-text {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--dynamic-text, #FFFFFF);
+  line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+  .instruction-icon {
+    font-size: 22px;
+    width: 40px;
+    height: 40px;
+  }
+  .instruction-text {
+    font-size: 0.8rem;
+  }
+  .emergency-instruction-item {
+    padding: 8px 0;
+  }
 }

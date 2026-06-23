@@ -1,7 +1,20 @@
+// src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore"; 
-import { getStorage } from "firebase/storage"; //// 👈 මේක තියෙන්නම ඕනේ
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  serverTimestamp, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot 
+} from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,5 +28,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app); // 👈 මේ ලයින් එක හරියටම තියෙනවද බලන්න
-export const storage = getStorage(app); // 👈 මේක තියෙන්නම ඕනේ
+export const db = getFirestore(app);
+export const storage = getStorage(app);
+
+// Re-export Firestore methods for convenience
+export { 
+  collection, 
+  addDoc, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  serverTimestamp, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot 
+};

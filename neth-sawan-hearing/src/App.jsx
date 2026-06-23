@@ -1,17 +1,16 @@
-// src/App.jsx – Full Updated Code
+// src/App.jsx – Full Updated Code with Firestore Notification Save
 import React, { useState, useEffect, useRef } from 'react';
-import { auth, db } from './firebase';
+import { auth, db, addDoc, collection, serverTimestamp } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-// Components
+// Components (all imports same as before)
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import TranscriptBox from './components/TranscriptBox';
 import VisualAlert from './components/VisualAlert';
 import SignLanguageBox from './components/SignLanguageBox';
-import SoundHistory from './components/SoundHistory'; // NEW
+import SoundHistory from './components/SoundHistory';
 import SoundVisualizer from './components/SoundVisualizer';
 import RelativesManager from './components/RelativesManager';
 import NotificationCenter from './components/NotificationCenter';
@@ -30,18 +29,16 @@ import InPersonTranslator from './components/InPersonTranslator';
 
 // Hooks
 import { useSpeech } from './hooks/useSpeech';
-import { useVolume } from './hooks/useVolume'; // UPDATED
+import { useVolume } from './hooks/useVolume';
 import { useNotifications } from './hooks/useNotifications';
 import { useGuestNotifications } from './hooks/useGuestNotifications';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
 
-// ===== HELPER: Build rich WhatsApp message =====
+// ---- Helper functions (same as before) ----
 const buildWhatsAppMessage = (contactName, location, userEmail, alertType) => {
-  const time = new Date().toLocaleString('en-LK', {
-    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
+  const time = new Date().toLocaleString('en-LK', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   let msg = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
   msg += `Dear ${contactName},\n\n`;
   msg += `⚠️ *This is an automated emergency alert from your loved one's device.*\n\n`;
@@ -65,11 +62,8 @@ const buildWhatsAppMessage = (contactName, location, userEmail, alertType) => {
   return msg;
 };
 
-// ===== HELPER: Build SMS message =====
 const buildSmsMessage = (contactName, location, userEmail, alertType) => {
-  const time = new Date().toLocaleString('en-LK', {
-    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
+  const time = new Date().toLocaleString('en-LK', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   let msg = `🚨 EMERGENCY ALERT - Neth-Sawan\n`;
   msg += `To: ${contactName}\n`;
   msg += `Type: ${alertType || 'SOS'}\n`;
@@ -85,7 +79,7 @@ const buildSmsMessage = (contactName, location, userEmail, alertType) => {
 };
 
 // ================================================================
-// INNER COMPONENT (uses LanguageContext)
+// APP CONTENT
 // ================================================================
 function AppContent() {
   const { updateLanguageFromTranscript, t } = useLanguage();
@@ -107,7 +101,7 @@ function AppContent() {
   const [roadSafetyActive, setRoadSafetyActive] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
-  // ---- Accessibility (synced with Firestore) ----
+  // ---- Accessibility ----
   const [currentTheme, setCurrentTheme] = useState('default');
   const [currentFontSize, setCurrentFontSize] = useState(16);
   const [emergencyNotificationsEnabled, setEmergencyNotificationsEnabled] = useState(true);
@@ -134,13 +128,12 @@ function AppContent() {
     supported
   } = useSpeech('si-LK');
 
-  // ── Volume Hook (UPDATED with soundHistory & setSoundHistory) ──
   const {
     volume,
     isLoud,
     soundType,
     soundHistory,
-    setSoundHistory, // for clearing history
+    setSoundHistory,
     threshold,
     setThreshold
   } = useVolume(0.15);
@@ -162,21 +155,47 @@ function AppContent() {
     clearAll: guestClearAll
   } = useGuestNotifications();
 
-  // ---- Guest data fallback ----
+  // ---- Guest data ----
   const [guestRelatives, setGuestRelatives] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
 
-  // ---- Sinhala manual typing ----
+  // ---- Sinhala typing ----
   const [sinhalaText, setSinhalaText] = useState('');
   const [signWord, setSignWord] = useState('');
 
+  // ===== NEW: Save notification to Firestore =====
+  const addNotificationToFirestore = async (notification) => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      // Guest mode – fallback to localStorage
+      guestAddNotification(notification);
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'users', currentUser.uid, 'notifications'), {
+        type: notification.type || 'GENERAL',
+        title: notification.message || 'Alert',
+        message: notification.message,
+        soundType: notification.soundType || null,
+        read: false,
+        timestamp: serverTimestamp(),
+        location: notification.location || null
+      });
+      console.log('✅ Notification saved to Firestore');
+    } catch (err) {
+      console.error('Failed to save notification to Firestore:', err);
+      // Fallback to guest mode (localStorage)
+      guestAddNotification(notification);
+    }
+  };
+
   // ============================================================
-  // 1. LOAD PREFERENCES FROM FIRESTORE (when user logs in)
+  // PREFERENCES LOAD/SAVE (same as before)
   // ============================================================
   useEffect(() => {
     const loadPreferences = async () => {
       if (!user) {
-        // Guest: load from localStorage
         const savedTheme = localStorage.getItem('accessibility_theme');
         const savedFontSize = localStorage.getItem('accessibility_fontSize');
         const savedToggle = localStorage.getItem('emergency_notifications_enabled');
@@ -186,7 +205,6 @@ function AppContent() {
         return;
       }
 
-      // Logged in: load from Firestore
       try {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
@@ -198,7 +216,6 @@ function AppContent() {
             if (prefs.emergencyNotificationsEnabled !== undefined) {
               setEmergencyNotificationsEnabled(prefs.emergencyNotificationsEnabled);
             }
-            // Also apply to DOM
             document.body.className = prefs.theme === 'light' ? 'light-theme' : '';
             document.documentElement.style.setProperty('--dynamic-font-size', `${prefs.fontSize || 16}px`);
             localStorage.setItem('emergency_notifications_enabled', String(prefs.emergencyNotificationsEnabled !== undefined ? prefs.emergencyNotificationsEnabled : true));
@@ -214,12 +231,8 @@ function AppContent() {
     }
   }, [user, authLoading]);
 
-  // ============================================================
-  // 2. SAVE PREFERENCES TO FIRESTORE (when they change)
-  // ============================================================
   const savePreferences = async (updates) => {
     if (!user) {
-      // Guest: save to localStorage
       if (updates.theme) localStorage.setItem('accessibility_theme', updates.theme);
       if (updates.fontSize) localStorage.setItem('accessibility_fontSize', String(updates.fontSize));
       if (updates.emergencyNotificationsEnabled !== undefined) {
@@ -244,7 +257,6 @@ function AppContent() {
     }
   };
 
-  // ---- Handlers that call savePreferences ----
   const handleThemeChange = (theme) => {
     setCurrentTheme(theme);
     document.body.className = theme === 'light' ? 'light-theme' : '';
@@ -267,19 +279,16 @@ function AppContent() {
     );
   };
 
-  // ---- Sync remaining states ----
   useEffect(() => {
     localStorage.setItem('emergency_notifications_enabled', String(emergencyNotificationsEnabled));
   }, [emergencyNotificationsEnabled]);
 
-  // ---- Language sync ----
   useEffect(() => {
     if (lang === 'si-LK') updateLanguageFromTranscript('සිංහල');
     else if (lang === 'ta-LK') updateLanguageFromTranscript('தமிழ்');
     else updateLanguageFromTranscript('Hello');
   }, [lang, updateLanguageFromTranscript]);
 
-  // ---- Real-time sign language translation from transcript ----
   useEffect(() => {
     if (!transcript) {
       setSignWord('');
@@ -310,7 +319,6 @@ function AppContent() {
     return () => clearTimeout(timer);
   }, [transcript]);
 
-  // ---- Guest data ----
   useEffect(() => {
     if (isGuest) {
       const savedRelatives = localStorage.getItem('neth_sawan_guest_relatives');
@@ -320,7 +328,6 @@ function AppContent() {
     }
   }, [isGuest]);
 
-  // ---- Fall detector status ----
   useEffect(() => {
     const check = () => {
       if (fallDetectorRef.current) {
@@ -333,28 +340,26 @@ function AppContent() {
     return () => clearInterval(interval);
   }, []);
 
-  // ---- Loud sound emergency flash ----
+  // ---- Loud sound emergency flash (now uses addNotificationToFirestore) ----
   useEffect(() => {
     if (isLoud && soundType && !roadSafetyActive && emergencyNotificationsEnabled) {
       setFlashEmergency(true);
       setEmergencyData({ soundType, message: `Emergency: ${soundType}`, timestamp: new Date(), volume });
       setEmergencyMessage(`🚨 ${soundType} detected!`);
-      if (isGuest) {
-        guestAddNotification({
-          id: Date.now(),
-          type: 'EMERGENCY',
-          message: `Emergency: ${soundType}`,
-          soundType,
-          timestamp: new Date().toISOString(),
-          read: false,
-          volume
-        });
-      }
+
+      // 🔥 Save notification to Firestore (or localStorage for guest)
+      addNotificationToFirestore({
+        type: 'EMERGENCY',
+        message: `Emergency: ${soundType}`,
+        soundType: soundType,
+        location: null,
+        read: false
+      });
+
       setTimeout(() => setFlashEmergency(false), 3000);
     }
-  }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled, isGuest, guestAddNotification, volume]);
+  }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled, isGuest, addNotificationToFirestore]);
 
-  // ---- Save sound history for guest ----
   useEffect(() => {
     if (isGuest && soundHistory?.length > 0) {
       setGuestSoundHistory(prev => {
@@ -365,7 +370,6 @@ function AppContent() {
     }
   }, [soundHistory, isGuest]);
 
-  // ---- Auth listener ----
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -394,16 +398,13 @@ function AppContent() {
     return () => unsubscribe();
   }, []);
 
-  // ---- Toast helper ----
   const showToast = (message, type = 'info') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
-  // ---- Toggle sidebar ----
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
-  // ---- Auth handlers ----
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -435,7 +436,6 @@ function AppContent() {
     showToast(t('guestSignedOut') || 'Signed out from guest mode', 'info');
   };
 
-  // ---- Fall permission ----
   const handleRequestFallPermission = async () => {
     if (fallDetectorRef.current) {
       const granted = await fallDetectorRef.current.requestPermission();
@@ -448,7 +448,6 @@ function AppContent() {
     }
   };
 
-  // ---- Sinhala transcript handler ----
   const handleTranscriptChange = (text) => {
     setSinhalaText(text);
     if (text && text.trim()) {
@@ -477,7 +476,6 @@ function AppContent() {
 
   const getSignLanguageText = () => sinhalaText || transcript;
 
-  // ---- Guest relatives handlers ----
   const guestAddRelative = (data) => {
     const entry = {
       id: Date.now().toString(),
@@ -520,9 +518,7 @@ function AppContent() {
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
-  // ================================================================
-  // EMERGENCY ALERT DISPATCH (single contact)
-  // ================================================================
+  // ===== EMERGENCY DISPATCH (uses addNotificationToFirestore) =====
   const sendAlertToContact = (contact, alertType, location, userEmail) => {
     if (!contact.phone) {
       console.warn(`❌ ${contact.name} has no phone number`);
@@ -552,7 +548,7 @@ function AppContent() {
     }
   };
 
-  // ===== FALL DETECTION =====
+  // Fall Detection
   const handleFallEmergency = async () => {
     console.log("🚨 Fall emergency triggered!");
     let location = null;
@@ -592,6 +588,16 @@ function AppContent() {
       });
       setEmergencyMessage('🚨 FALL DETECTED!');
       showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
+      
+      // 🔥 Save notification to Firestore (or localStorage)
+      addNotificationToFirestore({
+        type: 'EMERGENCY',
+        message: 'Automatic fall detected!',
+        soundType: 'FALL',
+        location: location,
+        read: false
+      });
+
       setTimeout(() => setFlashEmergency(false), 8000);
     }
 
@@ -604,7 +610,7 @@ function AppContent() {
     }
   };
 
-  // ===== MANUAL SOS =====
+  // Manual SOS
   const triggerEmergency = async (msg) => {
     console.log("🆘 SOS triggered:", msg);
     let location = null;
@@ -629,6 +635,7 @@ function AppContent() {
     showToast(`🚨 EMERGENCY: ${msg || 'SOS Activated!'}`, 'error');
     if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
 
+    // Save to Firestore / LocalStorage
     if (user && !isGuest) {
       try {
         await addDoc(collection(db, 'emergencies'), {
@@ -650,6 +657,15 @@ function AppContent() {
         location
       });
     }
+
+    // 🔥 Save notification to Firestore (or localStorage)
+    addNotificationToFirestore({
+      type: 'EMERGENCY',
+      message: msg || 'SOS Button Pressed',
+      soundType: 'SOS',
+      location: location,
+      read: false
+    });
 
     if (currentRelatives.length > 0) {
       currentRelatives.forEach(contact => {
@@ -688,7 +704,6 @@ function AppContent() {
 
   return (
     <div className={`app-wrapper ${currentTheme}`} style={{ fontSize: `${currentFontSize}px` }}>
-      {/* ✅ Background video ONLY on landing page */}
       {showLanding && <BackgroundVideo videoSrc="/videos/background.mp4" opacity={0.5} />}
 
       <FallDetector
@@ -788,7 +803,6 @@ function AppContent() {
               </div>
 
               <div className="dashboard-secondary">
-                {/* SoundHistory with Playback */}
                 <SoundHistory 
                   soundHistory={currentSoundHistory} 
                   onClear={() => setSoundHistory([])} 
@@ -814,17 +828,17 @@ function AppContent() {
                         volume: alert.volume
                       });
                       setEmergencyMessage(`🚗 ${alert.name}`);
+                      
+                      // 🔥 Save notification to Firestore
+                      addNotificationToFirestore({
+                        type: 'ROAD_SAFETY',
+                        message: alert.description,
+                        soundType: alert.name,
+                        location: null,
+                        read: false
+                      });
+
                       setTimeout(() => setFlashEmergency(false), 5000);
-                      if (isGuest) {
-                        guestAddNotification({
-                          id: Date.now(),
-                          type: 'ROAD_SAFETY',
-                          message: alert.description,
-                          soundType: alert.name,
-                          timestamp: new Date().toISOString(),
-                          read: false
-                        });
-                      }
                     }
                   }}
                   showToast={showToast}
@@ -881,6 +895,7 @@ function AppContent() {
               <div className="sos-header card-head">
                 <h2>🆘 {t('sosCenter') || 'SOS Emergency Center'}</h2>
               </div>
+
               <div
                 className="sos-button-large"
                 style={{
@@ -902,6 +917,7 @@ function AppContent() {
                   Tap to send emergency alert
                 </span>
               </div>
+
               <div className="emergency-numbers" style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
                 <button
                   className="emergency-btn police"
@@ -918,13 +934,41 @@ function AppContent() {
                   🚑 {t('ambulance') || 'Ambulance'} (1990)
                 </button>
               </div>
-              <div className="emergency-instructions-box" style={{ padding: '20px', background: 'rgba(255,0,51,0.05)', borderRadius: '16px', borderLeft: '4px solid #FF0033' }}>
-                <h4 style={{ color: '#FF0033', marginBottom: '12px' }}>⚠️ {t('emergencyInstructions') || 'Emergency Instructions'}</h4>
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                  <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>🔴 {t('redFlashing') || 'Red Flashing Screen = Emergency detected or SOS activated'}</li>
-                  <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📳 {t('vibration') || 'Phone Vibration = Alert being sent to your contacts'}</li>
-                  <li style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>📱 {t('contactsNotify') || 'Emergency Contacts = Will receive WhatsApp/SMS alerts'}</li>
-                  <li style={{ padding: '8px 0' }}>📍 {t('liveLocation') || 'Live Location = Automatically shared with emergency contacts'}</li>
+
+              <div className="emergency-instructions-box" style={{ 
+                padding: '20px', 
+                background: 'rgba(255,0,51,0.05)', 
+                borderRadius: '16px', 
+                borderLeft: '4px solid #FF0033' 
+              }}>
+                <h4 style={{ color: '#FF0033', marginBottom: '16px' }}>
+                  ⚠️ {t('emergencyInstructions') || 'Emergency Instructions'}
+                </h4>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  <li className="emergency-instruction-item">
+                    <span className="instruction-icon">🔴</span>
+                    <span className="instruction-text">
+                      {t('redFlashing') || 'Red Flashing Screen = Emergency detected or SOS activated'}
+                    </span>
+                  </li>
+                  <li className="emergency-instruction-item">
+                    <span className="instruction-icon">📳</span>
+                    <span className="instruction-text">
+                      {t('vibration') || 'Phone Vibration = Alert being sent to your contacts'}
+                    </span>
+                  </li>
+                  <li className="emergency-instruction-item">
+                    <span className="instruction-icon">📱</span>
+                    <span className="instruction-text">
+                      {t('contactsNotify') || 'Emergency Contacts = Will receive WhatsApp/SMS alerts'}
+                    </span>
+                  </li>
+                  <li className="emergency-instruction-item">
+                    <span className="instruction-icon">📍</span>
+                    <span className="instruction-text">
+                      {t('liveLocation') || 'Live Location = Automatically shared with emergency contacts'}
+                    </span>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -937,9 +981,23 @@ function AppContent() {
                 <p style={{ color: 'var(--text-secondary)' }}>
                   {t('dedicatedRoadSafety') || "Full‑screen detection of horns, sirens, engines – with direction & distance hints"}
                 </p>
+                <div style={{ 
+                  marginTop: '12px', 
+                  padding: '8px 20px', 
+                  borderRadius: '40px', 
+                  display: 'inline-block',
+                  background: roadSafetyActive ? 'rgba(0, 221, 179, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  color: roadSafetyActive ? '#00DDB3' : '#8899CC',
+                  border: roadSafetyActive ? '1px solid #00DDB3' : '1px solid rgba(255,255,255,0.1)',
+                  fontWeight: 600,
+                  fontSize: '0.9rem'
+                }}>
+                  {roadSafetyActive ? '🟢 Monitor Active' : '⏸️ Monitor Paused – Click "🚗 Road Safe" in Header to Start'}
+                </div>
               </div>
+
               <RoadSafetyMonitor
-                isActive={true}
+                isActive={roadSafetyActive}
                 onAlert={(alert) => {
                   if (emergencyNotificationsEnabled) {
                     showToast(alert.description, 'error');
@@ -951,17 +1009,17 @@ function AppContent() {
                       volume: alert.volume
                     });
                     setEmergencyMessage(`🚗 ${alert.name}`);
+                    
+                    // 🔥 Save notification to Firestore
+                    addNotificationToFirestore({
+                      type: 'ROAD_SAFETY',
+                      message: alert.description,
+                      soundType: alert.name,
+                      location: null,
+                      read: false
+                    });
+
                     setTimeout(() => setFlashEmergency(false), 5000);
-                    if (isGuest) {
-                      guestAddNotification({
-                        id: Date.now(),
-                        type: 'ROAD_SAFETY',
-                        message: alert.description,
-                        soundType: alert.name,
-                        timestamp: new Date().toISOString(),
-                        read: false
-                      });
-                    }
                   }
                 }}
                 showToast={showToast}
@@ -989,7 +1047,7 @@ function AppContent() {
   );
 }
 
-// ===== MAIN APP WRAPPER =====
+// ===== MAIN WRAPPER =====
 function App() {
   return (
     <LanguageProvider>

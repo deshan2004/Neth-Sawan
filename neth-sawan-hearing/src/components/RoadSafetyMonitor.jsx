@@ -1,6 +1,7 @@
 // src/components/RoadSafetyMonitor.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { auth, db, addDoc, collection, serverTimestamp } from '../firebase';
 import './RoadSafetyMonitor.css';
 
 const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
@@ -80,6 +81,28 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     }
   };
 
+  // ── Save road alert to Firestore ──
+  const saveRoadAlertToFirestore = async (alert) => {
+    const user = auth.currentUser;
+    if (!user) return; // Guest – skip
+
+    try {
+      await addDoc(collection(db, 'users', user.uid, 'road_alerts'), {
+        type: alert.type,
+        name: alert.name,
+        severity: alert.severity,
+        description: alert.description,
+        direction: alert.direction || null,
+        distance: alert.distance || null,
+        volume: alert.volume,
+        timestamp: serverTimestamp()
+      });
+      console.log('✅ Road alert saved to Firestore');
+    } catch (err) {
+      console.error('Failed to save road alert:', err);
+    }
+  };
+
   useEffect(() => {
     if (isActive) {
       startMonitoring();
@@ -107,7 +130,6 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
       const source = audioContext.createMediaStreamSource(stream);
       source.connect(analyser);
 
-      // Stereo for direction
       const splitter = audioContext.createChannelSplitter(2);
       source.connect(splitter);
 
@@ -154,7 +176,6 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
     const avgVolume = sum / dataArray.length / 255;
     setVolume(avgVolume);
 
-    // Frequency bands for spectrum
     const lowBand = dataArray.slice(0, 80);
     const midBand = dataArray.slice(80, 200);
     const highBand = dataArray.slice(200, 400);
@@ -277,6 +298,9 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
 
     setCurrentAlert(alert);
     setAlertHistory(prev => [alert, ...prev].slice(0, 20));
+
+    // 🔥 Save to Firestore (logged‑in users)
+    saveRoadAlertToFirestore(alert);
 
     triggerVisualAlert(alert);
     triggerHapticAlert(alert);

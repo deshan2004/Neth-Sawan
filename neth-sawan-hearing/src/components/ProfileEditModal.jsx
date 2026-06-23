@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { auth, db, storage } from '../firebase';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import './ProfileEditModal.css';
 
 const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
@@ -12,7 +12,10 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
   const [photoPreview, setPhotoPreview] = useState(user?.photoURL || null);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState('');
   const fileInputRef = useRef(null);
+  const uploadTaskRef = useRef(null);
+  const timeoutRef = useRef(null);
 
   const [privacy, setPrivacy] = useState({
     shareLocation: true,
@@ -54,85 +57,231 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
     }
   }, [isGuest]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (uploadTaskRef.current) uploadTaskRef.current.cancel();
+    };
+  }, []);
+
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
-      setPhotoFile(file);
-      setPhotoPreview(URL.createObjectURL(file));
+      // Compress large images (max 1MB)
+      compressImage(file).then(compressed => {
+        setPhotoFile(compressed);
+        setPhotoPreview(URL.createObjectURL(compressed));
+        setError('');
+      });
     }
+  };
+
+  // ── Compress image to max 1MB ──
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_SIZE = 800;
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height = (height * MAX_SIZE) / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width = (width * MAX_SIZE) / height;
+              height = MAX_SIZE;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            const compressedFile = new File([blob], file.name, { type: 'image/jpeg' });
+            resolve(compressedFile);
+          }, 'image/jpeg', 0.7);
+        };
+      };
+    });
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
-      setPhotoFile(file);
-      setPhotoPreview(URL.createObjectURL(file));
+      compressImage(file).then(compressed => {
+        setPhotoFile(compressed);
+        setPhotoPreview(URL.createObjectURL(compressed));
+        setError('');
+      });
     }
   };
 
   const handleDragOver = (e) => e.preventDefault();
 
+  // ── Upload with real progress ──
+  const uploadPhoto = (file, uid) => {
+    return new Promise((resolve, reject) => {
+      const storageRef = ref(storage, `profile_photos/${uid}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      uploadTaskRef.current = uploadTask;
+
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          console.log(`📤 Upload progress: ${progress}%`);
+          setUploadProgress(progress);
+        },
+        (err) => {
+          console.error('❌ Upload error:', err);
+          reject(err);
+        },
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            console.log('✅ Upload complete, URL:', downloadURL);
+            setUploadProgress(100);
+            resolve(downloadURL);
+          } catch (err) {
+            reject(err);
+          }
+        }
+      );
+    });
+  };
+
   const handleSave = async () => {
-    if (isGuest) {
-      const guestProfile = { displayName, photoURL: photoPreview, privacy };
-      localStorage.setItem('neth_sawan_guest_profile', JSON.stringify(guestProfile));
-      if (onUpdate) onUpdate(guestProfile);
-      onClose();
+    if (!displayName.trim()) {
+      setError('Please enter a display name');
       return;
     }
 
-    if (!user) return;
     setLoading(true);
+    setError('');
     setUploadProgress(0);
 
-    try {
-      let photoURL = user.photoURL || null;
+    // ── Timeout safety (30 seconds) ──
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      console.warn('⚠️ Save timeout – forcing reset');
+      setLoading(false);
+      setError('Operation timed out. Please try again.');
+      if (uploadTaskRef.current) uploadTaskRef.current.cancel();
+    }, 30000);
 
+    try {
+      // ── GUEST MODE ──
+      if (isGuest) {
+        const guestProfile = { 
+          displayName: displayName.trim(), 
+          photoURL: photoPreview,
+          privacy 
+        };
+        localStorage.setItem('neth_sawan_guest_profile', JSON.stringify(guestProfile));
+        if (onUpdate) onUpdate(guestProfile);
+        clearTimeout(timeoutRef.current);
+        setLoading(false);
+        onClose();
+        return;
+      }
+
+      // ── LOGGED‑IN USER ──
+      let photoURL = user?.photoURL || null;
+
+      // 1. Upload photo (if selected)
       if (photoFile) {
-        const storageRef = ref(storage, `profile_photos/${user.uid}`);
-        await uploadBytes(storageRef, photoFile);
-        photoURL = await getDownloadURL(storageRef);
+        try {
+          photoURL = await uploadPhoto(photoFile, user.uid);
+        } catch (uploadErr) {
+          console.error('❌ Upload failed:', uploadErr);
+          setError(`Failed to upload: ${uploadErr.message || 'Please try again'}`);
+          clearTimeout(timeoutRef.current);
+          setLoading(false);
+          return;
+        }
+      } else {
         setUploadProgress(100);
       }
 
-      // Update Firebase Auth profile
-      await updateProfile(auth.currentUser, {
-        displayName: displayName,
+      // 2. Update Auth Profile
+      try {
+        await updateProfile(auth.currentUser, {
+          displayName: displayName.trim(),
+          photoURL: photoURL,
+        });
+        console.log('✅ Auth profile updated');
+      } catch (authErr) {
+        console.warn('Auth update warning:', authErr);
+      }
+
+      // 3. Update Firestore
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          displayName: displayName.trim(),
+          name: displayName.trim(),
+          photoURL: photoURL,
+          privacy: privacy,
+          updatedAt: new Date().toISOString(),
+        });
+        console.log('✅ Firestore updated');
+      } catch (firestoreErr) {
+        console.error('❌ Firestore error:', firestoreErr);
+        setError(`Database error: ${firestoreErr.message}`);
+        clearTimeout(timeoutRef.current);
+        setLoading(false);
+        return;
+      }
+
+      // 4. Update local state
+      const updatedData = { 
+        displayName: displayName.trim(), 
         photoURL: photoURL,
-      });
+        privacy 
+      };
+      if (onUpdate) onUpdate(updatedData);
 
-      // Update Firestore
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        displayName,
-        photoURL,
-        privacy,
-        updatedAt: new Date().toISOString(),
-      });
-
-      if (onUpdate) onUpdate({ displayName, photoURL, privacy });
+      clearTimeout(timeoutRef.current);
+      setLoading(false);
       onClose();
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
-    } finally {
+
+    } catch (err) {
+      console.error('❌ Unexpected error:', err);
+      setError(`Error: ${err.message}`);
+      clearTimeout(timeoutRef.current);
       setLoading(false);
     }
   };
 
+  const handleCancel = () => {
+    if (uploadTaskRef.current) uploadTaskRef.current.cancel();
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setLoading(false);
+    onClose();
+  };
+
   return (
-    <div className="profile-modal-overlay" onClick={onClose}>
+    <div className="profile-modal-overlay" onClick={handleCancel}>
       <div className="profile-modal-container" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="profile-modal-header">
           <h3>✎ Edit Profile</h3>
-          <button className="modal-close-btn" onClick={onClose}>✕</button>
+          <button className="modal-close-btn" onClick={handleCancel}>✕</button>
         </div>
 
         {/* Body */}
         <div className="profile-modal-body">
-          {/* Photo upload – click or drag */}
+          {/* Photo upload */}
           <div
             className="profile-photo-section"
             onDrop={handleDrop}
@@ -148,9 +297,14 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
                 </div>
               )}
               <div className="photo-edit-badge">📷 Change</div>
-              {loading && (
+              {loading && uploadProgress > 0 && uploadProgress < 100 && (
                 <div className="upload-progress-bar">
                   <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }}></div>
+                </div>
+              )}
+              {loading && uploadProgress === 100 && (
+                <div className="upload-progress-bar">
+                  <div className="upload-progress-fill" style={{ width: '100%', background: '#00FF88' }}></div>
                 </div>
               )}
             </div>
@@ -175,7 +329,22 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
             />
           </div>
 
-          {/* Privacy (optional but useful) */}
+          {/* Error Message */}
+          {error && (
+            <div style={{ 
+              padding: '10px 14px', 
+              background: 'rgba(255,51,85,0.15)', 
+              borderRadius: '12px',
+              color: '#FF6B8A',
+              fontSize: '0.85rem',
+              marginBottom: '16px',
+              wordBreak: 'break-word'
+            }}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          {/* Privacy */}
           <div className="privacy-section">
             <h4>Privacy Settings</h4>
             <div className="privacy-option">
@@ -203,9 +372,11 @@ const ProfileEditModal = ({ user, isGuest, onClose, onUpdate }) => {
 
         {/* Footer */}
         <div className="profile-modal-footer">
-          <button className="btn-cancel" onClick={onClose}>Cancel</button>
+          <button className="btn-cancel" onClick={handleCancel} disabled={loading}>
+            {loading ? '⏳ Please wait...' : 'Cancel'}
+          </button>
           <button className="btn-save" onClick={handleSave} disabled={loading}>
-            {loading ? 'Saving...' : '💾 Save Changes'}
+            {loading ? `💾 Saving ${uploadProgress}%` : '💾 Save Changes'}
           </button>
         </div>
       </div>
