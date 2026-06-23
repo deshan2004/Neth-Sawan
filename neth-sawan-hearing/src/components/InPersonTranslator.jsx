@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import * as tmImage from '@teachablemachine/image';
+import { useLanguage } from '../context/LanguageContext';
 import './InPersonTranslator.css';
 
 // ⚠️ Replace with your Teachable Machine URL
@@ -18,9 +19,11 @@ const SINHALA_CLASS_MAP = {
 };
 
 const InPersonTranslator = ({ onClose }) => {
+  const { t } = useLanguage();
+
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [modelLoading, setModelLoading] = useState(false);
-  const [liveTranslation, setLiveTranslation] = useState('📷 කැමරාව සක්‍රීය කර සංඥා කරන්න...');
+  const [liveTranslation, setLiveTranslation] = useState(t('activateCameraAndSign'));
   const [translationHistory, setTranslationHistory] = useState([]);
   const [error, setError] = useState('');
   const [facingMode, setFacingMode] = useState('environment');
@@ -32,10 +35,17 @@ const InPersonTranslator = ({ onClose }) => {
   const maxPredictionsRef = useRef(0);
   const animationFrameIdRef = useRef(null);
 
+  // Update initial text if language changes
+  useEffect(() => {
+    if (!isCameraActive && !modelLoading) {
+      setLiveTranslation(t('activateCameraAndSign'));
+    }
+  }, [t, isCameraActive, modelLoading]);
+
   const startCameraScanner = async () => {
     setModelLoading(true);
     setError('');
-    setLiveTranslation('🧠 AI මොඩලය පූරණය වෙමින්...');
+    setLiveTranslation(t('aiModelLoading'));
 
     try {
       const modelPath = MODEL_URL + "model.json";
@@ -63,7 +73,7 @@ const InPersonTranslator = ({ onClose }) => {
 
       setIsCameraActive(true);
       setModelLoading(false);
-      setLiveTranslation('🤟 සජීවී AI ස්කෑන් කිරීම ක්‍රියාත්මකයි! සංඥා කරන්න...');
+      setLiveTranslation(t('aiScanActive'));
 
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
@@ -72,8 +82,8 @@ const InPersonTranslator = ({ onClose }) => {
 
     } catch (err) {
       console.error("AI Camera Error:", err);
-      setError('❌ මොඩලය සක්‍රීය කිරීම අසාර්ථකයි. Link එක නිවැරදිදැයි පරීක්ෂා කරන්න.');
-      setLiveTranslation('⚠️ දෝෂයක් සිදුවිය');
+      setError(t('modelInitError'));
+      setLiveTranslation(t('errorOccurred'));
       setModelLoading(false);
     }
   };
@@ -108,13 +118,12 @@ const InPersonTranslator = ({ onClose }) => {
     setTranslationHistory(prev => [`[${timestamp}] ${text}`, ...prev.slice(0, 9)]);
   };
 
-  // 🔥 Simple Flip: just toggle the camera, no persistent messages
   const flipCamera = async () => {
     if (!isCameraActive || isFlipping) return;
     setIsFlipping(true);
+    setLiveTranslation(t('flipping'));
 
     try {
-      // Stop current stream
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(track => track.stop());
         localStreamRef.current = null;
@@ -123,11 +132,9 @@ const InPersonTranslator = ({ onClose }) => {
         cameraFeedRef.current.srcObject = null;
       }
 
-      // Toggle mode
       const newMode = facingMode === 'environment' ? 'user' : 'environment';
       setFacingMode(newMode);
 
-      // Restart stream with new mode
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: newMode,
@@ -143,13 +150,12 @@ const InPersonTranslator = ({ onClose }) => {
       }
 
       setIsFlipping(false);
-      // The liveTranslation stays as it was – no forced message
+      setLiveTranslation(t('aiScanActive'));
 
     } catch (err) {
       console.error('Flip error:', err);
-      setError('කැමරාව හැරවීම අසාර්ථකයි');
+      setError(t('errorOccurred'));
       setIsFlipping(false);
-      // Attempt to restart with current mode
       setTimeout(() => {
         if (isCameraActive) startCameraScanner();
       }, 1000);
@@ -164,7 +170,7 @@ const InPersonTranslator = ({ onClose }) => {
     }
     if (cameraFeedRef.current) cameraFeedRef.current.srcObject = null;
     setIsCameraActive(false);
-    setLiveTranslation('⏹️ කැමරාව වසා ඇත');
+    setLiveTranslation(t('cameraStopped'));
   };
 
   useEffect(() => {
@@ -180,7 +186,7 @@ const InPersonTranslator = ({ onClose }) => {
     <div className="in-person-translator-overlay">
       <div className="translator-window">
         <div className="translator-header">
-          <h3>📸 සජීවී AI සංඥා පරිවර්තකය</h3>
+          <h3>{t('aiSignTranslator')}</h3>
           <button className="exit-btn" onClick={onClose}>✕</button>
         </div>
 
@@ -202,7 +208,7 @@ const InPersonTranslator = ({ onClose }) => {
                 onClick={startCameraScanner}
                 disabled={modelLoading}
               >
-                {modelLoading ? "⏳ පූරණය වෙමින්..." : "🚀 කැමරාව සක්‍රීය කරන්න"}
+                {modelLoading ? t('loading') : t('activateCamera')}
               </button>
               {error && <p style={{ color: '#FF3355', fontSize: '12px', marginTop: '8px' }}>{error}</p>}
             </div>
@@ -218,21 +224,20 @@ const InPersonTranslator = ({ onClose }) => {
 
         {isCameraActive && (
           <div className="translator-actions">
-            {/* 🔥 Simple Flip button – no extra messages */}
             <button className="flip-cam-btn" onClick={flipCamera} disabled={isFlipping}>
-              {isFlipping ? '⏳' : '🔄 හරවන්න'}
+              {isFlipping ? t('flipping') : t('flip')}
             </button>
             <button className="stop-scan-btn" onClick={stopCameraScanner}>
-              🛑 නවත්වන්න
+              {t('stop')}
             </button>
           </div>
         )}
 
         <div className="history-log-section">
-          <h4>📋 මෑතකදී හඳුනාගත් සංඥා</h4>
+          <h4>{t('recentSigns')}</h4>
           <div className="history-box">
             {translationHistory.length === 0 ? (
-              <p className="empty-history-text">සංඥා හඳුනාගත් විට මෙහි පෙන්වයි...</p>
+              <p className="empty-history-text">{t('noSignsDetected')}</p>
             ) : (
               translationHistory.map((log, index) => (
                 <div key={index} className="history-item-row">{log}</div>
@@ -242,7 +247,7 @@ const InPersonTranslator = ({ onClose }) => {
         </div>
 
         <div className="user-guide-footer">
-          💡 <b>උපදෙස:</b> දෑත් කැමරාවට හොඳින් පෙන්වන්න, ආලෝකය හොඳින් ඇති ස්ථානයක සිටින්න.
+          {t('tipInstructions')}
         </div>
       </div>
     </div>

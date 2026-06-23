@@ -1,10 +1,10 @@
+// src/components/BackgroundVideo.jsx
 import React from 'react';
 import './BackgroundVideo.css';
 
 const BackgroundVideo = ({ videoSrc, opacity = 0.4 }) => {
-  // Default abstract tech/wave video from free stock source
   const defaultVideo = "";
-  
+
   return (
     <div className="background-video-container">
       <video

@@ -3,7 +3,7 @@
 .in-person-translator-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 6, 18, 0.95);
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 95%, var(--dynamic-text, #FFFFFF) 5%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 3500;
@@ -20,8 +20,8 @@
 }
 
 .translator-window {
-  background: linear-gradient(145deg, #0D0F22, #1A1E3A);
-  border: 1px solid rgba(0, 221, 179, 0.3);
+  background: color-mix(in srgb, var(--dynamic-bg, #0D1128) 80%, var(--dynamic-text, #FFFFFF) 20%);
+  border: 1px solid color-mix(in srgb, var(--dynamic-primary, #00DDB3) 30%, transparent);
   border-radius: 28px;
   width: 100%;
   max-width: 640px;
@@ -46,15 +46,15 @@
 
 .translator-header h3 {
   font-size: 20px;
-  color: #00DDB3;
+  color: var(--dynamic-primary, #00DDB3);
   margin: 0;
   font-weight: 700;
 }
 
 .exit-btn {
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 6%, transparent);
   border: none;
-  color: #8899CC;
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 50%, transparent);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -77,10 +77,10 @@
   position: relative;
   width: 100%;
   aspect-ratio: 4 / 3;
-  background: #040510;
+  background: var(--dynamic-bg, #040510);
   border-radius: 20px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 6%, transparent);
 }
 
 .live-scanner-video {
@@ -100,7 +100,7 @@
   position: absolute;
   width: 24px;
   height: 24px;
-  border: 3px solid rgba(0, 221, 179, 0.7);
+  border: 3px solid color-mix(in srgb, var(--dynamic-primary, #00DDB3) 70%, transparent);
 }
 .top-left { top: 0; left: 0; border-right: none; border-bottom: none; }
 .top-right { top: 0; right: 0; border-left: none; border-bottom: none; }
@@ -116,7 +116,7 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  background: rgba(0, 0, 0, 0.6);
+  background: color-mix(in srgb, var(--dynamic-bg, #000) 60%, transparent);
   backdrop-filter: blur(4px);
 }
 
@@ -125,21 +125,21 @@
 }
 
 .activate-cam-btn {
-  background: linear-gradient(135deg, #00DDB3, #00B899);
-  color: #07091A;
+  background: var(--dynamic-primary, #00DDB3);
+  color: var(--dynamic-bg, #07091A);
   border: none;
   padding: 14px 32px;
   border-radius: 40px;
   font-weight: 700;
   cursor: pointer;
   font-size: 16px;
-  box-shadow: 0 4px 20px rgba(0, 221, 179, 0.3);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--dynamic-primary, #00DDB3) 30%, transparent);
   transition: all 0.2s;
 }
 
 .activate-cam-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 221, 179, 0.4);
+  box-shadow: 0 8px 30px color-mix(in srgb, var(--dynamic-primary, #00DDB3) 40%, transparent);
 }
 
 .activate-cam-btn:disabled {
@@ -154,8 +154,8 @@
   left: 50%;
   transform: translateX(-50%);
   width: 92%;
-  background: rgba(7, 9, 26, 0.88);
-  border: 1px solid rgba(245, 200, 66, 0.4);
+  background: color-mix(in srgb, var(--dynamic-bg, #07091A) 88%, var(--dynamic-text, #FFFFFF) 12%);
+  border: 1px solid color-mix(in srgb, #F5C842 40%, transparent);
   border-radius: 16px;
   padding: 14px 18px;
   text-align: center;
@@ -176,7 +176,7 @@
 .hud-text {
   font-size: 18px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--dynamic-text, #FFFFFF);
   margin: 0;
 }
 
@@ -185,36 +185,58 @@
   display: flex;
   justify-content: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.stop-scan-btn {
-  background: rgba(255, 51, 85, 0.15);
-  border: 1px solid #FF3355;
-  color: #FF3355;
+.stop-scan-btn,
+.flip-cam-btn {
   padding: 12px 28px;
   border-radius: 40px;
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
+  border: none;
+}
+
+.stop-scan-btn {
+  background: color-mix(in srgb, #FF3355 15%, transparent);
+  border: 1px solid #FF3355;
+  color: #FF3355;
 }
 
 .stop-scan-btn:hover {
-  background: rgba(255, 51, 85, 0.25);
+  background: color-mix(in srgb, #FF3355 25%, transparent);
   transform: translateY(-2px);
+}
+
+.flip-cam-btn {
+  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 15%, transparent);
+  border: 1px solid var(--dynamic-primary, #00DDB3);
+  color: var(--dynamic-primary, #00DDB3);
+}
+
+.flip-cam-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 25%, transparent);
+  transform: translateY(-2px);
+}
+
+.flip-cam-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* History */
 .history-log-section {
-  background: rgba(0, 0, 0, 0.25);
+  background: color-mix(in srgb, var(--dynamic-bg, #000) 25%, transparent);
   border-radius: 16px;
   padding: 14px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 4%, transparent);
 }
 
 .history-log-section h4 {
   font-size: 13px;
-  color: #8899CC;
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 50%, transparent);
   margin: 0 0 10px 0;
 }
 
@@ -228,23 +250,23 @@
 
 .history-item-row {
   font-size: 13px;
-  color: #D0D8FF;
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--dynamic-text, #D0D8FF);
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 3%, transparent);
   padding: 6px 14px;
   border-radius: 8px;
-  border-left: 3px solid #00DDB3;
+  border-left: 3px solid var(--dynamic-primary, #00DDB3);
 }
 
 .empty-history-text {
   font-size: 12px;
-  color: #5C628A;
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 40%, transparent);
   text-align: center;
   margin: 10px 0;
 }
 
 .user-guide-footer {
   font-size: 11px;
-  color: #5C628A;
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 40%, transparent);
   text-align: center;
   padding: 4px 0;
 }
@@ -257,7 +279,7 @@
   background: transparent;
 }
 .history-box::-webkit-scrollbar-thumb {
-  background: #00DDB3;
+  background: var(--dynamic-primary, #00DDB3);
   border-radius: 4px;
 }
 
@@ -280,52 +302,4 @@
     width: 16px;
     height: 16px;
   }
-}/* src/components/InPersonTranslator.css */
-
-/* ... (rest of the styles remain the same) ... */
-
-/* Controls - Updated to include flip button */
-.translator-actions {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.stop-scan-btn,
-.flip-cam-btn {
-  padding: 12px 28px;
-  border-radius: 40px;
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.stop-scan-btn {
-  background: rgba(255, 51, 85, 0.15);
-  border: 1px solid #FF3355;
-  color: #FF3355;
-}
-
-.stop-scan-btn:hover {
-  background: rgba(255, 51, 85, 0.25);
-  transform: translateY(-2px);
-}
-
-.flip-cam-btn {
-  background: rgba(0, 221, 179, 0.15);
-  border: 1px solid #00DDB3;
-  color: #00DDB3;
-}
-
-.flip-cam-btn:hover:not(:disabled) {
-  background: rgba(0, 221, 179, 0.25);
-  transform: translateY(-2px);
-}
-
-.flip-cam-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }

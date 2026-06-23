@@ -60,14 +60,14 @@ const Sidebar = ({
   // 👇 Updated menu items – only id and icon; labels come from translations
   const menuItems = [
     { id: 'dashboard', icon: '🏠' },
+    { id: 'roadmonitor', icon: '🛣️' },
     { id: 'vision', icon: '👁️' },
-    { id: 'learn', icon: '🤟' },
     { id: 'inperson', icon: '📸' },
+     { id: 'emergency', icon: '🆘' },
     { id: 'community', icon: '👥' },
     { id: 'alerts', icon: '🔔' },
     { id: 'contacts', icon: '📇' },
-    { id: 'emergency', icon: '🆘' },
-    { id: 'roadmonitor', icon: '🛣️' },
+     { id: 'learn', icon: '🤟' },
     { id: 'settings', icon: '♿' }
   ];
 

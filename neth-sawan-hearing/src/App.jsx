@@ -1,4 +1,4 @@
-// src/App.jsx
+// src/App.jsx – Full Updated Code
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -17,6 +17,7 @@ import RelativesManager from './components/RelativesManager';
 import NotificationCenter from './components/NotificationCenter';
 import Aivision from './components/Aivision';
 import SignLanguageTutor from './components/SignLanguageTutor';
+import VideoTutorial from './components/VideoTutorial';
 import EmergencyFlash from './components/EmergencyFlash';
 import AccessibilitySettings from './components/AccessibilitySettings';
 import RoadSafetyMonitor from './components/RoadSafetyMonitor';
@@ -685,7 +686,8 @@ function AppContent() {
 
   return (
     <div className={`app-wrapper ${currentTheme}`} style={{ fontSize: `${currentFontSize}px` }}>
-      <BackgroundVideo opacity={0.85} />
+      {/* ✅ Background video ONLY on landing page */}
+      {showLanding && <BackgroundVideo videoSrc="/videos/background.mp4" opacity={0.5} />}
 
       <FallDetector
         ref={fallDetectorRef}
@@ -783,6 +785,11 @@ function AppContent() {
                 </div>
               </div>
 
+              <div className="dashboard-secondary">
+                <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
+                <VideoTutorial />
+              </div>
+
               <div className="dashboard-primary">
                 <div className="sound-card">
                   <h3 className="card-title-simple"><span>🔊</span> Sound Monitor</h3>
@@ -817,18 +824,22 @@ function AppContent() {
                   showToast={showToast}
                 />
               </div>
-
-              <div className="dashboard-secondary">
-                <SoundHistory soundHistory={currentSoundHistory.slice(0, 5)} />
-              </div>
             </>
           )}
 
           {activeTab === 'vision' && <Aivision showToast={showToast} />}
-          {activeTab === 'learn' && <SignLanguageTutor />}
+
+          {activeTab === 'learn' && (
+            <div className="learn-tab-grid" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <SignLanguageTutor />
+              <VideoTutorial />
+            </div>
+          )}
+
           {activeTab === 'inperson' && (
             <InPersonTranslator onClose={() => setActiveTab('dashboard')} />
           )}
+
           {activeTab === 'community' && <OnlineUsers user={user} isGuest={isGuest} guestName={guestName} />}
 
           {activeTab === 'alerts' && (
