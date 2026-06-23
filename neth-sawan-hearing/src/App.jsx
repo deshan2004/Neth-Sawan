@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Components
@@ -35,94 +36,86 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
 import './App.css';
 
-// ===== BUILD WHATSAPP MESSAGE (rich, formatted) =====
+// ===== HELPER: Build rich WhatsApp message =====
 const buildWhatsAppMessage = (contactName, location, userEmail, alertType) => {
   const time = new Date().toLocaleString('en-LK', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
-
-  let message = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
-  message += `Dear ${contactName},\n\n`;
-  message += `⚠️ *This is an automated emergency alert from your loved one's device.*\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `📢 *ALERT TYPE:* 🆘 ${alertType || 'SOS EMERGENCY'}\n`;
-  message += `🕒 *TIME:* ${time}\n`;
-  message += `👤 *USER:* ${userEmail || 'Neth-Sawan User'}\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-
+  let msg = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
+  msg += `Dear ${contactName},\n\n`;
+  msg += `⚠️ *This is an automated emergency alert from your loved one's device.*\n\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `📢 *ALERT TYPE:* 🆘 ${alertType || 'SOS EMERGENCY'}\n`;
+  msg += `🕒 *TIME:* ${time}\n`;
+  msg += `👤 *USER:* ${userEmail || 'Neth-Sawan User'}\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   if (location) {
-    message += `📍 *LIVE LOCATION:*\n`;
-    message += `https://maps.google.com/?q=${location.lat},${location.lng}\n\n`;
+    msg += `📍 *LIVE LOCATION:*\n`;
+    msg += `https://maps.google.com/?q=${location.lat},${location.lng}\n\n`;
   } else {
-    message += `📍 *LOCATION:* Location services unavailable. Please call immediately.\n\n`;
+    msg += `📍 *LOCATION:* Location services unavailable. Please call immediately.\n\n`;
   }
-
-  message += `📝 *MESSAGE:* ${alertType || 'SOS'} button was pressed. Immediate assistance may be required. Please check on your loved one as soon as possible.\n\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `⚠️ *PLEASE RESPOND PROMPTLY* ⚠️\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  message += `_This is an automated message from Neth-Sawan Hearing Assistant._\n`;
-  message += `_For more info, visit neth-sawan.app_`;
-
-  return message;
+  msg += `📝 *MESSAGE:* ${alertType || 'SOS'} button was pressed. Immediate assistance may be required.\n\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `⚠️ *PLEASE RESPOND PROMPTLY* ⚠️\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  msg += `_This is an automated message from Neth-Sawan Hearing Assistant._\n`;
+  msg += `_For more info, visit neth-sawan.app_`;
+  return msg;
 };
 
-// ===== BUILD SMS MESSAGE (plain text, short) =====
+// ===== HELPER: Build SMS message =====
 const buildSmsMessage = (contactName, location, userEmail, alertType) => {
   const time = new Date().toLocaleString('en-LK', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
-
-  let message = `🚨 EMERGENCY ALERT - Neth-Sawan\n`;
-  message += `To: ${contactName}\n`;
-  message += `Type: ${alertType || 'SOS'}\n`;
-  message += `Time: ${time}\n`;
-  message += `User: ${userEmail || 'Neth-Sawan User'}\n`;
+  let msg = `🚨 EMERGENCY ALERT - Neth-Sawan\n`;
+  msg += `To: ${contactName}\n`;
+  msg += `Type: ${alertType || 'SOS'}\n`;
+  msg += `Time: ${time}\n`;
+  msg += `User: ${userEmail || 'Neth-Sawan User'}\n`;
   if (location) {
-    message += `Location: https://maps.google.com/?q=${location.lat},${location.lng}\n`;
+    msg += `Location: https://maps.google.com/?q=${location.lat},${location.lng}\n`;
   } else {
-    message += `Location: Not available - please call immediately.\n`;
+    msg += `Location: Not available - please call immediately.\n`;
   }
-  message += `Message: ${alertType || 'SOS'} pressed. Immediate assistance required.`;
-  return message;
+  msg += `Message: ${alertType || 'SOS'} pressed. Immediate assistance required.`;
+  return msg;
 };
 
-// ===== INNER COMPONENT =====
+// ================================================================
+// INNER COMPONENT (uses LanguageContext)
+// ================================================================
 function AppContent() {
   const { updateLanguageFromTranscript, t } = useLanguage();
 
-  // ===== AUTH STATES =====
+  // ---- Authentication ----
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [showLanding, setShowLanding] = useState(true);
 
-  // ===== UI STATES =====
+  // ---- UI State ----
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1024);
-  const [toastMessage, setToastMessage] = useState({ show: false, message: '', type: '' });
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [flashEmergency, setFlashEmergency] = useState(false);
   const [emergencyData, setEmergencyData] = useState(null);
   const [emergencyMessage, setEmergencyMessage] = useState('');
   const [roadSafetyActive, setRoadSafetyActive] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
-  // ===== ACCESSIBILITY STATES =====
+  // ---- Accessibility (synced with Firestore) ----
   const [currentTheme, setCurrentTheme] = useState('default');
   const [currentFontSize, setCurrentFontSize] = useState(16);
+  const [emergencyNotificationsEnabled, setEmergencyNotificationsEnabled] = useState(true);
 
-  // ===== EMERGENCY NOTIFICATIONS TOGGLE =====
-  const [emergencyNotificationsEnabled, setEmergencyNotificationsEnabled] = useState(() => {
-    const saved = localStorage.getItem('emergency_notifications_enabled');
-    return saved !== null ? saved === 'true' : true;
-  });
-
-  // ===== FALL DETECTOR REF & STATE =====
+  // ---- Fall Detector ----
   const fallDetectorRef = useRef(null);
   const [fallDetectorBlocked, setFallDetectorBlocked] = useState(false);
 
-  // ===== HOOKS =====
+  // ---- Custom Hooks ----
   const {
     transcript,
     setTranscript,
@@ -140,87 +133,181 @@ function AppContent() {
     supported
   } = useSpeech('si-LK');
 
-  const { volume, isLoud, soundType, soundHistory, threshold, setThreshold } = useVolume(0.15);
   const {
-    notificationQueue, markAsRead, clearNotifications,
-    relatives, addRelative, removeRelative, updateRelative,
+    volume,
+    isLoud,
+    soundType,
+    soundHistory,
+    threshold,
+    setThreshold
+  } = useVolume(0.15);
+
+  const {
+    notificationQueue,
+    markAsRead,
+    clearNotifications,
+    relatives,
+    addRelative,
+    removeRelative,
+    updateRelative,
     autoSendStatus
   } = useNotifications();
 
-  // ===== GUEST NOTIFICATIONS =====
-  const { notifications: guestNotifications, addNotification: guestAddNotification, clearAll: guestClearAll } = useGuestNotifications();
+  const {
+    notifications: guestNotifications,
+    addNotification: guestAddNotification,
+    clearAll: guestClearAll
+  } = useGuestNotifications();
 
-  // ===== SINHALA TYPING STATE =====
-  const [sinhalaText, setSinhalaText] = useState('');
-  const [signWord, setSignWord] = useState('');
-
-  // ===== GUEST DATA (Relatives & Sound History) =====
+  // ---- Guest data fallback ----
   const [guestRelatives, setGuestRelatives] = useState([]);
   const [guestSoundHistory, setGuestSoundHistory] = useState([]);
 
-  // ===== UI LANGUAGE SYNC WITH RECOGNITION LANGUAGE =====
+  // ---- Sinhala manual typing ----
+  const [sinhalaText, setSinhalaText] = useState('');
+  const [signWord, setSignWord] = useState('');
+
+  // ============================================================
+  // 1. LOAD PREFERENCES FROM FIRESTORE (when user logs in)
+  // ============================================================
   useEffect(() => {
-    if (lang === 'si-LK') {
-      updateLanguageFromTranscript('සිංහල');
-    } else if (lang === 'ta-LK') {
-      updateLanguageFromTranscript('தமிழ்');
-    } else {
-      updateLanguageFromTranscript('Hello');
+    const loadPreferences = async () => {
+      if (!user) {
+        // Guest: load from localStorage
+        const savedTheme = localStorage.getItem('accessibility_theme');
+        const savedFontSize = localStorage.getItem('accessibility_fontSize');
+        const savedToggle = localStorage.getItem('emergency_notifications_enabled');
+        if (savedTheme) setCurrentTheme(savedTheme);
+        if (savedFontSize) setCurrentFontSize(parseInt(savedFontSize));
+        if (savedToggle !== null) setEmergencyNotificationsEnabled(savedToggle === 'true');
+        return;
+      }
+
+      // Logged in: load from Firestore
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          if (data.preferences) {
+            const prefs = data.preferences;
+            if (prefs.theme) setCurrentTheme(prefs.theme);
+            if (prefs.fontSize) setCurrentFontSize(prefs.fontSize);
+            if (prefs.emergencyNotificationsEnabled !== undefined) {
+              setEmergencyNotificationsEnabled(prefs.emergencyNotificationsEnabled);
+            }
+            // Also apply to DOM
+            document.body.className = prefs.theme === 'light' ? 'light-theme' : '';
+            document.documentElement.style.setProperty('--dynamic-font-size', `${prefs.fontSize || 16}px`);
+            localStorage.setItem('emergency_notifications_enabled', String(prefs.emergencyNotificationsEnabled !== undefined ? prefs.emergencyNotificationsEnabled : true));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load preferences from Firestore:', err);
+      }
+    };
+
+    if (!authLoading) {
+      loadPreferences();
     }
+  }, [user, authLoading]);
+
+  // ============================================================
+  // 2. SAVE PREFERENCES TO FIRESTORE (when they change)
+  // ============================================================
+  const savePreferences = async (updates) => {
+    if (!user) {
+      // Guest: save to localStorage
+      if (updates.theme) localStorage.setItem('accessibility_theme', updates.theme);
+      if (updates.fontSize) localStorage.setItem('accessibility_fontSize', String(updates.fontSize));
+      if (updates.emergencyNotificationsEnabled !== undefined) {
+        localStorage.setItem('emergency_notifications_enabled', String(updates.emergencyNotificationsEnabled));
+      }
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+        preferences: {
+          theme: updates.theme || currentTheme,
+          fontSize: updates.fontSize || currentFontSize,
+          emergencyNotificationsEnabled: updates.emergencyNotificationsEnabled !== undefined
+            ? updates.emergencyNotificationsEnabled
+            : emergencyNotificationsEnabled,
+        }
+      }, { merge: true });
+    } catch (err) {
+      console.error('Failed to save preferences to Firestore:', err);
+    }
+  };
+
+  // ---- Handlers that call savePreferences ----
+  const handleThemeChange = (theme) => {
+    setCurrentTheme(theme);
+    document.body.className = theme === 'light' ? 'light-theme' : '';
+    savePreferences({ theme });
+  };
+
+  const handleFontSizeChange = (size) => {
+    setCurrentFontSize(size);
+    document.documentElement.style.setProperty('--dynamic-font-size', `${size}px`);
+    savePreferences({ fontSize: size });
+  };
+
+  const toggleEmergencyNotifications = () => {
+    const newState = !emergencyNotificationsEnabled;
+    setEmergencyNotificationsEnabled(newState);
+    savePreferences({ emergencyNotificationsEnabled: newState });
+    showToast(
+      newState ? (t('alertsOn') || 'Emergency notifications enabled') : (t('alertsOff') || 'Emergency notifications disabled'),
+      newState ? 'success' : 'info'
+    );
+  };
+
+  // ---- Sync remaining states ----
+  useEffect(() => {
+    localStorage.setItem('emergency_notifications_enabled', String(emergencyNotificationsEnabled));
+  }, [emergencyNotificationsEnabled]);
+
+  // ---- Language sync ----
+  useEffect(() => {
+    if (lang === 'si-LK') updateLanguageFromTranscript('සිංහල');
+    else if (lang === 'ta-LK') updateLanguageFromTranscript('தமிழ்');
+    else updateLanguageFromTranscript('Hello');
   }, [lang, updateLanguageFromTranscript]);
 
-  // ===== REAL-TIME SIGN LANGUAGE TRANSLATION =====
+  // ---- Real-time sign language translation from transcript ----
   useEffect(() => {
     if (!transcript) {
       setSignWord('');
       return;
     }
-
-    const wordsArray = transcript.trim().split(/\s+/);
-    const lastWord = wordsArray[wordsArray.length - 1];
+    const words = transcript.trim().split(/\s+/);
+    const lastWord = words[words.length - 1];
     if (!lastWord) return;
-
     if (/^[A-Za-z0-9]+$/.test(lastWord)) {
       setSignWord(lastWord.toLowerCase());
       return;
     }
-
     const fetchTranslation = async () => {
       try {
-        const response = await fetch(
+        const res = await fetch(
           `https://translate.googleapis.com/translate_a/single?client=gtx&sl=si&tl=en&dt=t&q=${encodeURIComponent(lastWord)}`
         );
-        const data = await response.json();
+        const data = await res.json();
         if (data && data[0] && data[0][0] && data[0][0][0]) {
           setSignWord(data[0][0][0].trim().toLowerCase());
         }
-      } catch (error) {
-        console.error("Translation failed:", error);
+      } catch (e) {
+        console.error('Translation failed:', e);
         setSignWord(lastWord.toLowerCase());
       }
     };
-
-    const delayDebounce = setTimeout(fetchTranslation, 300);
-    return () => clearTimeout(delayDebounce);
+    const timer = setTimeout(fetchTranslation, 300);
+    return () => clearTimeout(timer);
   }, [transcript]);
 
-  // ===== SAVE EMERGENCY TOGGLE =====
-  useEffect(() => {
-    localStorage.setItem('emergency_notifications_enabled', emergencyNotificationsEnabled);
-  }, [emergencyNotificationsEnabled]);
-
-  // ===== APPLY SAVED ACCESSIBILITY SETTINGS =====
-  useEffect(() => {
-    const savedFontSize = localStorage.getItem('accessibility_fontSize');
-    if (savedFontSize) {
-      setCurrentFontSize(parseInt(savedFontSize));
-      document.documentElement.style.setProperty('--dynamic-font-size', `${savedFontSize}px`);
-    }
-    const savedTheme = localStorage.getItem('accessibility_theme');
-    if (savedTheme) setCurrentTheme(savedTheme);
-  }, []);
-
-  // ===== LOAD GUEST DATA =====
+  // ---- Guest data ----
   useEffect(() => {
     if (isGuest) {
       const savedRelatives = localStorage.getItem('neth_sawan_guest_relatives');
@@ -230,20 +317,20 @@ function AppContent() {
     }
   }, [isGuest]);
 
-  // ===== FALL DETECTOR STATUS CHECK =====
+  // ---- Fall detector status ----
   useEffect(() => {
-    const checkStatus = () => {
+    const check = () => {
       if (fallDetectorRef.current) {
         const blocked = fallDetectorRef.current.isBlocked?.() || false;
         setFallDetectorBlocked(blocked);
       }
     };
-    checkStatus();
-    const interval = setInterval(checkStatus, 2000);
+    check();
+    const interval = setInterval(check, 2000);
     return () => clearInterval(interval);
   }, []);
 
-  // ===== LOUD SOUND EMERGENCY FLASH =====
+  // ---- Loud sound emergency flash ----
   useEffect(() => {
     if (isLoud && soundType && !roadSafetyActive && emergencyNotificationsEnabled) {
       setFlashEmergency(true);
@@ -262,9 +349,9 @@ function AppContent() {
       }
       setTimeout(() => setFlashEmergency(false), 3000);
     }
-  }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled, isGuest]);
+  }, [isLoud, soundType, roadSafetyActive, emergencyNotificationsEnabled, isGuest, guestAddNotification, volume]);
 
-  // ===== SAVE SOUND HISTORY FOR GUEST =====
+  // ---- Save sound history for guest ----
   useEffect(() => {
     if (isGuest && soundHistory?.length > 0) {
       setGuestSoundHistory(prev => {
@@ -275,14 +362,13 @@ function AppContent() {
     }
   }, [soundHistory, isGuest]);
 
-  // ===== AUTH LISTENER =====
+  // ---- Auth listener ----
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         setIsGuest(false);
         setShowLanding(false);
-        setAuthLoading(false);
       } else {
         const storedGuest = localStorage.getItem('guestUser');
         if (storedGuest) {
@@ -299,22 +385,22 @@ function AppContent() {
           setIsGuest(false);
           setShowLanding(true);
         }
-        setAuthLoading(false);
       }
+      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  // ===== TOAST HELPER =====
+  // ---- Toast helper ----
   const showToast = (message, type = 'info') => {
-    setToastMessage({ show: true, message, type });
-    setTimeout(() => setToastMessage({ show: false, message: '', type: '' }), 3000);
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
   };
 
-  // ===== TOGGLE SIDEBAR =====
+  // ---- Toggle sidebar ----
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
-  // ===== AUTH HANDLERS =====
+  // ---- Auth handlers ----
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -323,9 +409,9 @@ function AppContent() {
       setGuestName('');
       setUser(null);
       setShowLanding(true);
-      showToast(t('loggedOut') || "Logged out", "success");
+      showToast(t('loggedOut') || 'Logged out', 'success');
     } catch {
-      showToast(t('logoutFailed') || "Logout failed", "error");
+      showToast(t('logoutFailed') || 'Logout failed', 'error');
     }
   };
 
@@ -335,7 +421,7 @@ function AppContent() {
     setIsGuest(true);
     setGuestName(name);
     setShowLanding(false);
-    showToast(t('guestModeActivated') || "Guest mode activated", "success");
+    showToast(t('guestModeActivated') || 'Guest mode activated', 'success');
   };
 
   const handleSignOutGuest = () => {
@@ -343,30 +429,10 @@ function AppContent() {
     setIsGuest(false);
     setGuestName('');
     setShowLanding(true);
-    showToast(t('guestSignedOut') || "Signed out from guest mode", "info");
+    showToast(t('guestSignedOut') || 'Signed out from guest mode', 'info');
   };
 
-  // ===== ACCESSIBILITY HANDLERS =====
-  const handleThemeChange = (theme) => {
-    setCurrentTheme(theme);
-    document.body.className = theme === 'light' ? 'light-theme' : '';
-    localStorage.setItem('accessibility_theme', theme);
-  };
-
-  const handleFontSizeChange = (size) => {
-    setCurrentFontSize(size);
-    document.documentElement.setAttribute('data-size', size);
-    localStorage.setItem('accessibility_fontSize', size);
-  };
-
-  // ===== EMERGENCY TOGGLE =====
-  const toggleEmergencyNotifications = () => {
-    const newState = !emergencyNotificationsEnabled;
-    setEmergencyNotificationsEnabled(newState);
-    showToast(newState ? (t('alertsOn') || 'Emergency notifications enabled') : (t('alertsOff') || 'Emergency notifications disabled'), newState ? 'success' : 'info');
-  };
-
-  // ===== FALL PERMISSION REQUEST =====
+  // ---- Fall permission ----
   const handleRequestFallPermission = async () => {
     if (fallDetectorRef.current) {
       const granted = await fallDetectorRef.current.requestPermission();
@@ -379,7 +445,7 @@ function AppContent() {
     }
   };
 
-  // ===== SINHALA TRANSCRIPT HANDLER =====
+  // ---- Sinhala transcript handler ----
   const handleTranscriptChange = (text) => {
     setSinhalaText(text);
     if (text && text.trim()) {
@@ -388,15 +454,15 @@ function AppContent() {
       if (/[\u0D80-\u0DFF]/.test(lastWord)) {
         const fetchTranslation = async () => {
           try {
-            const response = await fetch(
+            const res = await fetch(
               `https://translate.googleapis.com/translate_a/single?client=gtx&sl=si&tl=en&dt=t&q=${encodeURIComponent(lastWord)}`
             );
-            const data = await response.json();
+            const data = await res.json();
             if (data && data[0] && data[0][0] && data[0][0][0]) {
               setSignWord(data[0][0][0].trim().toLowerCase());
             }
-          } catch (error) {
-            console.error("Translation failed:", error);
+          } catch (e) {
+            console.error('Translation failed:', e);
           }
         };
         fetchTranslation();
@@ -406,15 +472,12 @@ function AppContent() {
     }
   };
 
-  // ===== TEXT TO PASS TO SIGN LANGUAGE BOX =====
-  const getSignLanguageText = () => {
-    return sinhalaText || transcript;
-  };
+  const getSignLanguageText = () => sinhalaText || transcript;
 
-  // ===== GUEST RELATIVES HANDLERS =====
+  // ---- Guest relatives handlers ----
   const guestAddRelative = (data) => {
     const entry = {
-      id: Date.now(),
+      id: Date.now().toString(),
       name: data.name.trim(),
       phone: data.phone?.trim() || '',
       email: data.email?.trim() || '',
@@ -454,45 +517,28 @@ function AppContent() {
   const currentNotifications = isGuest ? guestNotifications : notificationQueue;
   const currentSoundHistory = isGuest ? guestSoundHistory : soundHistory;
 
-  // ============================================================
-  // ===== HELPER: SEND ALERT TO A SINGLE CONTACT =====
-  // ============================================================
+  // ================================================================
+  // EMERGENCY ALERT DISPATCH (single contact)
+  // ================================================================
   const sendAlertToContact = (contact, alertType, location, userEmail) => {
-    // Skip if no phone number
     if (!contact.phone) {
       console.warn(`❌ ${contact.name} has no phone number`);
       return;
     }
-
-    // Log what we're sending
-    console.log(`📤 Sending ${alertType} alert to ${contact.name}`);
-    console.log(`   - WhatsApp: ${contact.notifyByWhatsApp ? '✅' : '❌'}`);
-    console.log(`   - SMS: ${contact.notifyBySMS ? '✅' : '❌'}`);
-    console.log(`   - Desktop: ${contact.notifyByDesktop ? '✅' : '❌'}`);
-
-    // WhatsApp (if enabled)
     if (contact.notifyByWhatsApp) {
-      const waMessage = buildWhatsAppMessage(contact.name, location, userEmail, alertType);
-      let phoneNumber = contact.phone.replace(/[\s\-\(\)\.]/g, '');
-      if (phoneNumber.startsWith('0')) phoneNumber = '94' + phoneNumber.slice(1);
-      else if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.replace('+', '');
-      else if (!phoneNumber.startsWith('94')) phoneNumber = '94' + phoneNumber;
-      const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(waMessage)}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
-      console.log(`✅ WhatsApp sent to ${contact.name}`);
+      const waMsg = buildWhatsAppMessage(contact.name, location, userEmail, alertType);
+      let phone = contact.phone.replace(/[\s\-\(\)\.]/g, '');
+      if (phone.startsWith('0')) phone = '94' + phone.slice(1);
+      else if (phone.startsWith('+')) phone = phone.replace('+', '');
+      else if (!phone.startsWith('94')) phone = '94' + phone;
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`, '_blank', 'noopener,noreferrer');
       showToast(`💬 WhatsApp sent to ${contact.name}`, 'info');
     }
-
-    // SMS (if enabled)
     if (contact.notifyBySMS) {
-      const smsMessage = buildSmsMessage(contact.name, location, userEmail, alertType);
-      const smsUrl = `sms:${contact.phone}?body=${encodeURIComponent(smsMessage)}`;
-      window.open(smsUrl, '_blank');
-      console.log(`✅ SMS sent to ${contact.name}`);
+      const smsMsg = buildSmsMessage(contact.name, location, userEmail, alertType);
+      window.open(`sms:${contact.phone}?body=${encodeURIComponent(smsMsg)}`, '_blank');
       showToast(`✉️ SMS sent to ${contact.name}`, 'info');
     }
-
-    // Desktop notification
     if (contact.notifyByDesktop && Notification.permission === 'granted') {
       new Notification(`🆘 EMERGENCY ALERT - ${contact.name}`, {
         body: `${alertType} - Immediate attention needed!`,
@@ -500,45 +546,38 @@ function AppContent() {
         requireInteraction: true,
         vibrate: [200, 100, 200]
       });
-      console.log(`✅ Desktop notification sent to ${contact.name}`);
     }
   };
 
-  // ===== FALL DETECTION HANDLER =====
+  // ===== FALL DETECTION =====
   const handleFallEmergency = async () => {
     console.log("🚨 Fall emergency triggered!");
-    let currentLocation = null;
+    let location = null;
     try {
       const pos = await new Promise((resolve, reject) =>
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, enableHighAccuracy: true })
       );
-      currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      console.log("📍 Location obtained:", currentLocation);
+      location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     } catch (e) {
-      console.warn("Location error:", e.message);
+      console.warn('Location error:', e.message);
     }
 
-    // Save to Firebase
-    try {
-      await addDoc(collection(db, "emergency_alerts"), {
-        alertType: "AUTOMATIC_FALL_DETECTION",
-        status: "CRITICAL",
-        timestamp: serverTimestamp(),
-        userId: user ? user.uid : "GUEST_USER",
-        location: currentLocation ? `${currentLocation.lat}, ${currentLocation.lng}` : "Location Unavailable"
-      });
-      console.log("✅ Emergency alert saved to Firebase");
-    } catch (error) {
-      console.error("Firebase error:", error);
+    if (user && !isGuest) {
+      try {
+        await addDoc(collection(db, 'emergency_alerts'), {
+          alertType: 'AUTOMATIC_FALL_DETECTION',
+          status: 'CRITICAL',
+          timestamp: serverTimestamp(),
+          userId: user.uid,
+          location: location ? `${location.lat}, ${location.lng}` : 'Location Unavailable'
+        });
+      } catch (e) {
+        console.error('Firebase save error:', e);
+      }
     }
 
-    // Always vibrate
-    if (navigator.vibrate) {
-      navigator.vibrate([500, 200, 500, 200, 500]);
-      console.log("📳 Vibration triggered");
-    }
+    if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
 
-    // Emergency flash
     if (emergencyNotificationsEnabled) {
       setFlashEmergency(true);
       setEmergencyData({
@@ -546,42 +585,35 @@ function AppContent() {
         message: 'An automatic fall was detected!',
         timestamp: new Date(),
         volume: 1.0,
-        location: currentLocation
+        location
       });
       setEmergencyMessage('🚨 FALL DETECTED!');
       showToast('🚨 AUTOMATIC FALL DETECTED!', 'error');
       setTimeout(() => setFlashEmergency(false), 8000);
-      console.log("🔴 Emergency flash shown");
     }
 
-    // ===== SEND ALERTS TO ALL CONTACTS =====
-    if (currentRelatives && currentRelatives.length > 0) {
-      console.log(`📤 Sending fall alerts to ${currentRelatives.length} contacts...`);
+    if (currentRelatives.length > 0) {
       currentRelatives.forEach(contact => {
-        sendAlertToContact(contact, 'FALL DETECTED', currentLocation, user?.email || 'Guest User');
+        sendAlertToContact(contact, 'FALL DETECTED', location, user?.email || 'Guest User');
       });
     } else {
-      console.warn("⚠️ No emergency contacts found!");
-      showToast("⚠️ No emergency contacts added. Add contacts in the Contacts tab.", "warning");
+      showToast('⚠️ No emergency contacts added. Add contacts in the Contacts tab.', 'warning');
     }
   };
 
-  // ===== TRIGGER EMERGENCY (SOS) =====
+  // ===== MANUAL SOS =====
   const triggerEmergency = async (msg) => {
     console.log("🆘 SOS triggered:", msg);
-
-    let currentLocation = null;
+    let location = null;
     try {
       const pos = await new Promise((resolve, reject) =>
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, enableHighAccuracy: true })
       );
-      currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      console.log("📍 Location obtained:", currentLocation);
+      location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     } catch (e) {
-      console.warn("Location error:", e.message);
+      console.warn('Location error:', e.message);
     }
 
-    // Emergency flash
     setEmergencyMessage(msg || '🚨 SOS Activated!');
     setFlashEmergency(true);
     setEmergencyData({
@@ -589,29 +621,21 @@ function AppContent() {
       message: msg || 'Manual SOS Triggered!',
       timestamp: new Date(),
       volume: 1.0,
-      location: currentLocation
+      location
     });
     showToast(`🚨 EMERGENCY: ${msg || 'SOS Activated!'}`, 'error');
-    console.log("🔴 Emergency flash shown");
+    if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
 
-    // Always vibrate
-    if (navigator.vibrate) {
-      navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
-      console.log("📳 SOS vibration triggered");
-    }
-
-    // Save to Firestore if logged in
     if (user && !isGuest) {
       try {
         await addDoc(collection(db, 'emergencies'), {
           userId: user.uid,
           message: msg || 'SOS',
           timestamp: serverTimestamp(),
-          location: currentLocation
+          location
         });
-        console.log("✅ SOS saved to Firebase");
       } catch (e) {
-        console.error("Error saving emergency:", e);
+        console.error('Error saving emergency:', e);
       }
     } else if (isGuest) {
       guestAddNotification({
@@ -620,27 +644,25 @@ function AppContent() {
         message: msg || 'SOS',
         timestamp: new Date().toISOString(),
         read: false,
-        location: currentLocation
+        location
       });
-      console.log("✅ SOS saved to guest notifications");
     }
 
-    // ===== SEND ALERTS TO ALL CONTACTS =====
-    if (currentRelatives && currentRelatives.length > 0) {
-      console.log(`📤 Sending SOS alerts to ${currentRelatives.length} contacts...`);
+    if (currentRelatives.length > 0) {
       currentRelatives.forEach(contact => {
-        sendAlertToContact(contact, msg || 'SOS', currentLocation, user?.email || 'Guest User');
+        sendAlertToContact(contact, msg || 'SOS', location, user?.email || 'Guest User');
       });
     } else {
-      console.warn("⚠️ No emergency contacts found!");
-      showToast("⚠️ No emergency contacts added. Add contacts in the Contacts tab.", "warning");
+      showToast('⚠️ No emergency contacts added. Add contacts in the Contacts tab.', 'warning');
     }
 
-    // Auto-hide flash after 8 seconds
     setTimeout(() => setFlashEmergency(false), 8000);
   };
 
-  // ===== LOADING SCREEN =====
+  // ================================================================
+  // RENDER
+  // ================================================================
+
   if (authLoading) {
     return (
       <div className="loading-screen">
@@ -651,17 +673,14 @@ function AppContent() {
     );
   }
 
-  // ===== INSTRUCTIONS PAGE =====
   if (showInstructions) {
     return <InstructionsPage onClose={() => setShowInstructions(false)} />;
   }
 
-  // ===== LANDING PAGE =====
   if (showLanding && !user && !isGuest) {
     return <LandingPage onGuestMode={handleGuestMode} onShowInstructions={() => setShowInstructions(true)} />;
   }
 
-  // ===== MAIN APP =====
   const isMobile = window.innerWidth <= 1024;
 
   return (
@@ -709,7 +728,6 @@ function AppContent() {
       />
 
       <div className={`content-area ${sidebarOpen ? 'sidebar-open' : ''}`}>
-
         <Header
           isListening={isListening}
           lang={lang}
@@ -731,36 +749,29 @@ function AppContent() {
         />
 
         <main className="main-content">
-
           {activeTab === 'dashboard' && (
             <>
               <div className="dashboard-grid">
                 <div className="dashboard-left">
-                  <div className="captions-box">
-                    <TranscriptBox
-                      transcript={transcript}
-                      isListening={isListening}
-                      startListening={startListening}
-                      stopListening={stopListening}
-                      clearTranscript={clearTranscript}
-                      error={speechError}
-                      browserInfo={browserInfo}
-                      setLang={setLang}
-                      currentLang={lang}
-                      retryListening={retryListening}
-                      microphonePermission={microphonePermission}
-                      recognitionStatus={recognitionStatus}
-                      supported={supported}
-                      onTranscriptChange={handleTranscriptChange}
-                    />
-                  </div>
+                  <TranscriptBox
+                    transcript={transcript}
+                    isListening={isListening}
+                    startListening={startListening}
+                    stopListening={stopListening}
+                    clearTranscript={clearTranscript}
+                    error={speechError}
+                    browserInfo={browserInfo}
+                    setLang={setLang}
+                    currentLang={lang}
+                    retryListening={retryListening}
+                    microphonePermission={microphonePermission}
+                    recognitionStatus={recognitionStatus}
+                    supported={supported}
+                    onTranscriptChange={handleTranscriptChange}
+                  />
                 </div>
-
                 <div className="dashboard-right">
-                  <div className="sign-box">
-                    <SignLanguageBox transcript={getSignLanguageText()} />
-                  </div>
-
+                  <SignLanguageBox transcript={getSignLanguageText()} />
                   <VisualAlert
                     isLoud={isLoud && emergencyNotificationsEnabled}
                     soundType={soundType}
@@ -774,12 +785,9 @@ function AppContent() {
 
               <div className="dashboard-primary">
                 <div className="sound-card">
-                  <h3 className="card-title-simple">
-                    <span>🔊</span> Sound Monitor
-                  </h3>
+                  <h3 className="card-title-simple"><span>🔊</span> Sound Monitor</h3>
                   <SoundVisualizer volume={volume} isLoud={isLoud} soundType={soundType} />
                 </div>
-
                 <RoadSafetyMonitor
                   isActive={roadSafetyActive}
                   onAlert={(alert) => {
@@ -878,10 +886,18 @@ function AppContent() {
                 </span>
               </div>
               <div className="emergency-numbers" style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-                <button className="emergency-btn police" style={{ flex: 1, padding: '16px', borderRadius: '16px', background: '#1A1E3A', border: '1px solid #4488FF', color: '#4488FF', fontWeight: 700, fontSize: '16px', cursor: 'pointer' }} onClick={() => window.location.href = 'tel:119'}>
+                <button
+                  className="emergency-btn police"
+                  style={{ flex: 1, padding: '16px', borderRadius: '16px', background: '#1A1E3A', border: '1px solid #4488FF', color: '#4488FF', fontWeight: 700, fontSize: '16px', cursor: 'pointer' }}
+                  onClick={() => window.location.href = 'tel:119'}
+                >
                   👮 {t('police') || 'Police'} (119)
                 </button>
-                <button className="emergency-btn ambulance" style={{ flex: 1, padding: '16px', borderRadius: '16px', background: '#1A1E3A', border: '1px solid #FF3355', color: '#FF3355', fontWeight: 700, fontSize: '16px', cursor: 'pointer' }} onClick={() => window.location.href = 'tel:1990'}>
+                <button
+                  className="emergency-btn ambulance"
+                  style={{ flex: 1, padding: '16px', borderRadius: '16px', background: '#1A1E3A', border: '1px solid #FF3355', color: '#FF3355', fontWeight: 700, fontSize: '16px', cursor: 'pointer' }}
+                  onClick={() => window.location.href = 'tel:1990'}
+                >
                   🚑 {t('ambulance') || 'Ambulance'} (1990)
                 </button>
               </div>
@@ -944,11 +960,14 @@ function AppContent() {
               currentFontSize={currentFontSize}
             />
           )}
-
         </main>
       </div>
 
-      {toastMessage.show && <div className={`toast-message ${toastMessage.type}`}>{toastMessage.message}</div>}
+      {toast.show && (
+        <div className={`toast-message ${toast.type}`} role="alert">
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

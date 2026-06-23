@@ -28,6 +28,7 @@ const TranscriptBox = ({
   const [showBraille, setShowBraille] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [typedText, setTypedText] = useState('');
+  const [charCount, setCharCount] = useState(0);
 
   const languageOptions = [
     { code: 'si-LK', label: 'සිංහල', flag: '🇱🇰' },
@@ -35,7 +36,6 @@ const TranscriptBox = ({
     { code: 'ta-LK', label: 'தமிழ்', flag: '🇱🇰' }
   ];
 
-  // Auto-scroll to bottom on new transcripts
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -68,6 +68,13 @@ const TranscriptBox = ({
     return text.toLowerCase().split('').map(char => brailleMap[char] || char).join('');
   };
 
+  const handleTypedTextChange = (e) => {
+    const value = e.target.value;
+    setTypedText(value);
+    setCharCount(value.length);
+    if (onTranscriptChange) onTranscriptChange(value);
+  };
+
   return (
     <div className={`transcript-card ${isListening ? 'listening-active' : ''}`}>
       
@@ -83,17 +90,12 @@ const TranscriptBox = ({
         </div>
 
         <div className="header-right">
-          {/* Language Selection Dropdown */}
           <div className="lang-select-container">
             <FiGlobe className="globe-icon" />
             <select 
               className="lang-select"
               value={currentLang || 'en-US'} 
-              onChange={(e) => {
-                setLang(e.target.value);
-                // Show a toast-like message in the error area
-                // We'll rely on the hook to show error
-              }}
+              onChange={(e) => setLang(e.target.value)}
             >
               {languageOptions.map((lang) => (
                 <option key={lang.code} value={lang.code}>
@@ -117,7 +119,7 @@ const TranscriptBox = ({
           <button className="copy-btn" onClick={handleCopy} disabled={!transcript && !typedText} title="Copy All">
             {copySuccess ? <FiCheck style={{ color: '#00FF88' }} /> : <FiCopy />}
           </button>
-          <button className="clear-btn" onClick={() => { clearTranscript(); setTypedText(''); }} disabled={!transcript && !typedText} title="Clear">
+          <button className="clear-btn" onClick={() => { clearTranscript(); setTypedText(''); setCharCount(0); }} disabled={!transcript && !typedText} title="Clear">
             <FiTrash2 />
           </button>
         </div>
@@ -151,8 +153,20 @@ const TranscriptBox = ({
         </div>
       )}
 
-      {/* ===== MAIN CAPTION DISPLAY AREA ===== */}
-      <div className="transcript-body" ref={scrollRef} style={{ fontSize: `${fontSize}px` }}>
+      {/* ===== MAIN CAPTION DISPLAY ===== */}
+      <div 
+        className="transcript-body" 
+        ref={scrollRef} 
+        style={{ 
+          fontSize: `${fontSize}px`,
+          background: 'rgba(0, 0, 0, 0.7)',
+          minHeight: '120px',
+          maxHeight: '220px',
+          overflowY: 'auto',
+          padding: '20px',
+          scrollBehavior: 'smooth'
+        }}
+      >
         {!transcript && !typedText ? (
           <div className="placeholder-container">
             <div className="placeholder-icon">🎙️</div>
@@ -169,7 +183,7 @@ const TranscriptBox = ({
             </p>
             {typedText && (
               <div className="typed-text-section">
-                <span className="typed-tag">Manual Input:</span>
+                <span className="typed-tag">📝 Manual Input</span>
                 <p className="typed-content">{showBraille ? convertToBraille(typedText) : typedText}</p>
               </div>
             )}
@@ -198,19 +212,35 @@ const TranscriptBox = ({
         </button>
       </div>
 
-      {/* ===== SINHALA MANUAL TYPING COMPONENT ===== */}
+      {/* ===== SINHALA MANUAL TYPING – ENHANCED ===== */}
       {currentLang === 'si-LK' && (
         <div className="sinhala-typing-extension">
-          <div className="extension-header">✍️ සිංහල ටයිපින් සහය (Singlish Transliteration)</div>
+          <div className="extension-header">
+            <span className="extension-icon">✍️</span>
+            <span>සිංහල ටයිපින් සහය</span>
+            <span className="extension-badge">● සජීවී</span>
+            <span className="extension-char-count">{charCount} අකුරු</span>
+          </div>
+          
           <textarea
             className="sinhala-input"
-            placeholder="methana singlish valin type කරන්න... (e.g., ammaa -> අම්මා)"
+            placeholder="මෙතනට singlish වලින් type කරන්න... (e.g., ammaa -> අම්මා, kohomada -> කොහොමද)"
             value={typedText}
-            onChange={(e) => {
-              setTypedText(e.target.value);
-              if (onTranscriptChange) onTranscriptChange(e.target.value);
-            }}
+            onChange={handleTypedTextChange}
           />
+          
+          {typedText && (
+            <div className="sinhala-preview">
+              <span className="preview-label">🔍 පෙරදසුන</span>
+              <span className="preview-text">{typedText}</span>
+            </div>
+          )}
+
+          <div className="sinhala-tips">
+            <span className="tip-item">💡 ammaa → අම්මා</span>
+            <span className="tip-item">💡 kohomada → කොහොමද</span>
+            <span className="tip-item">💡 sthuthi → ස්තුතියි</span>
+          </div>
         </div>
       )}
 

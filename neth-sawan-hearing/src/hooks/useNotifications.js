@@ -1,19 +1,20 @@
+// src/hooks/useNotifications.js
 import { useState, useEffect, useCallback } from 'react';
+import { auth, db } from '../firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export const useNotifications = () => {
   const [permission, setPermission] = useState('default');
   const [notificationQueue, setNotificationQueue] = useState([]);
   const [relatives, setRelatives] = useState([]);
   const [autoSendStatus, setAutoSendStatus] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
 
+  // ---- Permission ----
   useEffect(() => {
     if ('Notification' in window) {
       setPermission(Notification.permission);
     }
-    try {
-      const saved = localStorage.getItem('neth_sawan_relatives');
-      if (saved) setRelatives(JSON.parse(saved));
-    } catch {}
   }, []);
 
   const requestPermission = useCallback(async () => {
@@ -27,13 +28,59 @@ export const useNotifications = () => {
     }
   }, []);
 
-  const saveRelatives = (list) => {
-    try { localStorage.setItem('neth_sawan_relatives', JSON.stringify(list)); } catch {}
-  };
+  // ---- Load contacts from Firestore (if logged in) or localStorage (guest) ----
+  const loadContacts = useCallback(async () => {
+    const user = auth.currentUser;
+    let list = [];
+    if (user) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          list = data.emergencyContacts || [];
+        }
+      } catch (error) {
+        console.error('Failed to load contacts from Firestore:', error);
+      }
+    } else {
+      // Guest: load from localStorage
+      try {
+        const saved = localStorage.getItem('neth_sawan_relatives');
+        if (saved) list = JSON.parse(saved);
+      } catch {}
+    }
+    setRelatives(list);
+    setIsLoading(false);
+  }, []);
 
-  const addRelative = useCallback((data) => {
+  // ---- Save contacts (Firestore for logged‑in, localStorage for guest) ----
+  const saveContacts = useCallback(async (list) => {
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        await setDoc(doc(db, 'users', user.uid), { emergencyContacts: list }, { merge: true });
+      } catch (error) {
+        console.error('Failed to save contacts to Firestore:', error);
+      }
+    } else {
+      try {
+        localStorage.setItem('neth_sawan_relatives', JSON.stringify(list));
+      } catch {}
+    }
+  }, []);
+
+  // ---- Reload when auth state changes ----
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(() => {
+      loadContacts();
+    });
+    return () => unsubscribe();
+  }, [loadContacts]);
+
+  // ---- CRUD operations (all call saveContacts) ----
+  const addRelative = useCallback(async (data) => {
     const entry = {
-      id: Date.now(),
+      id: Date.now().toString(),
       name: data.name.trim(),
       phone: data.phone?.trim() || '',
       email: data.email?.trim() || '',
@@ -47,28 +94,29 @@ export const useNotifications = () => {
     };
     setRelatives(prev => {
       const updated = [...prev, entry];
-      saveRelatives(updated);
+      saveContacts(updated);
       return updated;
     });
     return entry;
-  }, []);
+  }, [saveContacts]);
 
-  const removeRelative = useCallback((id) => {
+  const removeRelative = useCallback(async (id) => {
     setRelatives(prev => {
       const updated = prev.filter(r => r.id !== id);
-      saveRelatives(updated);
+      saveContacts(updated);
       return updated;
     });
-  }, []);
+  }, [saveContacts]);
 
-  const updateRelative = useCallback((id, updates) => {
+  const updateRelative = useCallback(async (id, updates) => {
     setRelatives(prev => {
       const updated = prev.map(r => r.id === id ? { ...r, ...updates } : r);
-      saveRelatives(updated);
+      saveContacts(updated);
       return updated;
     });
-  }, []);
+  }, [saveContacts]);
 
+  // ---- Format phone for WhatsApp ----
   const formatPhoneForWhatsApp = (phone) => {
     let cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
     if (cleaned.startsWith('0')) cleaned = '+94' + cleaned.slice(1);
@@ -76,6 +124,7 @@ export const useNotifications = () => {
     return cleaned.replace('+', '');
   };
 
+  // ---- Build messages (same as before) ----
   const buildBeautifulMessage = (data, relative) => {
     const time = new Date(data.timestamp || new Date()).toLocaleTimeString('en-LK', {
       hour: '2-digit', minute: '2-digit', hour12: true
@@ -83,7 +132,6 @@ export const useNotifications = () => {
     const date = new Date(data.timestamp || new Date()).toLocaleDateString('en-LK', {
       day: 'numeric', month: 'long', year: 'numeric'
     });
-    
     let msg = `🚨 *EMERGENCY ALERT - Neth-Sawan* 🚨\n\n`;
     msg += `─────────────────────────────────────\n`;
     msg += `*To:* ${relative.name}\n`;
@@ -93,17 +141,14 @@ export const useNotifications = () => {
     msg += `📅 *Date:* ${date}\n`;
     msg += `⏰ *Time:* ${time}\n`;
     msg += `📝 *Message:* ${data.message || 'Immediate assistance may be needed.'}\n\n`;
-    
     if (data.location) {
       msg += `📍 *Location:*\n`;
       msg += `https://www.google.com/maps?q=${data.location.lat},${data.location.lng}\n\n`;
     }
-    
     msg += `─────────────────────────────────────\n`;
     msg += `⚠️ *URGENT: Please respond as soon as possible* ⚠️\n`;
     msg += `─────────────────────────────────────\n\n`;
     msg += `_This is an automated emergency alert from Neth-Sawan Hearing Assistant._`;
-    
     return msg;
   };
 
@@ -111,45 +156,36 @@ export const useNotifications = () => {
     const time = new Date(data.timestamp || new Date()).toLocaleTimeString('en-LK', {
       hour: '2-digit', minute: '2-digit', hour12: true
     });
-    
     let msg = `EMERGENCY ALERT - Neth-Sawan\n`;
     msg += `To: ${relative.name}\n`;
     msg += `Detected: ${data.soundType || 'Emergency button pressed'}\n`;
     msg += `Time: ${time}\n`;
     msg += `Message: ${data.message || 'Immediate assistance needed!'}`;
-    
     if (data.location) {
       msg += `\nLocation: https://www.google.com/maps?q=${data.location.lat},${data.location.lng}`;
     }
-    
     return msg;
   };
 
+  // ---- Auto‑send WhatsApp ----
   const autoSendWhatsApp = useCallback(async (relative, emergencyData) => {
     if (!relative.autoSendWhatsApp || !relative.phone) return false;
-    
     const message = buildBeautifulMessage(emergencyData, relative);
     const phoneNumber = formatPhoneForWhatsApp(relative.phone);
     const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    
     setAutoSendStatus(prev => ({ ...prev, [relative.id]: 'sending' }));
-    
     try {
       window.open(url, '_blank', 'noopener,noreferrer');
-      
       if (Notification.permission === 'granted') {
         new Notification(`WhatsApp Sent to ${relative.name}`, {
           body: `Emergency alert has been sent via WhatsApp`,
           icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670051.png'
         });
       }
-      
       setAutoSendStatus(prev => ({ ...prev, [relative.id]: 'sent' }));
-      
       setTimeout(() => {
         setAutoSendStatus(prev => ({ ...prev, [relative.id]: null }));
       }, 3000);
-      
       return true;
     } catch (error) {
       console.error('Auto WhatsApp send failed:', error);
@@ -178,6 +214,7 @@ export const useNotifications = () => {
     window.location.href = `tel:${relative.phone}`;
   }, []);
 
+  // ---- Desktop notification helper ----
   const sendDesktopNotification = (title, body, tag) => {
     if (permission !== 'granted') return;
     try {
@@ -194,6 +231,7 @@ export const useNotifications = () => {
     } catch {}
   };
 
+  // ---- Notify all relatives ----
   const notifyRelatives = useCallback(async (emergencyData) => {
     const {
       message = 'Emergency detected',
@@ -231,15 +269,14 @@ export const useNotifications = () => {
           `emg-${notification.id}-${relative.id}`
         );
       }
-
       if (relative.autoSendWhatsApp && relative.notifyByWhatsApp) {
         await autoSendWhatsApp(relative, { ...emergencyData, location, timestamp });
       }
     }
-
     return { notification, location, relatives };
   }, [permission, relatives, autoSendWhatsApp]);
 
+  // ---- Notification queue management ----
   const markAsRead = useCallback((id) => {
     setNotificationQueue(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   }, []);
@@ -248,10 +285,12 @@ export const useNotifications = () => {
     setNotificationQueue([]);
   }, []);
 
+  // ---- Return everything ----
   return {
     permission,
     requestPermission,
     relatives,
+    isLoading,
     addRelative,
     removeRelative,
     updateRelative,
