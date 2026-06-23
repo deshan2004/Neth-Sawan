@@ -1,5 +1,5 @@
 // src/components/RoadSafetyMonitor.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import './RoadSafetyMonitor.css';
 
@@ -11,101 +11,122 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
   const [vehicleDirection, setVehicleDirection] = useState(null);
   const [distance, setDistance] = useState(null);
   const [volume, setVolume] = useState(0);
-  
+  const [frequencyData, setFrequencyData] = useState({ low: 0, mid: 0, high: 0 });
+  const [sensitivity, setSensitivity] = useState(0.25); // 0.1 – 0.5
+
   const audioContextRef = useRef(null);
   const mediaStreamRef = useRef(null);
   const analyserRef = useRef(null);
   const animationRef = useRef(null);
   const alertTimeoutRef = useRef(null);
+  const stereoDataRef = useRef(null);
 
+  // Advanced sound classification with frequency band analysis
   const VEHICLE_SOUNDS = {
     HORN: {
       name: '🚨 Vehicle Horn',
       severity: 'critical',
-      color: '#FF0000',
-      description: 'Car horn detected - Vehicle approaching!'
+      color: '#FF0033',
+      description: 'Car horn – vehicle approaching!',
+      icon: '📢'
     },
     ENGINE: {
       name: '🏎️ Engine Sound',
       severity: 'high',
       color: '#FF6600',
-      description: 'Vehicle engine detected - Watch out!'
+      description: 'Vehicle engine – watch out!',
+      icon: '🔊'
     },
     TIRE_SCREECH: {
       name: '⚠️ Tire Screech',
       severity: 'critical',
-      color: '#FF0000',
-      description: 'Braking vehicle! Emergency!'
+      color: '#FF0033',
+      description: 'Braking vehicle – emergency!',
+      icon: '🚨'
     },
     SIREN: {
       name: '🚨 Emergency Siren',
       severity: 'critical',
-      color: '#FF0000',
-      description: 'Emergency vehicle approaching!'
+      color: '#FF0033',
+      description: 'Emergency vehicle approaching!',
+      icon: '🚨'
     },
     TRAIN: {
       name: '🚂 Train Horn',
       severity: 'critical',
       color: '#FF4400',
-      description: 'Train approaching - Stay away from tracks!'
+      description: 'Train approaching – stay away from tracks!',
+      icon: '🚂'
     },
     BICYCLE_BELL: {
-      name: '🚲 Bicycle Bell',
+      name: '🔔 Bicycle Bell',
       severity: 'medium',
       color: '#FFAA00',
-      description: 'Bicycle nearby'
+      description: 'Bicycle nearby',
+      icon: '🚲'
     },
     MOTORCYCLE: {
       name: '🏍️ Motorcycle',
       severity: 'high',
       color: '#FF8800',
-      description: 'Motorcycle approaching'
+      description: 'Motorcycle approaching',
+      icon: '🏍️'
     },
     TRUCK: {
       name: '🚛 Heavy Truck',
       severity: 'high',
       color: '#FF5500',
-      description: 'Large truck nearby'
+      description: 'Large truck nearby',
+      icon: '🚛'
     }
   };
 
+  // ── Start / Stop ──
   useEffect(() => {
     if (isActive) {
       startMonitoring();
     } else {
       stopMonitoring();
     }
-    return () => {
-      stopMonitoring();
-    };
+    return () => stopMonitoring();
   }, [isActive]);
 
   const startMonitoring = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true,
-        video: false 
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
       });
-      
       mediaStreamRef.current = stream;
-      
+
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       audioContextRef.current = audioContext;
-      
+
       const analyser = audioContext.createAnalyser();
       analyserRef.current = analyser;
       analyser.fftSize = 2048;
-      
+      analyser.smoothingTimeConstant = 0.8;
+
       const source = audioContext.createMediaStreamSource(stream);
       source.connect(analyser);
-      
+
+      // For stereo panning (direction)
+      const splitter = audioContext.createChannelSplitter(2);
+      source.connect(splitter);
+
+      const leftAnalyser = audioContext.createAnalyser();
+      leftAnalyser.fftSize = 1024;
+      const rightAnalyser = audioContext.createAnalyser();
+      rightAnalyser.fftSize = 1024;
+      splitter.connect(leftAnalyser, 0);
+      splitter.connect(rightAnalyser, 1);
+      stereoDataRef.current = { leftAnalyser, rightAnalyser };
+
       await audioContext.resume();
-      
+
       setIsMonitoring(true);
       if (showToast) showToast(t('monitorActive'), 'success');
-      
+
       analyzeAudio();
-      
     } catch (error) {
       console.error('Microphone access error:', error);
       if (showToast) showToast(t('microphoneRequired'), 'error');
@@ -113,124 +134,149 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
   };
 
   const stopMonitoring = () => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-    }
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    if (audioContextRef.current) audioContextRef.current.close();
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
     }
-    if (alertTimeoutRef.current) {
-      clearTimeout(alertTimeoutRef.current);
-    }
+    if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
     setIsMonitoring(false);
     setCurrentAlert(null);
+    setVehicleDirection(null);
+    setDistance(null);
+    setFrequencyData({ low: 0, mid: 0, high: 0 });
   };
 
-  const analyzeAudio = () => {
+  // ── Audio Analysis Loop ──
+  const analyzeAudio = useCallback(() => {
     if (!analyserRef.current) return;
-    
+
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
     analyserRef.current.getByteFrequencyData(dataArray);
-    
+
+    // Overall volume
     let sum = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-      sum += dataArray[i];
-    }
+    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
     const avgVolume = sum / dataArray.length / 255;
     setVolume(avgVolume);
-    
+
+    // Frequency bands for visual
+    const lowBand = dataArray.slice(0, 80);
+    const midBand = dataArray.slice(80, 200);
+    const highBand = dataArray.slice(200, 400);
+    const lowAvg = lowBand.reduce((a,b) => a + b, 0) / lowBand.length / 255;
+    const midAvg = midBand.reduce((a,b) => a + b, 0) / midBand.length / 255;
+    const highAvg = highBand.reduce((a,b) => a + b, 0) / highBand.length / 255;
+    setFrequencyData({ low: lowAvg, mid: midAvg, high: highAvg });
+
+    // Direction from stereo
+    estimateDirection();
+
+    // Detect vehicle sounds
     detectVehicleSounds(dataArray, avgVolume);
-    estimateDirection(dataArray);
     estimateDistance(avgVolume);
-    
+
     animationRef.current = requestAnimationFrame(analyzeAudio);
+  }, []);
+
+  // ── Direction Estimation (stereo panning) ──
+  const estimateDirection = () => {
+    if (!stereoDataRef.current) return;
+    const { leftAnalyser, rightAnalyser } = stereoDataRef.current;
+    const leftData = new Uint8Array(leftAnalyser.frequencyBinCount);
+    const rightData = new Uint8Array(rightAnalyser.frequencyBinCount);
+    leftAnalyser.getByteFrequencyData(leftData);
+    rightAnalyser.getByteFrequencyData(rightData);
+
+    const leftSum = leftData.reduce((a,b) => a + b, 0);
+    const rightSum = rightData.reduce((a,b) => a + b, 0);
+    const diff = leftSum - rightSum;
+    const threshold = 50; // sensitivity
+    if (Math.abs(diff) > threshold) {
+      setVehicleDirection(diff > 0 ? 'left' : 'right');
+    } else {
+      setVehicleDirection(null);
+    }
   };
 
+  // ── Detection Logic ──
   const detectVehicleSounds = (dataArray, avgVolume) => {
-    const lowFreqRegion = dataArray.slice(0, 50);
-    const midFreqRegion = dataArray.slice(50, 150);
-    const highFreqRegion = dataArray.slice(150, 300);
-    
-    const lowAvg = lowFreqRegion.reduce((a,b) => a + b, 0) / lowFreqRegion.length;
-    const midAvg = midFreqRegion.reduce((a,b) => a + b, 0) / midFreqRegion.length;
-    const highAvg = highFreqRegion.reduce((a,b) => a + b, 0) / highFreqRegion.length;
-    
-    if (highAvg > 200 && avgVolume > 0.3) {
+    const lowAvg = dataArray.slice(0, 80).reduce((a,b) => a + b, 0) / 80;
+    const midAvg = dataArray.slice(80, 200).reduce((a,b) => a + b, 0) / 120;
+    const highAvg = dataArray.slice(200, 400).reduce((a,b) => a + b, 0) / 200;
+
+    // Normalize to 0-1
+    const normLow = lowAvg / 255;
+    const normMid = midAvg / 255;
+    const normHigh = highAvg / 255;
+
+    // Sensitivity threshold applied
+    const threshold = sensitivity;
+
+    if (normHigh > 0.7 && avgVolume > threshold) {
       triggerAlert('HORN', avgVolume);
     }
-    else if (midAvg > 150 && highAvg > 120 && isSirenPattern(dataArray)) {
+    else if (normMid > 0.6 && normHigh > 0.5 && isSirenPattern(dataArray)) {
       triggerAlert('SIREN', avgVolume);
     }
-    else if (lowAvg > 180 && avgVolume > 0.25) {
+    else if (normLow > 0.7 && avgVolume > threshold * 1.2) {
       triggerAlert('ENGINE', avgVolume);
     }
-    else if (highAvg > 220 && isSharpSpike(dataArray)) {
+    else if (normHigh > 0.8 && isSharpSpike(dataArray)) {
       triggerAlert('TIRE_SCREECH', avgVolume);
     }
-    else if (lowAvg > 150 && dataArray.slice(0, 20).some(v => v > 180)) {
+    else if (normLow > 0.6 && dataArray.slice(0, 30).some(v => v > 200)) {
       triggerAlert('TRAIN', avgVolume);
     }
-    else if (midAvg > 160 && isMotorcyclePattern(dataArray)) {
+    else if (normMid > 0.65 && isMotorcyclePattern(dataArray)) {
       triggerAlert('MOTORCYCLE', avgVolume);
     }
-    else if (lowAvg > 170 && dataArray.slice(0, 30).some(v => v > 160)) {
+    else if (normLow > 0.65 && dataArray.slice(0, 40).some(v => v > 180)) {
       triggerAlert('TRUCK', avgVolume);
     }
-    else if (highAvg > 180 && isBellPattern(dataArray)) {
+    else if (normHigh > 0.7 && isBellPattern(dataArray)) {
       triggerAlert('BICYCLE_BELL', avgVolume);
     }
   };
 
-  const isSirenPattern = (dataArray) => {
+  // Helper patterns
+  const isSirenPattern = (data) => {
     let peaks = 0;
-    for (let i = 100; i < 200; i += 10) {
-      if (dataArray[i] > 140) peaks++;
+    for (let i = 120; i < 220; i += 15) {
+      if (data[i] > 150) peaks++;
     }
-    return peaks > 3;
+    return peaks > 4;
   };
 
-  const isSharpSpike = (dataArray) => {
+  const isSharpSpike = (data) => {
     let spikes = 0;
-    for (let i = 250; i < 350; i++) {
-      if (dataArray[i] > dataArray[i-1] + 50 && dataArray[i] > dataArray[i+1] + 50) {
-        spikes++;
-      }
+    for (let i = 280; i < 380; i++) {
+      if (data[i] > data[i-1] + 60 && data[i] > data[i+1] + 60) spikes++;
     }
-    return spikes > 2;
+    return spikes > 3;
   };
 
-  const isMotorcyclePattern = (dataArray) => {
-    return dataArray[45] > 150 && dataArray[80] > 130;
+  const isMotorcyclePattern = (data) => {
+    return data[50] > 160 && data[90] > 140;
   };
 
-  const isBellPattern = (dataArray) => {
-    return dataArray[280] > 170 && dataArray[290] > 140;
+  const isBellPattern = (data) => {
+    return data[300] > 180 && data[320] > 150;
   };
 
-  const estimateDirection = (dataArray) => {
-    setVehicleDirection(Math.random() > 0.5 ? 'left' : 'right');
+  const estimateDistance = (vol) => {
+    if (vol > 0.6) setDistance('very close');
+    else if (vol > 0.4) setDistance('close');
+    else if (vol > 0.25) setDistance('approaching');
+    else setDistance('far');
   };
 
-  const estimateDistance = (volume) => {
-    if (volume > 0.6) {
-      setDistance('very close');
-    } else if (volume > 0.4) {
-      setDistance('close');
-    } else if (volume > 0.25) {
-      setDistance('approaching');
-    } else {
-      setDistance('far');
-    }
-  };
-
+  // ── Trigger Alert ──
   const triggerAlert = (soundType, volumeLevel) => {
     const vehicleSound = VEHICLE_SOUNDS[soundType];
     if (!vehicleSound) return;
     if (alertTimeoutRef.current) return;
-    
+
     const alert = {
       id: Date.now(),
       type: soundType,
@@ -238,93 +284,91 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
       severity: vehicleSound.severity,
       color: vehicleSound.color,
       description: vehicleSound.description,
+      icon: vehicleSound.icon,
       distance: distance,
       direction: vehicleDirection,
       volume: volumeLevel,
       timestamp: new Date()
     };
-    
+
     setCurrentAlert(alert);
     setAlertHistory(prev => [alert, ...prev].slice(0, 20));
-    
+
     triggerVisualAlert(alert);
     triggerHapticAlert(alert);
-    
+
     if (onAlert) onAlert(alert);
-    
+
     alertTimeoutRef.current = setTimeout(() => {
       setCurrentAlert(null);
       alertTimeoutRef.current = null;
     }, 5000);
   };
 
+  // ── Visual & Haptic Feedback ──
   const triggerVisualAlert = (alert) => {
+    // Flash overlay
     const flashDiv = document.createElement('div');
-    flashDiv.style.position = 'fixed';
-    flashDiv.style.top = '0';
-    flashDiv.style.left = '0';
-    flashDiv.style.width = '100%';
-    flashDiv.style.height = '100%';
-    flashDiv.style.backgroundColor = alert.color;
-    flashDiv.style.opacity = '0.6';
-    flashDiv.style.zIndex = '9999';
-    flashDiv.style.pointerEvents = 'none';
+    flashDiv.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: ${alert.color}; opacity: 0.5; z-index: 9999;
+      pointer-events: none; transition: opacity 0.3s;
+    `;
     document.body.appendChild(flashDiv);
-    
-    setTimeout(() => {
-      flashDiv.remove();
-    }, 500);
-    
+    setTimeout(() => flashDiv.remove(), 500);
+
+    // Direction arrow banner
     if (alert.direction) {
-      const directionDiv = document.createElement('div');
-      directionDiv.innerHTML = alert.direction === 'left' ? '← VEHICLE LEFT ←' : '→ VEHICLE RIGHT →';
-      directionDiv.style.position = 'fixed';
-      directionDiv.style[alert.direction === 'left' ? 'left' : 'right'] = '20px';
-      directionDiv.style.top = '50%';
-      directionDiv.style.transform = 'translateY(-50%)';
-      directionDiv.style.backgroundColor = alert.color;
-      directionDiv.style.color = 'white';
-      directionDiv.style.padding = '20px';
-      directionDiv.style.borderRadius = '16px';
-      directionDiv.style.fontSize = '24px';
-      directionDiv.style.fontWeight = 'bold';
-      directionDiv.style.zIndex = '9999';
-      directionDiv.style.animation = 'pulse 0.5s ease infinite';
-      document.body.appendChild(directionDiv);
-      
-      setTimeout(() => {
-        directionDiv.remove();
-      }, 3000);
+      const dirDiv = document.createElement('div');
+      const arrow = alert.direction === 'left' ? '◀' : '▶';
+      dirDiv.innerHTML = `${arrow} ${alert.direction.toUpperCase()} ${arrow}`;
+      dirDiv.style.cssText = `
+        position: fixed; top: 50%; transform: translateY(-50%);
+        ${alert.direction === 'left' ? 'left: 20px;' : 'right: 20px;'}
+        background: ${alert.color}; color: white; padding: 20px 24px;
+        border-radius: 16px; font-size: 28px; font-weight: 900;
+        z-index: 9999; box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        animation: dirFlash 0.5s ease infinite alternate;
+      `;
+      document.head.insertAdjacentHTML('beforeend', `
+        <style>
+          @keyframes dirFlash {
+            0% { opacity: 0.6; transform: translateY(-50%) scale(0.95); }
+            100% { opacity: 1; transform: translateY(-50%) scale(1.05); }
+          }
+        </style>
+      `);
+      document.body.appendChild(dirDiv);
+      setTimeout(() => dirDiv.remove(), 3000);
     }
   };
 
   const triggerHapticAlert = (alert) => {
-    if (navigator.vibrate) {
-      if (alert.severity === 'critical') {
-        navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
-      } else if (alert.severity === 'high') {
-        navigator.vibrate([400, 150, 400, 150, 400]);
-      } else {
-        navigator.vibrate([300, 100, 300]);
-      }
-    }
+    if (!navigator.vibrate) return;
+    const pattern = alert.severity === 'critical' 
+      ? [500, 200, 500, 200, 500, 200, 700]
+      : alert.severity === 'high'
+      ? [400, 150, 400, 150, 400]
+      : [300, 100, 300];
+    navigator.vibrate(pattern);
   };
 
-  const clearCurrentAlert = () => {
-    if (alertTimeoutRef.current) {
-      clearTimeout(alertTimeoutRef.current);
-      alertTimeoutRef.current = null;
-    }
-    setCurrentAlert(null);
+  // ── Clear History ──
+  const clearHistory = () => setAlertHistory([]);
+
+  // ── Test Alert ──
+  const simulateAlert = () => {
+    triggerAlert('HORN', 0.8);
   };
 
+  // ── Format Time ──
   const formatTime = (date) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
     <div className="road-safety-monitor">
-      {/* Header Card */}
+      {/* Header */}
       <div className="safety-card header-card">
         <div className="card-header">
           <span className="card-icon">🛣️</span>
@@ -336,7 +380,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
         </div>
       </div>
 
-      {/* Action Card */}
+      {/* Action & Controls */}
       <div className="safety-card action-card">
         {!isMonitoring ? (
           <button className="start-monitor-btn" onClick={startMonitoring}>
@@ -350,39 +394,48 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
             <span className="btn-text">{t('stopMonitoring')}</span>
           </button>
         )}
+        <div className="monitor-controls">
+          <button className="test-btn" onClick={simulateAlert} disabled={!isMonitoring}>
+            🔔 Alert
+          </button>
+          <button className="clear-btn" onClick={clearHistory} disabled={alertHistory.length === 0}>
+            🗑️ Clear
+          </button>
+        </div>
+        <div className="sensitivity-control">
+          <label>🔧 Sensitivity: <span>{Math.round(sensitivity * 100)}%</span></label>
+          <input
+            type="range"
+            min="0.1"
+            max="0.5"
+            step="0.01"
+            value={sensitivity}
+            onChange={e => setSensitivity(parseFloat(e.target.value))}
+            className="sensitivity-slider"
+          />
+        </div>
       </div>
 
-      {/* Waveform Card */}
-      <div className="safety-card waveform-card">
+      {/* Spectrum Analyzer (Frequency Bands) */}
+      <div className="safety-card spectrum-card">
         <div className="card-header">
-          <span className="card-icon">🌊</span>
-          <h3 className="card-title">{t('waveform')}</h3>
+          <span className="card-icon">📊</span>
+          <h3 className="card-title">Frequency Spectrum</h3>
           <span className="volume-badge">{Math.round(volume * 100)}%</span>
         </div>
-        <div className="waveform-container">
-          <div className="waveform-visual">
-            <div className="waveform-bars">
-              {[...Array(40)].map((_, i) => {
-                const height = Math.max(5, Math.sin(i / 3) * volume * 80 + 20 + Math.random() * 10);
-                return (
-                  <div 
-                    key={i} 
-                    className={`wave-bar ${volume > 0.3 ? 'loud' : ''}`}
-                    style={{ 
-                      height: `${height}%`,
-                      animationDelay: `${i * 0.05}s`
-                    }}
-                  />
-                );
-              })}
+        <div className="spectrum-bars">
+          {['low', 'mid', 'high'].map((band) => (
+            <div key={band} className="spectrum-band">
+              <div
+                className="spectrum-fill"
+                style={{
+                  height: `${Math.min(frequencyData[band] * 100, 100)}%`,
+                  background: band === 'low' ? '#FF6600' : band === 'mid' ? '#FFCC00' : '#00DDFF'
+                }}
+              />
+              <span className="spectrum-label">{band}</span>
             </div>
-          </div>
-          {isMonitoring && (
-            <div className="waveform-status">
-              <span className="recording-dot"></span>
-              <span>{t('monitorActive')}</span>
-            </div>
-          )}
+          ))}
         </div>
       </div>
 
@@ -390,32 +443,35 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
       {currentAlert && (
         <div className="safety-card alert-card" style={{ borderColor: currentAlert.color }}>
           <div className="alert-content">
-            <span className="alert-icon">🚨</span>
+            <span className="alert-icon">{currentAlert.icon}</span>
             <div className="alert-info">
               <h4 className="alert-title">{currentAlert.name}</h4>
               <p className="alert-description">{currentAlert.description}</p>
               <div className="alert-tags">
                 {currentAlert.direction && (
                   <span className="tag direction">
-                    {currentAlert.direction === 'left' ? t('left') : t('right')}
+                    {currentAlert.direction === 'left' ? '← Left' : 'Right →'}
                   </span>
                 )}
                 {currentAlert.distance && (
                   <span className="tag distance">
-                    {currentAlert.distance === 'very close' ? t('immediate') : 
-                     currentAlert.distance === 'close' ? t('near') : 
-                     currentAlert.distance === 'approaching' ? 'Approaching' : t('distance')}
+                    {currentAlert.distance === 'very close' ? '⚠️ Immediate' :
+                     currentAlert.distance === 'close' ? '🔴 Near' :
+                     currentAlert.distance === 'approaching' ? '🟠 Approaching' : '🟡 Far'}
                   </span>
                 )}
                 <span className="tag volume">{Math.round(currentAlert.volume * 100)}%</span>
               </div>
             </div>
-            <button className="dismiss-alert" onClick={clearCurrentAlert}>✕</button>
+            <button className="dismiss-alert" onClick={() => {
+              if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
+              setCurrentAlert(null);
+            }}>✕</button>
           </div>
         </div>
       )}
 
-      {/* Direction Card */}
+      {/* Direction & Distance */}
       <div className="safety-card direction-card">
         <div className="direction-indicator">
           <div className={`direction left ${vehicleDirection === 'left' ? 'active' : ''}`}>
@@ -423,7 +479,7 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
             <small>LEFT</small>
           </div>
           <div className="direction-center">
-            <span className="you-icon">🚶</span>
+            <span className="you-icon">🧍</span>
             <span className="you-label">YOU</span>
           </div>
           <div className={`direction right ${vehicleDirection === 'right' ? 'active' : ''}`}>
@@ -434,20 +490,20 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
         <div className="warning-zones">
           <div className={`zone ${distance === 'very close' ? 'danger' : ''}`}>
             <div className="zone-circle zone-1"></div>
-            <span>{t('immediate')}</span>
+            <span>Immediate</span>
           </div>
           <div className={`zone ${distance === 'close' ? 'warning' : ''}`}>
             <div className="zone-circle zone-2"></div>
-            <span>{t('near')}</span>
+            <span>Near</span>
           </div>
           <div className="zone">
             <div className="zone-circle zone-3"></div>
-            <span>{t('distance')}</span>
+            <span>Far</span>
           </div>
         </div>
       </div>
 
-      {/* History Card */}
+      {/* History */}
       <div className="safety-card history-card">
         <div className="card-header">
           <span className="card-icon">📜</span>
@@ -458,19 +514,12 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
           {alertHistory.length === 0 ? (
             <div className="history-empty">
               <span className="empty-icon">🔇</span>
-              <p>{t('noSoundsDetected')}</p>
+              <p>No alerts yet. Start monitoring to detect sounds.</p>
             </div>
           ) : (
             alertHistory.slice(0, 8).map((alert) => (
               <div key={alert.id} className="history-item" style={{ borderLeftColor: alert.color }}>
-                <span className="history-icon">
-                  {alert.type === 'HORN' ? '📢' :
-                   alert.type === 'ENGINE' ? '🏎️' :
-                   alert.type === 'SIREN' ? '🚨' :
-                   alert.type === 'TIRE_SCREECH' ? '⚠️' :
-                   alert.type === 'TRAIN' ? '🚂' :
-                   alert.type === 'MOTORCYCLE' ? '🏍️' : '🚗'}
-                </span>
+                <span className="history-icon">{alert.icon}</span>
                 <div className="history-info">
                   <span className="history-name">{alert.name}</span>
                   <span className="history-time">{formatTime(alert.timestamp)}</span>
@@ -486,46 +535,21 @@ const RoadSafetyMonitor = ({ isActive, onAlert, showToast }) => {
         </div>
       </div>
 
-      {/* Tips Card */}
+      {/* Tips */}
       <div className="safety-card tips-card">
         <div className="card-header">
           <span className="card-icon">🛡️</span>
-          <h3 className="card-title">{t('safetyTipsTitle')}</h3>
+          <h3 className="card-title">Safety Tips</h3>
         </div>
         <ul className="tips-list">
-          <li><span className="tip-number">1</span> {t('tip1')}</li>
-          <li><span className="tip-number">2</span> {t('tip2')}</li>
-          <li><span className="tip-number">3</span> {t('tip3')}</li>
-          <li><span className="tip-number">4</span> {t('tip4')}</li>
-          <li><span className="tip-number">5</span> {t('tip5')}</li>
-          <li className="tip-important"><span className="tip-number">6</span> {t('tip6')}</li>
+          <li><span className="tip-number">1</span> Always face traffic when walking on roads</li>
+          <li><span className="tip-number">2</span> Stay in well-lit areas at night</li>
+          <li><span className="tip-number">3</span> Use sidewalks when available</li>
+          <li><span className="tip-number">4</span> Watch for vehicle lights and shadows</li>
+          <li><span className="tip-number">5</span> This monitor listens for approaching vehicles</li>
+          <li className="tip-important"><span className="tip-number">6</span> Red alert = Immediate danger, move away!</li>
         </ul>
       </div>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        @keyframes barBounce {
-          0%, 100% { transform: scaleY(0.5); }
-          50% { transform: scaleY(1); }
-        }
-        .wave-bar {
-          animation: barBounce 0.6s ease-in-out infinite alternate;
-        }
-        .wave-bar.loud {
-          background: var(--dynamic-primary, #00DDB3) !important;
-        }
-        .recording-dot {
-          display: inline-block;
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-          background: #FF0033;
-          animation: pulse 1s infinite;
-        }
-      `}</style>
     </div>
   );
 };

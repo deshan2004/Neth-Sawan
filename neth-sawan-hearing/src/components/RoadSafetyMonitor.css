@@ -1,37 +1,38 @@
-/* src/components/RoadSafetyMonitor.css */
+/* src/components/RoadSafetyMonitor.css – Advanced & Superb */
 
-/* ================================================================ */
-/* ROAD SAFETY MONITOR – DASHBOARD OPTIMIZED                        */
-/* ================================================================ */
-
+/* ── Container ── */
 .road-safety-monitor {
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
-/* ===== BASE CARD – Clean & Minimal ===== */
+/* ── Base Card ── */
 .safety-card {
   background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 85%, var(--dynamic-text, #FFFFFF) 15%);
   border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 8%, transparent);
   border-radius: 16px;
   padding: 14px 18px;
   transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .safety-card:hover {
-  border-color: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 20%, transparent);
+  border-color: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 30%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-/* ===== HEADER CARD ===== */
+/* ── Header ── */
 .header-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
   background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 90%, var(--dynamic-primary, #00DDB3) 10%) !important;
-  border-bottom: 2px solid color-mix(in srgb, var(--dynamic-primary, #00DDB3) 30%, transparent);
+  border-bottom: 3px solid var(--dynamic-primary, #00DDB3);
 }
 
 .card-header {
@@ -43,24 +44,25 @@
 }
 
 .card-icon {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
+  line-height: 1;
 }
 
 .card-title {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--dynamic-text, #FFFFFF);
   margin: 0;
 }
 
-/* ===== STATUS BADGE ===== */
+/* ── Status Badge ── */
 .monitor-status {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 12px;
+  padding: 4px 14px;
   border-radius: 40px;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -69,20 +71,22 @@
 }
 
 .monitor-status.active {
-  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 15%, transparent);
+  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 20%, transparent);
   color: var(--dynamic-primary, #00DDB3);
+  border: 1px solid color-mix(in srgb, var(--dynamic-primary, #00DDB3) 30%, transparent);
 }
 
 .monitor-status.inactive {
-  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 6%, transparent);
-  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 40%, transparent);
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 8%, transparent);
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 45%, transparent);
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: currentColor;
+  transition: all 0.3s;
 }
 
 .monitor-status.active .status-dot {
@@ -91,20 +95,21 @@
 
 @keyframes statusPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(0.7); }
+  50% { opacity: 0.2; transform: scale(0.7); }
 }
 
-/* ===== ACTION BUTTON – Clean & Bold ===== */
+/* ── Action Card ── */
 .action-card {
-  padding: 0;
-  overflow: hidden;
-  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .start-monitor-btn,
 .stop-monitor-btn {
   width: 100%;
-  padding: 18px 20px;
+  padding: 16px 20px;
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -113,17 +118,21 @@
   align-items: center;
   gap: 4px;
   font-family: inherit;
-  border-radius: 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  min-height: 56px;
 }
 
 .start-monitor-btn {
   background: linear-gradient(135deg, var(--dynamic-primary, #00DDB3), color-mix(in srgb, var(--dynamic-primary, #00DDB3) 70%, #000));
   color: var(--dynamic-bg, #000);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--dynamic-primary, #00DDB3) 30%, transparent);
 }
 
 .start-monitor-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px color-mix(in srgb, var(--dynamic-primary, #00DDB3) 30%, transparent);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--dynamic-primary, #00DDB3) 40%, transparent);
 }
 
 .start-monitor-btn:active {
@@ -131,37 +140,154 @@
 }
 
 .stop-monitor-btn {
-  background: color-mix(in srgb, #FF3355 12%, transparent);
+  background: color-mix(in srgb, #FF3355 15%, transparent);
   color: #FF3355;
-  border: 1px solid color-mix(in srgb, #FF3355 30%, transparent);
+  border: 2px solid color-mix(in srgb, #FF3355 40%, transparent);
 }
 
 .stop-monitor-btn:hover {
+  background: color-mix(in srgb, #FF3355 25%, transparent);
+}
+
+.btn-icon { font-size: 1.8rem; }
+.btn-text { font-size: 1.05rem; font-weight: 700; }
+.btn-sub { font-size: 0.75rem; opacity: 0.8; font-weight: 400; }
+
+/* ── Controls (Test & Clear) ── */
+.monitor-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.test-btn,
+.clear-btn {
+  padding: 8px 18px;
+  border-radius: 40px;
+  border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 15%, transparent);
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 70%, var(--dynamic-text, #FFFFFF) 30%);
+  color: var(--dynamic-text, #FFFFFF);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 44px;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.test-btn:hover:not(:disabled) {
+  background: var(--dynamic-primary, #00DDB3);
+  color: var(--dynamic-bg, #000);
+  border-color: var(--dynamic-primary, #00DDB3);
+  transform: translateY(-2px);
+}
+
+.clear-btn:hover:not(:disabled) {
   background: color-mix(in srgb, #FF3355 20%, transparent);
+  border-color: #FF3355;
+  color: #FF3355;
+  transform: translateY(-2px);
 }
 
-.btn-icon {
-  font-size: 1.8rem;
+.test-btn:disabled,
+.clear-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
-.btn-text {
-  font-size: 1rem;
-  font-weight: 700;
+/* ── Sensitivity Slider ── */
+.sensitivity-control {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.btn-sub {
-  font-size: 0.7rem;
-  opacity: 0.75;
-  font-weight: 400;
+.sensitivity-control label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dynamic-text, #FFFFFF);
 }
 
-/* ===== WAVEFORM – Compact ===== */
-.waveform-card {
+.sensitivity-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 15%, transparent);
+  border-radius: 6px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.sensitivity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--dynamic-primary, #00DDB3);
+  cursor: pointer;
+  box-shadow: 0 0 12px var(--dynamic-primary, rgba(0, 221, 179, 0.4));
+  transition: all 0.2s;
+}
+
+.sensitivity-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.sensitivity-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--dynamic-primary, #00DDB3);
+  cursor: pointer;
+  border: none;
+}
+
+/* ── Spectrum Analyzer ── */
+.spectrum-card {
   padding: 12px 16px;
 }
 
-.waveform-card .card-header {
-  margin-bottom: 8px;
+.spectrum-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 60px;
+  margin-top: 8px;
+}
+
+.spectrum-band {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.spectrum-fill {
+  width: 100%;
+  max-width: 30px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.15s ease;
+  min-height: 4px;
+}
+
+.spectrum-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 40%, transparent);
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .volume-badge {
@@ -169,94 +295,39 @@
   font-weight: 700;
   padding: 2px 12px;
   border-radius: 40px;
-  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 12%, transparent);
+  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 15%, transparent);
   color: var(--dynamic-primary, #00DDB3);
+  margin-left: auto;
 }
 
-.waveform-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.waveform-visual {
-  height: 48px;
-  background: color-mix(in srgb, var(--dynamic-bg, #000) 50%, var(--dynamic-text, #FFFFFF) 5%);
-  border-radius: 10px;
-  overflow: hidden;
-  padding: 4px 2px;
-}
-
-.waveform-bars {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  height: 100%;
-  gap: 2px;
-}
-
-.wave-bar {
-  flex: 1;
-  min-width: 3px;
-  max-width: 10px;
-  border-radius: 2px 2px 0 0;
-  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 40%, transparent);
-  transform-origin: bottom;
-  transition: height 0.12s ease;
-}
-
-.wave-bar.loud {
-  background: var(--dynamic-primary, #00DDB3) !important;
-}
-
-.waveform-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.7rem;
-  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 50%, transparent);
-}
-
-.recording-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #FF0033;
-  animation: dotPulse 1s infinite;
-}
-
-@keyframes dotPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
-}
-
-/* ===== ALERT CARD ===== */
+/* ── Alert Card ── */
 .alert-card {
-  border-left: 4px solid #FF0033;
+  border-left: 6px solid #FF0033;
   animation: alertSlide 0.4s ease;
-  padding: 14px 16px;
+  padding: 16px;
+  background: color-mix(in srgb, #FF0033 10%, var(--dynamic-bg, #0A0C1A)) !important;
 }
 
 @keyframes alertSlide {
-  from { opacity: 0; transform: translateY(-8px); }
+  from { opacity: 0; transform: translateY(-12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .alert-content {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
 }
 
 .alert-icon {
-  font-size: 2rem;
+  font-size: 2.4rem;
   animation: alertBounce 0.6s ease infinite;
+  flex-shrink: 0;
 }
 
 @keyframes alertBounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  50% { transform: translateY(-6px); }
 }
 
 .alert-info {
@@ -265,56 +336,56 @@
 }
 
 .alert-title {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--dynamic-text, #FFFFFF);
-  margin: 0 0 2px 0;
+  margin: 0 0 4px 0;
 }
 
 .alert-description {
-  font-size: 0.8rem;
-  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 65%, transparent);
-  margin: 0 0 6px 0;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 70%, transparent);
+  margin: 0 0 8px 0;
 }
 
 .alert-tags {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .tag {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   font-weight: 600;
-  padding: 2px 10px;
+  padding: 3px 12px;
   border-radius: 40px;
-  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 6%, transparent);
-  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 50%, transparent);
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 8%, transparent);
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 60%, transparent);
 }
 
 .tag.direction {
-  background: color-mix(in srgb, #FF8800 15%, transparent);
+  background: color-mix(in srgb, #FF8800 20%, transparent);
   color: #FF8800;
 }
 
 .tag.distance {
-  background: color-mix(in srgb, #FF3355 15%, transparent);
+  background: color-mix(in srgb, #FF3355 20%, transparent);
   color: #FF3355;
 }
 
 .tag.volume {
-  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 12%, transparent);
+  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 15%, transparent);
   color: var(--dynamic-primary, #00DDB3);
 }
 
 .dismiss-alert {
-  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 6%, transparent);
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 8%, transparent);
   border: none;
   border-radius: 50%;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 40%, transparent);
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -324,11 +395,12 @@
 }
 
 .dismiss-alert:hover {
-  background: color-mix(in srgb, #FF3355 20%, transparent);
+  background: color-mix(in srgb, #FF3355 25%, transparent);
   color: #FF3355;
+  transform: scale(1.1);
 }
 
-/* ===== DIRECTION CARD – Compact ===== */
+/* ── Direction Card ── */
 .direction-card {
   padding: 12px 16px;
 }
@@ -337,10 +409,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: color-mix(in srgb, var(--dynamic-bg, #000) 50%, var(--dynamic-text, #FFFFFF) 5%);
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--dynamic-bg, #000) 60%, var(--dynamic-text, #FFFFFF) 10%);
   border-radius: 40px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .direction {
@@ -353,22 +425,22 @@
 
 .direction.active {
   opacity: 1;
-  background: color-mix(in srgb, #FF8800 20%, transparent);
+  background: color-mix(in srgb, #FF8800 25%, transparent);
   animation: dirPulse 0.8s ease infinite;
 }
 
 @keyframes dirPulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.5; }
 }
 
 .direction span {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   display: block;
 }
 
 .direction small {
-  font-size: 0.5rem;
+  font-size: 0.55rem;
   color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 40%, transparent);
 }
 
@@ -381,12 +453,12 @@
 }
 
 .you-icon {
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   display: block;
 }
 
 .you-label {
-  font-size: 0.5rem;
+  font-size: 0.55rem;
   color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 30%, transparent);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -403,35 +475,33 @@
 }
 
 .zone-circle {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   margin: 0 auto 4px;
   transition: all 0.3s;
 }
 
 .zone-1 {
-  background: color-mix(in srgb, #FF3355 12%, transparent);
+  background: color-mix(in srgb, #FF3355 15%, transparent);
   border: 2px solid #FF3355;
 }
-
 .zone-2 {
-  background: color-mix(in srgb, #FF8800 10%, transparent);
+  background: color-mix(in srgb, #FF8800 12%, transparent);
   border: 2px solid #FF8800;
 }
-
 .zone-3 {
-  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 4%, transparent);
-  border: 2px dashed color-mix(in srgb, var(--dynamic-text, #FFFFFF) 12%, transparent);
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 5%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--dynamic-text, #FFFFFF) 15%, transparent);
 }
 
 .zone.danger .zone-1 {
-  background: color-mix(in srgb, #FF3355 35%, transparent);
+  background: color-mix(in srgb, #FF3355 40%, transparent);
   animation: zonePulse 0.6s ease infinite;
 }
 
 .zone.warning .zone-2 {
-  background: color-mix(in srgb, #FF8800 25%, transparent);
+  background: color-mix(in srgb, #FF8800 30%, transparent);
   animation: zonePulse 1s ease infinite;
 }
 
@@ -441,34 +511,34 @@
 }
 
 .zone span {
-  font-size: 0.5rem;
+  font-size: 0.55rem;
   color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 40%, transparent);
 }
 
-/* ===== HISTORY CARD ===== */
+/* ── History Card ── */
 .history-card {
   padding: 12px 16px;
 }
 
 .history-count {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 35%, transparent);
-  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 5%, transparent);
-  padding: 2px 10px;
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 6%, transparent);
+  padding: 2px 12px;
   border-radius: 40px;
 }
 
 .history-list {
-  max-height: 180px;
+  max-height: 200px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .history-list::-webkit-scrollbar {
-  width: 3px;
+  width: 4px;
 }
 .history-list::-webkit-scrollbar-track {
   background: transparent;
@@ -480,39 +550,40 @@
 
 .history-empty {
   text-align: center;
-  padding: 16px 8px;
+  padding: 20px 8px;
   color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 30%, transparent);
 }
 
 .empty-icon {
-  font-size: 1.5rem;
+  font-size: 2rem;
   display: block;
-  margin-bottom: 4px;
-  opacity: 0.4;
+  margin-bottom: 8px;
+  opacity: 0.5;
 }
 
 .history-empty p {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   margin: 0;
 }
 
 .history-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
-  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 3%, transparent);
-  border-radius: 10px;
-  border-left: 3px solid;
+  gap: 12px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 4%, transparent);
+  border-radius: 12px;
+  border-left: 4px solid;
   transition: all 0.2s;
 }
 
 .history-item:hover {
-  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 6%, transparent);
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 8%, transparent);
+  transform: translateX(4px);
 }
 
 .history-icon {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
 }
 
 .history-info {
@@ -521,30 +592,26 @@
 }
 
 .history-name {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--dynamic-text, #FFFFFF);
   display: block;
 }
 
 .history-time {
-  font-size: 0.55rem;
+  font-size: 0.6rem;
   color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 35%, transparent);
 }
 
 .history-direction {
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 30%, transparent);
 }
 
-/* ===== TIPS CARD ===== */
+/* ── Tips Card ── */
 .tips-card {
   padding: 12px 16px;
-}
-
-.tips-card .card-header {
-  margin-bottom: 8px;
 }
 
 .tips-list {
@@ -553,96 +620,78 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .tips-list li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 5px 10px;
-  font-size: 0.75rem;
-  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 75%, transparent);
-  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 2%, transparent);
-  border-radius: 8px;
+  gap: 12px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 80%, transparent);
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 3%, transparent);
+  border-radius: 10px;
   transition: all 0.2s;
 }
 
 .tips-list li:hover {
-  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 4%, transparent);
+  background: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 6%, transparent);
 }
 
 .tip-number {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 12%, transparent);
+  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 15%, transparent);
   color: var(--dynamic-primary, #00DDB3);
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   font-weight: 700;
   flex-shrink: 0;
 }
 
 .tip-important {
-  background: color-mix(in srgb, #FF3355 6%, transparent) !important;
-  border-left: 3px solid #FF3355;
+  background: color-mix(in srgb, #FF3355 8%, transparent) !important;
+  border-left: 4px solid #FF3355;
 }
 
 .tip-important .tip-number {
-  background: color-mix(in srgb, #FF3355 15%, transparent) !important;
+  background: color-mix(in srgb, #FF3355 20%, transparent) !important;
   color: #FF3355 !important;
 }
 
 /* ================================================================ */
-/* ===== RESPONSIVE – DASHBOARD VIEW ===== */
+/* ===== RESPONSIVE – MOBILE FIRST ===== */
 /* ================================================================ */
 
-/* When in dashboard grid (smaller container) */
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   .safety-card {
     padding: 10px 14px;
   }
-  
   .header-card {
     padding: 10px 14px;
+    flex-wrap: wrap;
   }
-  
   .card-title {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
   }
-  
   .card-icon {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
   }
-  
   .start-monitor-btn,
   .stop-monitor-btn {
     padding: 14px 16px;
-  }
-  
-  .btn-text {
     font-size: 0.9rem;
   }
-  
-  .btn-icon {
-    font-size: 1.5rem;
-  }
-  
-  .waveform-visual {
-    height: 40px;
-  }
-  
-  .direction span {
-    font-size: 1.2rem;
-  }
-  
-  .zone-circle {
-    width: 28px;
-    height: 28px;
-  }
+  .btn-text { font-size: 0.95rem; }
+  .btn-icon { font-size: 1.5rem; }
+  .spectrum-bars { height: 50px; }
+  .spectrum-fill { max-width: 24px; }
+  .direction span { font-size: 1.2rem; }
+  .zone-circle { width: 28px; height: 28px; }
 }
 
 @media (max-width: 600px) {
@@ -650,130 +699,92 @@
     padding: 8px 12px;
     border-radius: 12px;
   }
-  
   .header-card {
     padding: 8px 12px;
-    flex-wrap: wrap;
   }
-  
   .card-title {
     font-size: 0.85rem;
   }
-  
   .monitor-status {
-    font-size: 0.5rem;
+    font-size: 0.55rem;
     padding: 2px 10px;
   }
-  
   .start-monitor-btn,
   .stop-monitor-btn {
     padding: 12px 14px;
-    border-radius: 12px;
-  }
-  
-  .btn-text {
+    border-radius: 10px;
     font-size: 0.85rem;
   }
-  
-  .btn-sub {
-    font-size: 0.6rem;
+  .btn-text { font-size: 0.85rem; }
+  .btn-sub { font-size: 0.6rem; }
+  .monitor-controls {
+    flex-direction: column;
+    align-items: stretch;
   }
-  
-  .waveform-visual {
-    height: 32px;
+  .test-btn,
+  .clear-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 48px;
   }
-  
-  .wave-bar {
-    min-width: 2px;
-  }
-  
-  .direction span {
-    font-size: 1rem;
-  }
-  
-  .direction {
-    padding: 2px 8px;
-  }
-  
-  .zone-circle {
+  .sensitivity-slider::-webkit-slider-thumb {
     width: 24px;
     height: 24px;
   }
-  
-  .history-item {
-    padding: 4px 8px;
-  }
-  
-  .history-name {
-    font-size: 0.7rem;
-  }
-  
-  .tips-list li {
-    font-size: 0.65rem;
-    padding: 4px 8px;
-  }
-  
-  .tip-number {
-    width: 18px;
-    height: 18px;
-    font-size: 0.55rem;
-  }
-  
-  .alert-icon {
-    font-size: 1.6rem;
-  }
-  
-  .alert-title {
-    font-size: 0.85rem;
-  }
-  
-  .alert-description {
-    font-size: 0.7rem;
-  }
+  .spectrum-bars { height: 40px; gap: 8px; }
+  .spectrum-fill { max-width: 20px; }
+  .alert-icon { font-size: 1.8rem; }
+  .alert-title { font-size: 0.9rem; }
+  .alert-description { font-size: 0.75rem; }
+  .direction span { font-size: 1rem; }
+  .direction { padding: 2px 8px; }
+  .zone-circle { width: 24px; height: 24px; }
+  .history-item { padding: 6px 10px; }
+  .history-name { font-size: 0.7rem; }
+  .tips-list li { font-size: 0.7rem; padding: 4px 10px; }
+  .tip-number { width: 18px; height: 18px; font-size: 0.55rem; }
 }
 
 /* ================================================================ */
-/* ===== HIGH CONTRAST ===== */
+/* ===== ACCESSIBILITY: HIGH CONTRAST & REDUCED MOTION ===== */
 /* ================================================================ */
 
 @media (prefers-contrast: high) {
   .safety-card {
     border: 2px solid var(--dynamic-text, #FFFFFF);
   }
-  
+  .header-card {
+    border-bottom: 4px solid var(--dynamic-primary, #00DDB3);
+  }
   .start-monitor-btn {
     border: 2px solid #000000;
   }
-  
   .stop-monitor-btn {
     border: 2px solid #FF0000;
   }
-  
-  .header-card {
-    border-bottom: 3px solid var(--dynamic-primary, #00DDB3);
+  .alert-card {
+    border-left: 8px solid #FF0000;
+  }
+  .tag {
+    border: 1px solid currentColor;
   }
 }
 
-/* ================================================================ */
-/* ===== REDUCED MOTION ===== */
-/* ================================================================ */
-
 @media (prefers-reduced-motion: reduce) {
-  .monitor-status.active .status-dot,
-  .alert-icon,
-  .direction.active,
-  .zone.danger .zone-1,
-  .zone.warning .zone-2,
-  .recording-dot {
-    animation: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  
   .alert-card {
     animation: none !important;
   }
-  
   .start-monitor-btn:hover,
-  .stop-monitor-btn:hover {
+  .stop-monitor-btn:hover,
+  .test-btn:hover,
+  .clear-btn:hover {
     transform: none !important;
   }
 }
