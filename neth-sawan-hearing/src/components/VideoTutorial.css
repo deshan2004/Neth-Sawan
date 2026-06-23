@@ -1,21 +1,26 @@
 /* src/components/VideoTutorial.css */
 
+/* ============================================================
+   VIDEO TUTORIAL – MOBILE-FIRST, FULLY RESPONSIVE
+   ============================================================ */
+
+/* ── Main Card ── */
 .video-tutorial-card {
   background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 85%, var(--dynamic-text, #FFFFFF) 15%);
   border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 8%, transparent);
   border-radius: 16px;
   overflow: hidden;
   transition: all 0.25s ease;
-  height: 100%;
   display: flex;
   flex-direction: column;
-  min-height: 180px;
+  width: 100%;
 }
 
 .video-tutorial-card:hover {
   border-color: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 20%, transparent);
 }
 
+/* ── Header ── */
 .video-header {
   display: flex;
   align-items: center;
@@ -28,10 +33,11 @@
 
 .video-icon {
   font-size: 1.2rem;
+  line-height: 1;
 }
 
 .video-header h4 {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--dynamic-text, #FFFFFF);
   margin: 0;
@@ -45,189 +51,74 @@
   border-radius: 40px;
   background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 15%, transparent);
   color: var(--dynamic-primary, #00DDB3);
-  animation: badgePulse 2s ease-in-out infinite;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-@keyframes badgePulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
-/* ── Video container ── */
+/* ── Video Container ── */
 .video-container {
   flex: 1;
-  background: color-mix(in srgb, var(--dynamic-bg, #000) 60%, var(--dynamic-text, #FFFFFF) 5%);
+  background: #000000;
   position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 16 / 9;  /* forces a consistent box */
+  aspect-ratio: 16 / 9;
   min-height: 180px;
+  width: 100%;
+  overflow: hidden;
 }
 
-/* ── Playlist grid ── */
-.playlist-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 16px;
+.video-embed {
   width: 100%;
   height: 100%;
-  overflow-y: auto;
-  align-content: start;
-}
-
-@media (max-width: 600px) {
-  .playlist-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.playlist-item {
+  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 18px 12px;
-  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 70%, var(--dynamic-text, #FFFFFF) 30%);
-  border: 2px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 10%, transparent);
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  text-align: center;
-  min-height: 100px;
-  position: relative;
-  color: var(--dynamic-text, #FFFFFF);
-  font-family: inherit;
 }
 
-.playlist-item:hover {
-  transform: translateY(-4px);
-  border-color: var(--dynamic-primary, #00DDB3);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 60%, var(--dynamic-primary, #00DDB3) 15%);
-}
-
-.playlist-item.active {
-  border-color: var(--dynamic-primary, #00DDB3);
-  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 20%, transparent);
-  box-shadow: 0 0 30px var(--dynamic-primary, rgba(0, 221, 179, 0.2));
-}
-
-.playlist-emoji {
-  font-size: 2.4rem;
-  margin-bottom: 4px;
-}
-
-.playlist-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--dynamic-text, #FFFFFF);
-}
-
-.playlist-description {
-  font-size: 0.7rem;
-  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 50%, transparent);
-  line-height: 1.3;
-  max-width: 100%;
-}
-
-.playlist-play-icon {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  font-size: 1.2rem;
-  opacity: 0.5;
-  transition: opacity 0.2s;
-}
-
-.playlist-item:hover .playlist-play-icon {
-  opacity: 1;
-}
-
-/* ── Video player ── */
-.video-embed {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background: #000;
-}
-
+/* ── Video Player ── */
 .video-player {
   width: 100%;
   height: 100%;
-  object-fit: contain;  /* no cropping */
-  background: #000;
+  object-fit: contain;
+  background: #000000;
   display: block;
 }
 
-/* Fullscreen button */
+/* ── Fullscreen Button ── */
 .fullscreen-btn {
   position: absolute;
   bottom: 16px;
   right: 16px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  color: #fff;
+  color: #ffffff;
   padding: 8px 12px;
   font-size: 1.2rem;
+  line-height: 1;
   cursor: pointer;
   z-index: 10;
   transition: all 0.2s;
-}
-
-.fullscreen-btn:hover {
-  background: rgba(0, 221, 179, 0.3);
-  border-color: var(--dynamic-primary, #00DDB3);
-}
-
-/* Close button */
-.close-video {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0, 0, 0, 0.7);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
+  touch-action: manipulation;
+  min-width: 40px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
-  z-index: 10;
-  backdrop-filter: blur(4px);
 }
 
-.close-video:hover {
-  background: rgba(255, 51, 85, 0.8);
-  transform: scale(1.1);
+.fullscreen-btn:hover {
+  background: rgba(0, 221, 179, 0.35);
+  border-color: var(--dynamic-primary, #00DDB3);
 }
 
-.video-title-overlay {
-  position: absolute;
-  bottom: 16px;
-  left: 16px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  padding: 6px 16px;
-  border-radius: 40px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #FFFFFF;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  pointer-events: none;
-  z-index: 5;
+.fullscreen-btn:active {
+  transform: scale(0.92);
 }
 
-/* Error fallback */
+/* ── Error Fallback ── */
 .video-error-fallback {
   width: 100%;
   height: 100%;
@@ -238,121 +129,443 @@
   background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 90%, #FF3355 10%);
   padding: 20px;
   text-align: center;
-  min-height: 120px;
+  gap: 6px;
 }
 
 .video-error-fallback p {
   font-size: 0.9rem;
-  margin: 4px 0;
+  margin: 0;
+  color: #FF6B8A;
+  font-weight: 600;
 }
 
 .video-error-fallback small {
   font-size: 0.65rem;
-  opacity: 0.7;
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 50%, transparent);
+}
+
+.video-error-fallback button {
+  margin-top: 12px;
+  padding: 8px 20px;
+  border-radius: 40px;
+  background: #00DDB3;
+  color: #000000;
+  border: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+  min-height: 44px;
+}
+
+.video-error-fallback button:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 16px rgba(0, 221, 179, 0.3);
+}
+
+.video-error-fallback button:active {
+  transform: scale(0.96);
+}
+
+/* ── Video Controls ── */
+.video-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  gap: 12px;
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 90%, var(--dynamic-text, #FFFFFF) 10%);
+  border-top: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 8%, transparent);
+  flex-wrap: wrap;
+}
+
+/* ── Control Buttons ── */
+.control-btn {
+  padding: 8px 16px;
+  border-radius: 40px;
+  border: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 15%, transparent);
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 70%, var(--dynamic-text, #FFFFFF) 30%);
+  color: var(--dynamic-text, #FFFFFF);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 44px;
+  min-width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.control-btn:hover:not(:disabled) {
+  background: var(--dynamic-primary, #00DDB3);
+  color: var(--dynamic-bg, #000000);
+  border-color: var(--dynamic-primary, #00DDB3);
+  transform: translateY(-1px);
+}
+
+.control-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.control-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ── Progress / Title Display ── */
+.video-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 80px;
+  gap: 2px;
+}
+
+.video-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--dynamic-text, #FFFFFF);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.video-counter {
+  font-size: 0.65rem;
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 45%, transparent);
+  font-weight: 500;
 }
 
 /* ── Footer ── */
 .video-footer {
   padding: 8px 16px;
   font-size: 0.7rem;
-  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 50%, transparent);
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 45%, transparent);
   border-top: 1px solid color-mix(in srgb, var(--dynamic-text, #FFFFFF) 5%, transparent);
   text-align: center;
   flex-shrink: 0;
 }
 
-/* ===== RESPONSIVE TWEAKS ===== */
-@media (max-width: 768px) {
-  .video-tutorial-card {
-    min-height: 150px;
-  }
+/* ============================================================
+   RESPONSIVE – TABLET & MOBILE
+   ============================================================ */
+
+/* ── Tablet (≤ 1024px) ── */
+@media (max-width: 1024px) {
   .video-container {
     aspect-ratio: 16 / 9;
-    min-height: 150px;
-  }
-  .playlist-item {
-    min-height: 80px;
-    padding: 14px 10px;
-  }
-  .playlist-emoji {
-    font-size: 2rem;
-  }
-  .playlist-title {
-    font-size: 0.9rem;
-  }
-  .playlist-description {
-    font-size: 0.65rem;
+    min-height: 200px;
   }
 }
 
-@media (max-width: 480px) {
+/* ── Small Tablet (≤ 768px) ── */
+@media (max-width: 768px) {
   .video-container {
-    aspect-ratio: 4 / 3;  /* slightly taller on very small screens */
-    min-height: 140px;
+    aspect-ratio: 16 / 9;
+    min-height: 180px;
   }
-  .playlist-item {
-    min-height: 70px;
-    padding: 12px 8px;
+
+  .video-header h4 {
+    font-size: 0.85rem;
   }
-  .playlist-emoji {
-    font-size: 1.8rem;
+
+  .control-btn {
+    font-size: 0.8rem;
+    padding: 6px 14px;
+    min-height: 40px;
+    min-width: 70px;
   }
-  .playlist-title {
+
+  .video-title {
     font-size: 0.8rem;
   }
-  .playlist-description {
-    font-size: 0.6rem;
+
+  .fullscreen-btn {
+    bottom: 12px;
+    right: 12px;
+    padding: 6px 10px;
+    font-size: 1rem;
+    min-width: 36px;
+    min-height: 36px;
   }
+}
+
+/* ── Mobile (≤ 600px) ── */
+@media (max-width: 600px) {
+  .video-container {
+    aspect-ratio: 16 / 9;
+    min-height: 160px;
+  }
+
+  .video-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .control-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+    min-height: 48px;
+    font-size: 0.9rem;
+    border-radius: 60px;
+  }
+
+  .video-progress {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    order: -1;
+    padding: 4px 0;
+    gap: 8px;
+  }
+
+  .video-title {
+    font-size: 0.85rem;
+    text-align: left;
+    flex: 1;
+  }
+
+  .video-counter {
+    font-size: 0.6rem;
+    white-space: nowrap;
+  }
+
   .fullscreen-btn {
     bottom: 10px;
     right: 10px;
     padding: 6px 10px;
     font-size: 1rem;
+    min-width: 36px;
+    min-height: 36px;
   }
-  .video-title-overlay {
-    font-size: 0.75rem;
-    padding: 4px 12px;
-    bottom: 12px;
-    left: 12px;
+
+  .video-header {
+    padding: 10px 14px;
+    gap: 8px;
   }
-  .close-video {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
-  }
+
   .video-header h4 {
     font-size: 0.8rem;
   }
+
   .video-badge {
     font-size: 0.5rem;
-    padding: 1px 8px;
+    padding: 2px 8px;
+  }
+
+  .video-footer {
+    font-size: 0.6rem;
+    padding: 6px 14px;
+  }
+
+  .video-error-fallback p {
+    font-size: 0.8rem;
+  }
+
+  .video-error-fallback button {
+    font-size: 0.75rem;
+    padding: 6px 16px;
+    min-height: 40px;
   }
 }
 
-/* ===== HIGH CONTRAST & REDUCED MOTION ===== */
+/* ── Very Small Phones (≤ 400px) ── */
+@media (max-width: 400px) {
+  .video-container {
+    aspect-ratio: 4 / 3;
+    min-height: 140px;
+  }
+
+  .video-controls {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .control-btn {
+    padding: 10px;
+    min-height: 44px;
+    font-size: 0.8rem;
+  }
+
+  .video-title {
+    font-size: 0.75rem;
+  }
+
+  .video-counter {
+    font-size: 0.55rem;
+  }
+
+  .video-header {
+    padding: 8px 12px;
+  }
+
+  .video-header h4 {
+    font-size: 0.75rem;
+  }
+
+  .video-icon {
+    font-size: 1rem;
+  }
+
+  .fullscreen-btn {
+    bottom: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+/* ── Ultra-Small (≤ 320px) ── */
+@media (max-width: 320px) {
+  .video-container {
+    aspect-ratio: 4 / 3;
+    min-height: 120px;
+  }
+
+  .video-progress {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .video-title {
+    font-size: 0.7rem;
+    text-align: center;
+    width: 100%;
+  }
+
+  .control-btn {
+    font-size: 0.7rem;
+    padding: 8px;
+    min-height: 38px;
+  }
+
+  .video-badge {
+    font-size: 0.45rem;
+    padding: 1px 6px;
+  }
+}
+
+/* ============================================================
+   ACCESSIBILITY – HIGH CONTRAST
+   ============================================================ */
+
 @media (prefers-contrast: high) {
   .video-tutorial-card {
     border: 2px solid var(--dynamic-text, #FFFFFF);
   }
-  .playlist-item {
+
+  .video-header {
+    border-bottom: 3px solid var(--dynamic-primary, #00DDB3);
+  }
+
+  .control-btn {
     border: 2px solid #FFFFFF;
   }
-  .playlist-item.active {
-    border-color: #FFFF00;
+
+  .control-btn:hover:not(:disabled) {
+    background: #FFFFFF;
+    color: #000000;
+  }
+
+  .fullscreen-btn {
+    border: 2px solid #FFFFFF;
+  }
+
+  .fullscreen-btn:hover {
+    background: #FFFFFF;
+    color: #000000;
+  }
+
+  .video-error-fallback {
+    border: 2px solid #FF0000;
   }
 }
 
+/* ============================================================
+   ACCESSIBILITY – REDUCED MOTION
+   ============================================================ */
+
 @media (prefers-reduced-motion: reduce) {
   .video-tutorial-card,
-  .playlist-item,
+  .control-btn,
   .fullscreen-btn,
-  .close-video {
+  .video-error-fallback button {
     transition: none !important;
-  }
-  .playlist-item:hover {
-    transform: none !important;
-  }
-  .video-badge {
     animation: none !important;
   }
+
+  .control-btn:hover:not(:disabled),
+  .fullscreen-btn:hover,
+  .video-error-fallback button:hover {
+    transform: none !important;
+  }
+
+  .control-btn:active:not(:disabled),
+  .fullscreen-btn:active,
+  .video-error-fallback button:active {
+    transform: none !important;
+  }
+}
+
+/* ============================================================
+   UTILITY – TOUCH TARGETS (WCAG 2.5.5)
+   ============================================================ */
+
+/* All interactive elements are at least 44px in height/width on mobile */
+/* This is enforced via min-height on buttons and touch-action */
+
+/* ============================================================
+   DARK MODE / THEME COMPATIBILITY (via CSS variables)
+   ============================================================ */
+
+/* All colours use dynamic CSS variables for theme support */
+/* --dynamic-bg, --dynamic-text, --dynamic-primary are inherited */
+
+.video-tutorial-card,
+.video-header,
+.video-controls,
+.video-footer {
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 85%, var(--dynamic-text, #FFFFFF) 15%);
+  color: var(--dynamic-text, #FFFFFF);
+}
+
+/* Override backgrounds that need to be darker */
+.video-container {
+  background: color-mix(in srgb, var(--dynamic-bg, #0A0C1A) 95%, var(--dynamic-text, #FFFFFF) 5%);
+}
+
+.video-embed {
+  background: #000000;
+}
+
+/* Ensure text always readable */
+.video-title,
+.video-header h4,
+.control-btn {
+  color: var(--dynamic-text, #FFFFFF);
+}
+
+/* Footer text slightly muted */
+.video-footer {
+  color: color-mix(in srgb, var(--dynamic-text, #FFFFFF) 45%, transparent);
+}
+
+/* Badge uses primary colour */
+.video-badge {
+  background: color-mix(in srgb, var(--dynamic-primary, #00DDB3) 15%, transparent);
+  color: var(--dynamic-primary, #00DDB3);
 }

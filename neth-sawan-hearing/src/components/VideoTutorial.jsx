@@ -2,54 +2,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './VideoTutorial.css';
 
-// ── Video playlist ──
+// ── Video playlist (order matters) ──
 const VIDEO_PLAYLIST = [
-  {
-    id: 1,
-    title: 'Basic Greetings',
-    emoji: '👋',
-    src: '/videos/tutorial.mp4',
-    description: 'Learn how to say Hello, Thank you, and Goodbye'
-  },
-  {
-    id: 2,
-    title: 'Emergency Signs',
-    emoji: '🆘',
-    src: '/videos/tutorial1.mp4',
-    description: 'Essential signs for help, police, and hospital'
-  },
-  {
-    id: 3,
-    title: 'Family & Friends',
-    emoji: '👨‍👩‍👧',
-    src: '/videos/tutorial3.mp4',
-    description: 'Signs for mother, father, brother, sister'
-  },
-  {
-    id: 4,
-    title: 'Food & Drink',
-    emoji: '🍽️',
-    src: '/videos/tutorial4.mp4',
-    description: 'Signs for water, eat, hungry, and more'
-  },
-  {
-    id: 5,
-    title: 'Colors & Numbers',
-    emoji: '🌈',
-    src: '/videos/tutorial5.mp4',
-    description: 'Learn colors and numbers 1–10'
-  },
+  { id: 1, title: 'Getting Started', emoji: '🚀', src: '/videos/tutorial.mp4' },
+  { id: 2, title: 'Emergency Signs',   emoji: '🆘', src: '/videos/tutorial1.mp4' },
+  { id: 3, title: 'Family & Friends',  emoji: '👨‍👩‍👧', src: '/videos/tutorial3.mp4' },
+  { id: 4, title: 'Food & Drink',      emoji: '🍽️', src: '/videos/tutorial4.mp4' },
+  { id: 5, title: 'Colors & Numbers',  emoji: '🌈', src: '/videos/tutorial5.mp4' },
 ];
 
 const VideoTutorial = () => {
-  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasError, setHasError] = useState(false);
   const videoRef = useRef(null);
 
-  // Auto‑play when a video is selected
+  const currentVideo = VIDEO_PLAYLIST[currentIndex];
+  const totalVideos = VIDEO_PLAYLIST.length;
+
+  // Auto‑play when video source changes
   useEffect(() => {
-    if (selectedVideo && videoRef.current) {
+    if (videoRef.current) {
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
@@ -57,37 +30,39 @@ const VideoTutorial = () => {
         });
       }
     }
-  }, [selectedVideo]);
+  }, [currentIndex]);
 
-  const handleSelectVideo = (video) => {
-    if (selectedVideo?.id === video.id && isPlaying) {
-      // If same video, close it
-      handleClose();
-      return;
+  const handlePlay = () => setIsPlaying(true);
+  const handlePause = () => setIsPlaying(false);
+
+  const handleEnded = () => {
+    // Move to next video automatically
+    if (currentIndex < totalVideos - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      // Loop back to start (optional)
+      // setCurrentIndex(0);
+      setIsPlaying(false);
     }
-    setSelectedVideo(video);
-    setIsPlaying(true);
-    setHasError(false);
-  };
-
-  const handleClose = () => {
-    if (videoRef.current) {
-      try {
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
-      } catch {}
-    }
-    setIsPlaying(false);
-    setSelectedVideo(null);
-  };
-
-  const handleVideoEnd = () => {
-    setIsPlaying(false);
   };
 
   const handleError = () => {
     setHasError(true);
     setIsPlaying(false);
+  };
+
+  const goToPrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      setHasError(false);
+    }
+  };
+
+  const goToNext = () => {
+    if (currentIndex < totalVideos - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setHasError(false);
+    }
   };
 
   const toggleFullscreen = () => {
@@ -102,87 +77,93 @@ const VideoTutorial = () => {
 
   return (
     <div className="video-tutorial-card">
+      {/* Header with playlist info */}
       <div className="video-header">
         <span className="video-icon">📹</span>
-        <h4>Sign Language Tutorials</h4>
-        <span className="video-badge">{VIDEO_PLAYLIST.length} videos</span>
+        <h4>Video Tutorial</h4>
+        <span className="video-badge">
+          {currentIndex + 1} / {totalVideos}
+        </span>
       </div>
 
       <div className="video-container">
-        {selectedVideo && isPlaying ? (
-          // ── Video Player ──
-          <div className="video-embed">
-            {hasError ? (
-              <div className="video-error-fallback">
-                <span style={{ fontSize: '3rem' }}>🎬</span>
-                <p style={{ color: '#FF6B8A', fontWeight: 600 }}>Video not available</p>
-                <small style={{ color: '#8899CC' }}>Check filename: {selectedVideo.src}</small>
-                <button
-                  onClick={() => setHasError(false)}
-                  style={{
-                    marginTop: '12px',
-                    padding: '8px 20px',
-                    borderRadius: '40px',
-                    background: '#00DDB3',
-                    color: '#000',
-                    border: 'none',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Retry
-                </button>
-              </div>
-            ) : (
-              <>
-                <video
-                  ref={videoRef}
-                  key={selectedVideo.id}
-                  src={selectedVideo.src}
-                  controls
-                  playsInline
-                  autoPlay
-                  onEnded={handleVideoEnd}
-                  onError={handleError}
-                  className="video-player"
-                />
-                <button
-                  className="fullscreen-btn"
-                  onClick={toggleFullscreen}
-                  aria-label="Fullscreen"
-                >
-                  ⛶
-                </button>
-              </>
-            )}
-            <button className="close-video" onClick={handleClose}>
-              ✕
-            </button>
-            <div className="video-title-overlay">
-              <span>{selectedVideo.emoji} {selectedVideo.title}</span>
-            </div>
-          </div>
-        ) : (
-          // ── Playlist Grid ──
-          <div className="playlist-grid">
-            {VIDEO_PLAYLIST.map((video) => (
+        <div className="video-embed">
+          {hasError ? (
+            <div className="video-error-fallback">
+              <span style={{ fontSize: '3rem' }}>🎬</span>
+              <p style={{ color: '#FF6B8A', fontWeight: 600 }}>
+                Video not available
+              </p>
+              <small style={{ color: '#8899CC' }}>
+                {currentVideo?.src}
+              </small>
               <button
-                key={video.id}
-                className={`playlist-item ${selectedVideo?.id === video.id ? 'active' : ''}`}
-                onClick={() => handleSelectVideo(video)}
+                onClick={() => setHasError(false)}
+                style={{
+                  marginTop: '12px',
+                  padding: '8px 20px',
+                  borderRadius: '40px',
+                  background: '#00DDB3',
+                  color: '#000',
+                  border: 'none',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
               >
-                <span className="playlist-emoji">{video.emoji}</span>
-                <span className="playlist-title">{video.title}</span>
-                <span className="playlist-description">{video.description}</span>
-                <span className="playlist-play-icon">▶</span>
+                Retry
               </button>
-            ))}
-          </div>
-        )}
+            </div>
+          ) : (
+            <>
+              <video
+                ref={videoRef}
+                key={currentVideo?.id}
+                src={currentVideo?.src}
+                controls
+                playsInline
+                autoPlay
+                onPlay={handlePlay}
+                onPause={handlePause}
+                onEnded={handleEnded}
+                onError={handleError}
+                className="video-player"
+              />
+              <button
+                className="fullscreen-btn"
+                onClick={toggleFullscreen}
+                aria-label="Fullscreen"
+              >
+                ⛶
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Controls: Previous / Next / Progress */}
+      <div className="video-controls">
+        <button
+          className="control-btn prev"
+          onClick={goToPrevious}
+          disabled={currentIndex === 0}
+        >
+          ⏮ Prev
+        </button>
+        <span className="video-progress">
+          <span className="video-title">{currentVideo?.emoji} {currentVideo?.title}</span>
+          <span className="video-counter">{currentIndex + 1} of {totalVideos}</span>
+        </span>
+        <button
+          className="control-btn next"
+          onClick={goToNext}
+          disabled={currentIndex === totalVideos - 1}
+        >
+          Next ⏭
+        </button>
       </div>
 
       <div className="video-footer">
-        <span>💡 Tap any lesson to start learning. Close to return to the list.</span>
+        <span>💡 Videos play automatically. Use buttons to skip.</span>
       </div>
     </div>
   );
