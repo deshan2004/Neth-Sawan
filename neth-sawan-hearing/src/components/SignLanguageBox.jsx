@@ -11,7 +11,7 @@ const SIGN_DICTIONARY = {
   'PLEASE': { asl: '🤲', sinhala: 'කරුණාකර', description: 'Flat hand circles on chest' },
   'SORRY': { asl: '😔', sinhala: 'සමාවන්න', description: 'Fist circles on chest' },
   'YES': { asl: '👍', sinhala: 'ඔව්', description: 'Nodding fist' },
-  'NO': { asl: '👎', description: 'Tap index and middle together' },
+  'NO': { asl: '👎', sinhala: 'නැහැ', description: 'Tap index and middle together' },
 
   // Emergency
   'HELP': { asl: '🤝👍', sinhala: 'උදව්', description: 'One hand taps other palm, then thumbs up' },
@@ -74,7 +74,7 @@ const SIGN_DICTIONARY = {
   'FLOWER': { asl: '🌸', sinhala: 'මල', description: 'Fingers touching nose then spread' },
   'ANIMAL': { asl: '🐾', sinhala: 'සත්ව', description: 'Hands on chest like paws' },
   'DOG': { asl: '🐕', sinhala: 'බල්ලා', description: 'Snap fingers then pat leg' },
-  'CAT': { asl: '🐈', description: 'Fingers stroking whiskers' },
+  'CAT': { asl: '🐈', sinhala: 'බළලා', description: 'Fingers stroking whiskers' },
   'BIRD': { asl: '🐦', sinhala: 'කුරුල්ලා', description: 'Fingers at mouth like beak' },
   'FISH': { asl: '🐟', sinhala: 'මාළුවා', description: 'Hand swimming motion' }
 };
@@ -102,6 +102,35 @@ const detectScript = (text) => {
   return 'unknown';
 };
 
+// ============================================================
+// 🆕 HELPER: Try multiple extensions for fingerspelling images
+// ============================================================
+const getImageSrc = (letter) => {
+  // Try PNG first (default)
+  return `/assets/signs/${letter}.png`;
+};
+
+const handleImageError = (e, letter) => {
+  const img = e.target;
+  // If current src ends with .png, try .jpg
+  if (img.src.endsWith('.png')) {
+    img.src = `/assets/signs/${letter}.jpg`;
+  }
+  // If current src ends with .jpg, try .jpeg
+  else if (img.src.endsWith('.jpg')) {
+    img.src = `/assets/signs/${letter}.jpeg`;
+  }
+  // If all fail, show a fallback emoji (instead of broken image)
+  else {
+    img.onerror = null; // prevent infinite loop
+    img.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔤</text></svg>";
+    img.style.objectFit = 'contain';
+  }
+};
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 const SignLanguageBox = ({ transcript, currentWord }) => {
   // ===== STATE =====
   const [currentSign, setCurrentSign] = useState(null);
@@ -350,7 +379,9 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
     }, 4000);
   };
 
-  // ===== RENDER FINGERSPELLING =====
+  // ============================================================
+  // 🆕 RENDER FINGERSPELLING – WITH PNG → JPG → JPEG FALLBACK
+  // ============================================================
   const renderFingerspelling = () => {
     const isLong = lettersArray.length > 8;
 
@@ -362,13 +393,10 @@ const SignLanguageBox = ({ transcript, currentWord }) => {
             return (
               <div key={idx} className="fingerspell-item">
                 <img
-                  src={`/assets/signs/${letterChar}.png`}
+                  src={getImageSrc(letterChar)}
                   alt={`Sign for ${letterChar}`}
                   className="fingerspell-img"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23F5C842' stroke-width='2'><path d='M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h11z'/><path d='M19 15l4-3-4-3v6z'/></svg>";
-                  }}
+                  onError={(e) => handleImageError(e, letterChar)}
                 />
                 <span className="fingerspell-label">{char.toUpperCase()}</span>
               </div>
